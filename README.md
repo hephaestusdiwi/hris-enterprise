@@ -62,13 +62,23 @@ Project dibangun bertahap. Status pengerjaan step per step dicatat di [`docs/ROA
 |------|------|--------|
 | 1 | Setup Project | ✅ Selesai |
 | 2 | Docker | ✅ Selesai |
-| 3 | Docker Compose | ⬜ Belum |
+| 3 | Docker Compose | ✅ Selesai |
 | 4 | Nginx | ⬜ Belum |
+| 5 | PHP-FPM | ⬜ Belum |
 | ... | ... | ⬜ Belum |
 
 ## Cara Menjalankan
 
-Belum tersedia — environment Docker baru dikerjakan di STEP 2 dan seterusnya.
+`docker-compose.yml` sudah ada, tapi baru sebagian service yang bisa dijalankan penuh sampai STEP 4 & 5 selesai (Dockerfile `nginx` & `php` belum ditulis).
+
+```bash
+cp .env.example .env
+docker compose config          # validasi syntax
+docker compose up -d postgres redis   # service yang sudah bisa jalan penuh sekarang
+docker compose ps
+```
+
+Full `docker compose up` (semua service) baru berhasil total setelah STEP 5 (PHP-FPM) selesai.
 
 ## Lisensi
 

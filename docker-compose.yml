@@ -1,0 +1,148 @@
+services:
+  php:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    container_name: hris_php
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./backend:/var/www/html
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-hris}
+      DB_USERNAME: ${DB_USERNAME:-hris}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - hris_network
+
+  nginx:
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    container_name: hris_nginx
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:80"
+    volumes:
+      - ./backend:/var/www/html
+    depends_on:
+      - php
+    networks:
+      - hris_network
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: hris_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-hris}
+      POSTGRES_USER: ${DB_USERNAME:-hris}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - hris_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    networks:
+      - hris_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-hris} -d ${DB_DATABASE:-hris}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: hris_redis
+    restart: unless-stopped
+    volumes:
+      - hris_redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - hris_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  node:
+    image: node:22-alpine
+    container_name: hris_node
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./frontend:/var/www/html
+    ports:
+      - "${VITE_PORT:-5173}:5173"
+    command: >
+      sh -c "if [ -f package.json ]; then npm install && npm run dev -- --host 0.0.0.0; else echo 'frontend belum di-install (lihat STEP 12)'; tail -f /dev/null; fi"
+    networks:
+      - hris_network
+
+  queue:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    container_name: hris_queue
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./backend:/var/www/html
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-hris}
+      DB_USERNAME: ${DB_USERNAME:-hris}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    command: >
+      sh -c "if [ -f artisan ]; then php artisan queue:work --sleep=3 --tries=3 --backoff=5; else echo 'backend belum di-install (lihat STEP 11)'; tail -f /dev/null; fi"
+    depends_on:
+      - php
+      - postgres
+      - redis
+    networks:
+      - hris_network
+
+  scheduler:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    container_name: hris_scheduler
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./backend:/var/www/html
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-hris}
+      DB_USERNAME: ${DB_USERNAME:-hris}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    command: >
+      sh -c "if [ -f artisan ]; then while true; do php artisan schedule:run --verbose --no-interaction; sleep 60; done; else echo 'backend belum di-install (lihat STEP 11)'; tail -f /dev/null; fi"
+    depends_on:
+      - php
+      - postgres
+      - redis
+    networks:
+      - hris_network
+
+networks:
+  hris_network:
+    driver: bridge
+
+volumes:
+  hris_postgres_data:
+  hris_redis_data:
