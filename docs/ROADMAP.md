@@ -4,7 +4,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 
 ## PHASE 1 — Environment
 - [x] 1. Setup Project
-- [ ] 2. Docker
+- [x] 2. Docker
 - [ ] 3. Docker Compose
 - [ ] 4. Nginx
 - [ ] 5. PHP-FPM

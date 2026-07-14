@@ -42,7 +42,7 @@ hris-enterprise/
 └── README.md
 ```
 
-> Catatan: `backend/` dan `frontend/` masih kosong di STEP 1. Instalasi Laravel dan Vue dilakukan di STEP 11 dan STEP 12 sesuai roadmap. `docker/` akan diisi mulai STEP 2.
+> Catatan: `backend/` dan `frontend/` masih kosong. Instalasi Laravel dan Vue dilakukan di STEP 11 dan STEP 12 sesuai roadmap. `docker/` sudah punya struktur subfolder per service (lihat [`docker/README.md`](docker/README.md)) tapi Dockerfile/config aktual ditulis bertahap mulai STEP 3.
 
 ## Arsitektur
 
@@ -61,8 +61,9 @@ Project dibangun bertahap. Status pengerjaan step per step dicatat di [`docs/ROA
 | Step | Nama | Status |
 |------|------|--------|
 | 1 | Setup Project | ✅ Selesai |
-| 2 | Docker | ⬜ Belum |
+| 2 | Docker | ✅ Selesai |
 | 3 | Docker Compose | ⬜ Belum |
+| 4 | Nginx | ⬜ Belum |
 | ... | ... | ⬜ Belum |
 
 ## Cara Menjalankan

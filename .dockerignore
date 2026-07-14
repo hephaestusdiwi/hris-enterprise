@@ -1,0 +1,32 @@
+# Git
+.git
+.gitignore
+
+# Backend (Laravel) - akan relevan mulai STEP 5/11
+backend/vendor
+backend/node_modules
+backend/storage/logs/*
+backend/storage/framework/cache/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+backend/bootstrap/cache/*
+backend/.env
+backend/.phpunit.result.cache
+
+# Frontend (Vue) - akan relevan mulai STEP 12
+frontend/node_modules
+frontend/dist
+frontend/.vite
+
+# Docs & misc
+docs
+*.md
+.editorconfig
+.env
+.env.example
+
+# IDE / OS
+.idea
+.vscode
+*.DS_Store
+Thumbs.db
