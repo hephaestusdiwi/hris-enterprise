@@ -6,7 +6,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x] 1. Setup Project
 - [x] 2. Docker
 - [x] 3. Docker Compose
-- [ ] 4. Nginx
+- [x] 4. Nginx
 - [ ] 5. PHP-FPM
 - [ ] 6. PostgreSQL
 - [ ] 7. Redis

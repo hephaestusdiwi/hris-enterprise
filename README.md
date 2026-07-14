@@ -63,7 +63,7 @@ Project dibangun bertahap. Status pengerjaan step per step dicatat di [`docs/ROA
 | 1 | Setup Project | ✅ Selesai |
 | 2 | Docker | ✅ Selesai |
 | 3 | Docker Compose | ✅ Selesai |
-| 4 | Nginx | ⬜ Belum |
+| 4 | Nginx | ✅ Selesai |
 | 5 | PHP-FPM | ⬜ Belum |
 | ... | ... | ⬜ Belum |
 
