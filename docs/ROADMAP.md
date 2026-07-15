@@ -16,7 +16,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x] 11. Laravel Installation
 - [x] 12. Vue Installation
 - [x] 13. TypeScript
-- [ ] 14. Tailwind CSS
+- [x] 14. Tailwind CSS
 - [ ] 15. Sanctum
 - [ ] 16. Spatie Permission
 - [ ] 17. Authentication
