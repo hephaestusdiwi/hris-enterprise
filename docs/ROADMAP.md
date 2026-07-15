@@ -7,7 +7,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x] 2. Docker
 - [x] 3. Docker Compose
 - [x] 4. Nginx
-- [ ] 5. PHP-FPM
+- [x] 5. PHP-FPM
 - [ ] 6. PostgreSQL
 - [ ] 7. Redis
 - [ ] 8. Queue
