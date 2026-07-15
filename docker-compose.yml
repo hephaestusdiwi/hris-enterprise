@@ -16,6 +16,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-secret}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-secret}
     depends_on:
       - postgres
       - redis
@@ -45,10 +46,6 @@ services:
       POSTGRES_DB: ${DB_DATABASE:-hris}
       POSTGRES_USER: ${DB_USERNAME:-hris}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
-    # Tuning ringan buat VPS single-core/RAM terbatas (lihat docs/DOCKER.md) —
-    # pakai flag -c di command, BUKAN custom postgresql.conf penuh, supaya
-    # parameter lain yang nggak disebut tetap pakai default resmi image
-    # (nggak ada resiko kelupaan set parameter penting kayak listen_addresses).
     command: >
       postgres
       -c max_connections=50
@@ -59,7 +56,6 @@ services:
       -c log_min_duration_statement=1000
     volumes:
       - hris_postgres_data:/var/lib/postgresql/data
-      # Cuma jalan otomatis sekali pas data dir masih kosong (first init).
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     ports:
       - "${DB_PORT:-5432}:5432"
@@ -110,6 +106,7 @@ services:
     container_name: hris_queue
     restart: unless-stopped
     working_dir: /var/www/html
+    stop_grace_period: 30s
     volumes:
       - ./backend:/var/www/html
     environment:
@@ -120,8 +117,9 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-secret}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-secret}
     command: >
-      sh -c "if [ -f artisan ]; then php artisan queue:work --sleep=3 --tries=3 --backoff=5; else echo 'backend belum di-install (lihat STEP 11)'; tail -f /dev/null; fi"
+      sh -c "if [ -f artisan ]; then php artisan queue:work --queue=default --sleep=3 --tries=3 --backoff=5 --max-time=3600; else echo 'backend belum di-install (lihat STEP 11)'; tail -f /dev/null; fi"
     depends_on:
       - php
       - postgres
@@ -146,6 +144,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-secret}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-secret}
     command: >
       sh -c "if [ -f artisan ]; then while true; do php artisan schedule:run --verbose --no-interaction; sleep 60; done; else echo 'backend belum di-install (lihat STEP 11)'; tail -f /dev/null; fi"
     depends_on:
