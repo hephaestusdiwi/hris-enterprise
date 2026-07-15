@@ -1,8 +1,8 @@
 services:
   php:
     build:
-      context: ./docker/php
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docker/php/Dockerfile
     container_name: hris_php
     restart: unless-stopped
     working_dir: /var/www/html
@@ -101,8 +101,8 @@ services:
 
   queue:
     build:
-      context: ./docker/php
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docker/php/Dockerfile
     container_name: hris_queue
     restart: unless-stopped
     working_dir: /var/www/html
@@ -118,8 +118,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-secret}
-    command: >
-      sh -c "if [ -f artisan ]; then php artisan queue:work --queue=default --sleep=3 --tries=3 --backoff=5 --max-time=3600; else echo 'backend belum di-install (lihat STEP 11)'; tail -f /dev/null; fi"
+    command: ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
     depends_on:
       - php
       - postgres
@@ -129,8 +128,8 @@ services:
 
   scheduler:
     build:
-      context: ./docker/php
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docker/php/Dockerfile
     container_name: hris_scheduler
     restart: unless-stopped
     working_dir: /var/www/html

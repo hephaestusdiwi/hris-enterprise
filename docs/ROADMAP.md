@@ -12,7 +12,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x] 7. Redis
 - [x] 8. Queue
 - [x] 9. Scheduler
-- [ ] 10. Supervisor
+- [x] 10. Supervisor
 - [ ] 11. Laravel Installation
 - [ ] 12. Vue Installation
 - [ ] 13. TypeScript

@@ -43,9 +43,14 @@ RUN apk add --no-cache --virtual .build-deps \
     && apk del .build-deps \
     && rm -rf /tmp/pear
 
+RUN apk add --no-cache supervisor \
+    && mkdir -p /var/log/supervisor
+
 # php.ini custom (upload size, timezone, opcache tuning, dll)
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-COPY php.ini /usr/local/etc/php/conf.d/99-hris.ini
+COPY docker/php/php.ini /usr/local/etc/php/conf.d/99-hris.ini
+COPY docker/supervisor/supervisord.conf /etc/supervisord.conf
+COPY docker/supervisor/conf.d/ /etc/supervisor/conf.d/
 
 WORKDIR /var/www/html
 
