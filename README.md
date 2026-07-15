@@ -71,6 +71,8 @@ Project dibangun bertahap. Status pengerjaan step per step dicatat di [`docs/ROA
 | 9    | Scheduler              | ✅ Selesai |
 | 10   | Supervisor             | ✅ Selesai |
 | 11   | Laravel Installation   | ✅ Selesai |
+| 12   | Vue Installation      | ✅ Selesai |
+| 13   | TypeScript            | ✅ Selesai |
 | ...  | ...                   | ⬜ Belum   |
 ## Cara Menjalankan
 
