@@ -1,22 +1,48 @@
-# HRIS Enterprise — Frontend
+# .
 
-Vue 3 SPA (Composition API) dengan Vite, Pinia untuk state management, dan Vue Router untuk routing. TypeScript akan ditambahkan di **STEP 13**, Tailwind CSS v4 di **STEP 14**.
+This template should help get you started developing with Vue 3 in Vite.
 
-## Tech Stack
+## Recommended IDE Setup
 
-- Vue 3 (Composition API)
-- Vite
-- Pinia
-- Vue Router
-- Axios
-- ESLint + Prettier + oxlint
+[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
 
-## Struktur
+## Recommended Browser Setup
 
-Mengikuti struktur default `create-vue`, dengan konvensi tambahan:
-- `src/stores/` — Pinia stores per domain
-- `src/services/` — wrapper axios per module API
-- `src/views/` — halaman routed
-- `src/components/` — komponen reusable
+- Chromium-based browsers (Chrome, Edge, Brave, etc.):
+  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
+  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
+- Firefox:
+  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
+  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
 
-Lihat `docs/ARCHITECTURE.md` dan `docs/ROADMAP.md` di root project untuk detail lengkap.
+## Type Support for `.vue` Imports in TS
+
+TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+
+## Customize configuration
+
+See [Vite Configuration Reference](https://vite.dev/config/).
+
+## Project Setup
+
+```sh
+npm install
+```
+
+### Compile and Hot-Reload for Development
+
+```sh
+npm run dev
+```
+
+### Type-Check, Compile and Minify for Production
+
+```sh
+npm run build
+```
+
+### Lint with [ESLint](https://eslint.org/)
+
+```sh
+npm run lint
+```
