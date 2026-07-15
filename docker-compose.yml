@@ -146,7 +146,7 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-secret}
     command: >
-      sh -c "if [ -f artisan ]; then while true; do php artisan schedule:run --verbose --no-interaction; sleep 60; done; else echo 'backend belum di-install (lihat STEP 11)'; tail -f /dev/null; fi"
+      sh -c "if [ -f artisan ]; then while true; do php artisan schedule:run --verbose --no-interaction >> storage/logs/scheduler.log 2>&1; sleep $(( 60 - $(date +%s) % 60 )); done; else echo 'backend belum di-install (lihat STEP 11)'; tail -f /dev/null; fi"
     depends_on:
       - php
       - postgres
