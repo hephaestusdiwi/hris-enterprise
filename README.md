@@ -64,7 +64,7 @@ Project dibangun bertahap. Status pengerjaan step per step dicatat di [`docs/ROA
 | 2 | Docker | ✅ Selesai |
 | 3 | Docker Compose | ✅ Selesai |
 | 4 | Nginx | ✅ Selesai |
-| 5 | PHP-FPM | ⬜ Belum |
+| 5 | PHP-FPM | ✅ Selesai |
 | 6    | PostgreSQL             | ✅ Selesai |
 | 7    | Redis                  | ✅ Selesai |
 | 8    | Queue                  | ✅ Selesai |
