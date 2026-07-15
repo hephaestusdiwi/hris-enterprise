@@ -88,6 +88,7 @@ services:
   node:
     image: node:22-alpine
     container_name: hris_node
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     restart: unless-stopped
     working_dir: /var/www/html
     volumes:
