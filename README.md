@@ -65,8 +65,13 @@ Project dibangun bertahap. Status pengerjaan step per step dicatat di [`docs/ROA
 | 3 | Docker Compose | ✅ Selesai |
 | 4 | Nginx | ✅ Selesai |
 | 5 | PHP-FPM | ⬜ Belum |
-| ... | ... | ⬜ Belum |
-
+| 6    | PostgreSQL             | ✅ Selesai |
+| 7    | Redis                  | ✅ Selesai |
+| 8    | Queue                  | ✅ Selesai |
+| 9    | Scheduler              | ✅ Selesai |
+| 10   | Supervisor             | ✅ Selesai |
+| 11   | Laravel Installation   | ✅ Selesai |
+| ...  | ...                   | ⬜ Belum   |
 ## Cara Menjalankan
 
 `docker-compose.yml` sudah ada, tapi baru sebagian service yang bisa dijalankan penuh sampai STEP 4 & 5 selesai (Dockerfile `nginx` & `php` belum ditulis).
