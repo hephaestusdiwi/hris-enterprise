@@ -44,6 +44,7 @@ RUN apk add --no-cache --virtual .build-deps \
     && rm -rf /tmp/pear
 
 # php.ini custom (upload size, timezone, opcache tuning, dll)
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 COPY php.ini /usr/local/etc/php/conf.d/99-hris.ini
 
 WORKDIR /var/www/html
