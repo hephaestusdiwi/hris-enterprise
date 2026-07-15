@@ -9,7 +9,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x] 4. Nginx
 - [x] 5. PHP-FPM
 - [x] 6. PostgreSQL
-- [ ] 7. Redis
+- [x] 7. Redis
 - [ ] 8. Queue
 - [ ] 9. Scheduler
 - [ ] 10. Supervisor
