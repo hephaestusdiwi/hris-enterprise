@@ -20,7 +20,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x] 15. Sanctum
 - [x] 16. Spatie Permission
 - [x] 17. Authentication
-- [ ] 18. Authorization
+- [x] 18. Authorization
 - [ ] 19. Dashboard
 - [ ] 20. User Module
 
