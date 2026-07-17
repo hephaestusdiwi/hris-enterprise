@@ -22,7 +22,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x] 17. Authentication
 - [x] 18. Authorization
 - [x] 19. Dashboard
-- [ ] 20. User Module
+- [x] 20. User Module
 
 ## PHASE 2 — Master Data
 - [ ] 21. Company
