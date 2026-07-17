@@ -10,6 +10,8 @@ interface User {
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
+  const roles = ref<string[]>([])
+  const permissions = ref<string[]>([])
   const isAuthenticated = computed(() => !!user.value)
 
   async function fetchCsrfCookie() {
@@ -25,16 +27,23 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout() {
     await apiClient.post('/api/logout')
     user.value = null
+    roles.value = []
+    permissions.value = []
   }
 
   async function fetchUser() {
     try {
       const response = await apiClient.get('/api/user')
-      user.value = response.data.data
+      const data = response.data.data
+      user.value = { id: data.id, name: data.name, email: data.email }
+      roles.value = data.roles ?? []
+      permissions.value = data.permissions ?? []
     } catch {
       user.value = null
+      roles.value = []
+      permissions.value = []
     }
   }
 
-  return { user, isAuthenticated, login, logout, fetchUser }
+  return { user, roles, permissions, isAuthenticated, login, logout, fetchUser }
 })

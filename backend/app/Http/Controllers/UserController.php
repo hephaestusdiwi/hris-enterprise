@@ -78,4 +78,13 @@ class UserController extends Controller
             'data' => null,
         ]);
     }
+
+    public function roles()
+    {
+        return response()->json([
+            'success' => true,
+            'message' => 'OK',
+            'data' => \Spatie\Permission\Models\Role::pluck('name'),
+        ]);
+    }
 }

@@ -12,6 +12,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware('permission:view users')->group(function () {
         Route::get('/users', [UserController::class, 'index']);
+        Route::get('/roles', [UserController::class, 'roles']);
         Route::get('/users/{user}', [UserController::class, 'show']);
     });
 
