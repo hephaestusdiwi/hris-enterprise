@@ -11,11 +11,10 @@ const menuItems = [
   { name: 'users', label: 'Users', icon: Users, to: '/users', permission: 'view users' },
   { name: 'companies', label: 'Company', icon: Building2, to: '/companies', permission: 'view companies' },
   { name: 'branches', label: 'Branch', icon: MapPin, to: '/branches', permission: 'view branches' },
+  { name: 'departments', label: 'Department', icon: Network, to: '/departments', permission: 'view departments' },
 ]
 
 const upcomingItems = [
-  { label: 'Branch', icon: MapPin },
-  { label: 'Department', icon: Network },
   { label: 'Position', icon: Briefcase },
   { label: 'Employee', icon: UserRound },
 ]

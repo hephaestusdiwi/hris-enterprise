@@ -22,4 +22,5 @@ Route::middleware('auth:sanctum')->group(function () {
 
     require __DIR__.'/../app/Modules/Company/Routes/api.php';
     require __DIR__.'/../app/Modules/Branch/Routes/api.php';
+    require __DIR__.'/../app/Modules/Department/Routes/api.php';
 });
