@@ -13,11 +13,10 @@ const menuItems = [
   { name: 'branches', label: 'Branch', icon: MapPin, to: '/branches', permission: 'view branches' },
   { name: 'departments', label: 'Department', icon: Network, to: '/departments', permission: 'view departments' },
   { name: 'positions', label: 'Position', icon: Briefcase, to: '/positions', permission: 'view positions' },
+  { name: 'employees', label: 'Employee', icon: UserRound, to: '/employees', permission: 'view employees' },
 ]
 
-const upcomingItems = [
-  { label: 'Employee', icon: UserRound },
-]
+const upcomingItems: { label: string; icon: typeof LayoutDashboard }[] = []
 
 function canAccess(permission: string | null) {
   if (!permission) return true

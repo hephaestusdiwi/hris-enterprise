@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Modules\EmploymentStatus\Models\EmploymentStatus;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -19,5 +20,16 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Admin HRIS', 'password' => bcrypt('password123')]
         );
         $admin->assignRole('admin');
+
+        $statuses = [
+            ['name' => 'Permanent', 'code' => 'PERMANENT'],
+            ['name' => 'Contract', 'code' => 'CONTRACT'],
+            ['name' => 'Probation', 'code' => 'PROBATION'],
+            ['name' => 'Intern', 'code' => 'INTERN'],
+        ];
+
+        foreach ($statuses as $status) {
+            EmploymentStatus::firstOrCreate(['code' => $status['code']], $status);
+        }
     }
 }
