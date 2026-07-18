@@ -22,6 +22,10 @@ class RolePermissionSeeder extends Seeder
             'create companies',
             'edit companies',
             'delete companies',
+            'view branches',
+            'create branches',
+            'edit branches',
+            'delete branches',
         ];
 
         foreach ($permissions as $permission) {

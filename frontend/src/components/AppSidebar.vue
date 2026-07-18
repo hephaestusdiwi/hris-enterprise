@@ -10,6 +10,7 @@ const menuItems = [
   { name: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: '/', permission: null as string | null },
   { name: 'users', label: 'Users', icon: Users, to: '/users', permission: 'view users' },
   { name: 'companies', label: 'Company', icon: Building2, to: '/companies', permission: 'view companies' },
+  { name: 'branches', label: 'Branch', icon: MapPin, to: '/branches', permission: 'view branches' },
 ]
 
 const upcomingItems = [

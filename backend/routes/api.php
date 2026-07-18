@@ -21,4 +21,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:delete users')->delete('/users/{user}', [UserController::class, 'destroy']);
 
     require __DIR__.'/../app/Modules/Company/Routes/api.php';
+    require __DIR__.'/../app/Modules/Branch/Routes/api.php';
 });
