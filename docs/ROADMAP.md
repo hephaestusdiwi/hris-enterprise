@@ -27,7 +27,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 ## PHASE 2 — Master Data
 - [x] 21. Company
 - [x] 22. Branch
-- [ ] 23. Department
+- [x] 23. Department
 - [ ] 24. Position
 - [ ] 25. Employee
 - [ ] 26. Holiday
