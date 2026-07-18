@@ -28,7 +28,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x] 21. Company
 - [x] 22. Branch
 - [x] 23. Department
-- [ ] 24. Position
+- [x] 24. Position
 - [ ] 25. Employee
 - [ ] 26. Holiday
 - [ ] 27. Shift
