@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DashboardView from '../views/DashboardView.vue'
 import UserListView from '../views/UserListView.vue'
+import CompanyListView from '../views/CompanyListView.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
@@ -22,6 +23,12 @@ const router = createRouter({
       path: '/about',
       name: 'about',
       component: () => import('../views/AboutView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/companies',
+      name: 'companies',
+      component: CompanyListView,
       meta: { requiresAuth: true },
     },
     {

@@ -19,4 +19,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:create users')->post('/users', [UserController::class, 'store']);
     Route::middleware('permission:edit users')->put('/users/{user}', [UserController::class, 'update']);
     Route::middleware('permission:delete users')->delete('/users/{user}', [UserController::class, 'destroy']);
+
+    require __DIR__.'/../app/Modules/Company/Routes/api.php';
 });

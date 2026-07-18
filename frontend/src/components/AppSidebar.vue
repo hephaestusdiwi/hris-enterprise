@@ -9,10 +9,10 @@ const authStore = useAuthStore()
 const menuItems = [
   { name: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: '/', permission: null as string | null },
   { name: 'users', label: 'Users', icon: Users, to: '/users', permission: 'view users' },
+  { name: 'companies', label: 'Company', icon: Building2, to: '/companies', permission: 'view companies' },
 ]
 
 const upcomingItems = [
-  { label: 'Company', icon: Building2 },
   { label: 'Branch', icon: MapPin },
   { label: 'Department', icon: Network },
   { label: 'Position', icon: Briefcase },
