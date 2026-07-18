@@ -25,7 +25,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x] 20. User Module
 
 ## PHASE 2 — Master Data
-- [ ] 21. Company
+- [x] 21. Company
 - [ ] 22. Branch
 - [ ] 23. Department
 - [ ] 24. Position
