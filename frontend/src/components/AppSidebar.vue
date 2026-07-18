@@ -12,10 +12,10 @@ const menuItems = [
   { name: 'companies', label: 'Company', icon: Building2, to: '/companies', permission: 'view companies' },
   { name: 'branches', label: 'Branch', icon: MapPin, to: '/branches', permission: 'view branches' },
   { name: 'departments', label: 'Department', icon: Network, to: '/departments', permission: 'view departments' },
+  { name: 'positions', label: 'Position', icon: Briefcase, to: '/positions', permission: 'view positions' },
 ]
 
 const upcomingItems = [
-  { label: 'Position', icon: Briefcase },
   { label: 'Employee', icon: UserRound },
 ]
 

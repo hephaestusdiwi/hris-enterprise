@@ -30,6 +30,10 @@ class RolePermissionSeeder extends Seeder
             'create departments',
             'edit departments',
             'delete departments',
+            'view positions',
+            'create positions',
+            'edit positions',
+            'delete positions',
         ];
 
         foreach ($permissions as $permission) {
