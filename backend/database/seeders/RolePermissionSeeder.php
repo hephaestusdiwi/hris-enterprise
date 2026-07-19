@@ -46,6 +46,10 @@ class RolePermissionSeeder extends Seeder
             'create holidays',
             'edit holidays',
             'delete holidays',
+            'view job levels',
+            'create job levels',
+            'edit job levels',
+            'delete job levels',
         ];
 
         foreach ($permissions as $permission) {

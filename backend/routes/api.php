@@ -27,4 +27,5 @@ Route::middleware('auth:sanctum')->group(function () {
     require __DIR__.'/../app/Modules/EmploymentStatus/Routes/api.php';
     require __DIR__.'/../app/Modules/Employee/Routes/api.php';
     require __DIR__.'/../app/Modules/Holiday/Routes/api.php';
+    require __DIR__.'/../app/Modules/JobLevel/Routes/api.php';
 });

@@ -7,6 +7,7 @@ use App\Modules\Branch\Models\Branch;
 use App\Modules\Company\Models\Company;
 use App\Modules\Department\Models\Department;
 use App\Modules\EmploymentStatus\Models\EmploymentStatus;
+use App\Modules\JobLevel\Models\JobLevel;
 use App\Modules\Position\Models\Position;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -24,6 +25,7 @@ class Employee extends Model
         'branch_id',
         'department_id',
         'position_id',
+        'job_level_id',
         'employment_status_id',
         'manager_employee_id',
         'user_id',
@@ -74,6 +76,11 @@ class Employee extends Model
     public function position(): BelongsTo
     {
         return $this->belongsTo(Position::class);
+    }
+
+    public function jobLevel(): BelongsTo
+    {
+        return $this->belongsTo(JobLevel::class);
     }
 
     public function employmentStatus(): BelongsTo

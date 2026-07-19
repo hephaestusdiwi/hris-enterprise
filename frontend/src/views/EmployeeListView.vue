@@ -17,6 +17,7 @@ interface EmployeeRow {
   company: Ref
   department: Ref | null
   position: Ref | null
+  job_level: Ref | null
   employment_status: Ref | null
 }
 
@@ -27,6 +28,7 @@ const companies = ref<Ref[]>([])
 const branches = ref<Ref[]>([])
 const departments = ref<Ref[]>([])
 const positions = ref<Ref[]>([])
+const jobLevels = ref<Ref[]>([])
 const employmentStatuses = ref<Ref[]>([])
 const managerOptions = ref<{ id: number; employee_number: string; first_name: string; last_name: string | null }[]>([])
 
@@ -45,6 +47,7 @@ const form = reactive({
   branch_id: null as number | null,
   department_id: null as number | null,
   position_id: null as number | null,
+  job_level_id: null as number | null,
   employment_status_id: null as number | null,
   manager_employee_id: null as number | null,
   join_date: '',
@@ -85,11 +88,12 @@ async function loadEmployees() {
 }
 
 async function loadReferenceData() {
-  const [companyRes, branchRes, departmentRes, positionRes, statusRes, employeeRes] = await Promise.all([
+  const [companyRes, branchRes, departmentRes, positionRes, jobLevelRes, statusRes, employeeRes] = await Promise.all([
     apiClient.get('/api/companies'),
     apiClient.get('/api/branches'),
     apiClient.get('/api/departments'),
     apiClient.get('/api/positions'),
+    apiClient.get('/api/job-levels'),
     apiClient.get('/api/employment-statuses'),
     apiClient.get('/api/employees'),
   ])
@@ -98,6 +102,7 @@ async function loadReferenceData() {
   branches.value = branchRes.data.data.data
   departments.value = departmentRes.data.data.data
   positions.value = positionRes.data.data.data
+  jobLevels.value = jobLevelRes.data.data.data
   employmentStatuses.value = statusRes.data.data.data
   managerOptions.value = employeeRes.data.data.data
 }
@@ -110,6 +115,7 @@ async function resetForm() {
   form.branch_id = null
   form.department_id = null
   form.position_id = null
+  form.job_level_id = null
   form.employment_status_id = null
   form.manager_employee_id = null
   form.join_date = new Date().toISOString().slice(0, 10)
@@ -152,6 +158,7 @@ async function openEditModal(row: EmployeeRow) {
   form.branch_id = e.branch?.id ?? null
   form.department_id = e.department?.id ?? null
   form.position_id = e.position?.id ?? null
+  form.job_level_id = e.job_level?.id ?? null
   form.employment_status_id = e.employment_status?.id ?? null
   form.manager_employee_id = e.manager?.id ?? null
   form.join_date = e.join_date?.slice(0, 10) ?? ''
@@ -190,6 +197,7 @@ async function handleSubmit() {
     branch_id: form.branch_id,
     department_id: form.department_id,
     position_id: form.position_id,
+    job_level_id: form.job_level_id,
     employment_status_id: form.employment_status_id,
     manager_employee_id: form.manager_employee_id,
     join_date: form.join_date,
@@ -302,6 +310,7 @@ onMounted(() => {
               <th class="px-5 py-3 font-medium text-slate-500">Company</th>
               <th class="px-5 py-3 font-medium text-slate-500">Department</th>
               <th class="px-5 py-3 font-medium text-slate-500">Position</th>
+              <th class="px-5 py-3 font-medium text-slate-500">Job Level</th>
               <th class="px-5 py-3 font-medium text-slate-500">Status</th>
               <th class="px-5 py-3 text-right font-medium text-slate-500">Aksi</th>
             </tr>
@@ -317,6 +326,7 @@ onMounted(() => {
               <td class="px-5 py-3.5 text-slate-500">{{ row.company.name }}</td>
               <td class="px-5 py-3.5 text-slate-500">{{ row.department?.name ?? '-' }}</td>
               <td class="px-5 py-3.5 text-slate-500">{{ row.position?.name ?? '-' }}</td>
+              <td class="px-5 py-3.5 text-slate-500">{{ row.job_level?.name ?? '-' }}</td>
               <td class="px-5 py-3.5">
                 <span
                   v-if="row.employment_status"
@@ -404,6 +414,13 @@ onMounted(() => {
                   <select v-model="form.position_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
                     <option :value="null">-</option>
                     <option v-for="p in positions" :key="p.id" :value="p.id">{{ p.name }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-slate-700">Job Level</label>
+                  <select v-model="form.job_level_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                    <option :value="null">-</option>
+                    <option v-for="jl in jobLevels" :key="jl.id" :value="jl.id">{{ jl.name }}</option>
                   </select>
                 </div>
                 <div>
