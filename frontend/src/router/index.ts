@@ -6,6 +6,7 @@ import BranchListView from '../views/BranchListView.vue'
 import DepartmentListView from '../views/DepartmentListView.vue'
 import PositionListView from '../views/PositionListView.vue'
 import EmployeeListView from '@/views/EmployeeListView.vue'
+import HolidayListView from '@/views/HolidayListView.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
@@ -57,6 +58,12 @@ const router = createRouter({
       path: '/employees',
       name: 'employees',
       component: EmployeeListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/holidays',
+      name: 'holidays',
+      component: HolidayListView,
       meta: { requiresAuth: true },
     },
     {

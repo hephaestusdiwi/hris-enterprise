@@ -2,6 +2,7 @@
 import { ref, onMounted, reactive } from 'vue'
 import { Plus, Pencil, Trash2, X } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
+import OrgChart from '@/components/employee/OrgChart.vue'
 
 interface Ref {
   id: number
@@ -18,6 +19,8 @@ interface EmployeeRow {
   position: Ref | null
   employment_status: Ref | null
 }
+
+const view = ref<'directory' | 'orgchart'>('directory')
 
 const employees = ref<EmployeeRow[]>([])
 const companies = ref<Ref[]>([])
@@ -251,6 +254,7 @@ onMounted(() => {
         <p class="mt-1 text-sm text-slate-500">Kelola data karyawan.</p>
       </div>
       <button
+        v-if="view === 'directory'"
         @click="openCreateModal"
         :disabled="companies.length === 0"
         class="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
@@ -260,68 +264,92 @@ onMounted(() => {
       </button>
     </div>
 
-    <p v-if="companies.length === 0 && !loading" class="rounded-xl bg-amber-50 p-4 text-sm text-amber-700">
+    <!-- Tab switcher -->
+    <div class="flex gap-1">
+      <button
+        @click="view = 'directory'"
+        class="rounded-xl px-3 py-1.5 text-sm font-medium transition-colors"
+        :class="view === 'directory' ? 'bg-primary-soft text-primary-dark' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'"
+      >
+        Directory
+      </button>
+      <button
+        @click="view = 'orgchart'"
+        class="rounded-xl px-3 py-1.5 text-sm font-medium transition-colors"
+        :class="view === 'orgchart' ? 'bg-primary-soft text-primary-dark' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'"
+      >
+        Org chart
+      </button>
+    </div>
+
+    <p v-if="view === 'directory' && companies.length === 0 && !loading" class="rounded-xl bg-amber-50 p-4 text-sm text-amber-700">
       Belum ada company. Tambahkan company terlebih dahulu sebelum membuat employee.
     </p>
 
-    <div v-if="loading" class="text-sm text-slate-400">Memuat data...</div>
-    <div v-else-if="errorMessage" class="rounded-xl bg-red-50 p-4 text-sm text-red-600">
-      {{ errorMessage }}
-    </div>
+    <!-- Directory view -->
+    <template v-if="view === 'directory'">
+      <div v-if="loading" class="text-sm text-slate-400">Memuat data...</div>
+      <div v-else-if="errorMessage" class="rounded-xl bg-red-50 p-4 text-sm text-red-600">
+        {{ errorMessage }}
+      </div>
 
-    <div v-else class="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
-      <table class="w-full text-left text-sm">
-        <thead>
-          <tr class="border-b border-slate-100 bg-slate-50/60">
-            <th class="px-5 py-3 font-medium text-slate-500">No. Karyawan</th>
-            <th class="px-5 py-3 font-medium text-slate-500">Nama</th>
-            <th class="px-5 py-3 font-medium text-slate-500">Company</th>
-            <th class="px-5 py-3 font-medium text-slate-500">Department</th>
-            <th class="px-5 py-3 font-medium text-slate-500">Position</th>
-            <th class="px-5 py-3 font-medium text-slate-500">Status</th>
-            <th class="px-5 py-3 text-right font-medium text-slate-500">Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="row in employees"
-            :key="row.id"
-            class="border-b border-slate-50 last:border-0 hover:bg-slate-50/50"
-          >
-            <td class="px-5 py-3.5 text-slate-500">{{ row.employee_number }}</td>
-            <td class="px-5 py-3.5 font-medium text-slate-800">{{ fullName(row) }}</td>
-            <td class="px-5 py-3.5 text-slate-500">{{ row.company.name }}</td>
-            <td class="px-5 py-3.5 text-slate-500">{{ row.department?.name ?? '-' }}</td>
-            <td class="px-5 py-3.5 text-slate-500">{{ row.position?.name ?? '-' }}</td>
-            <td class="px-5 py-3.5">
-              <span
-                v-if="row.employment_status"
-                class="rounded-full bg-primary-soft px-2.5 py-1 text-xs font-medium text-primary-dark"
-              >
-                {{ row.employment_status.name }}
-              </span>
-              <span v-else class="text-slate-400">-</span>
-            </td>
-            <td class="px-5 py-3.5">
-              <div class="flex items-center justify-end gap-1">
-                <button
-                  @click="openEditModal(row)"
-                  class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+      <div v-else class="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-slate-100 bg-slate-50/60">
+              <th class="px-5 py-3 font-medium text-slate-500">No. Karyawan</th>
+              <th class="px-5 py-3 font-medium text-slate-500">Nama</th>
+              <th class="px-5 py-3 font-medium text-slate-500">Company</th>
+              <th class="px-5 py-3 font-medium text-slate-500">Department</th>
+              <th class="px-5 py-3 font-medium text-slate-500">Position</th>
+              <th class="px-5 py-3 font-medium text-slate-500">Status</th>
+              <th class="px-5 py-3 text-right font-medium text-slate-500">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="row in employees"
+              :key="row.id"
+              class="border-b border-slate-50 last:border-0 hover:bg-slate-50/50"
+            >
+              <td class="px-5 py-3.5 text-slate-500">{{ row.employee_number }}</td>
+              <td class="px-5 py-3.5 font-medium text-slate-800">{{ fullName(row) }}</td>
+              <td class="px-5 py-3.5 text-slate-500">{{ row.company.name }}</td>
+              <td class="px-5 py-3.5 text-slate-500">{{ row.department?.name ?? '-' }}</td>
+              <td class="px-5 py-3.5 text-slate-500">{{ row.position?.name ?? '-' }}</td>
+              <td class="px-5 py-3.5">
+                <span
+                  v-if="row.employment_status"
+                  class="rounded-full bg-primary-soft px-2.5 py-1 text-xs font-medium text-primary-dark"
                 >
-                  <Pencil class="h-4 w-4" :stroke-width="1.75" />
-                </button>
-                <button
-                  @click="handleDelete(row)"
-                  class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
-                >
-                  <Trash2 class="h-4 w-4" :stroke-width="1.75" />
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+                  {{ row.employment_status.name }}
+                </span>
+                <span v-else class="text-slate-400">-</span>
+              </td>
+              <td class="px-5 py-3.5">
+                <div class="flex items-center justify-end gap-1">
+                  <button
+                    @click="openEditModal(row)"
+                    class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                  >
+                    <Pencil class="h-4 w-4" :stroke-width="1.75" />
+                  </button>
+                  <button
+                    @click="handleDelete(row)"
+                    class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                  >
+                    <Trash2 class="h-4 w-4" :stroke-width="1.75" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
+    <!-- Org chart view -->
+    <OrgChart v-else />
 
     <Teleport to="body">
       <div

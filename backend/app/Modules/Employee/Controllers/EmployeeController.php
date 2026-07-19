@@ -90,4 +90,33 @@ class EmployeeController extends Controller
 
         return $prefix.str_pad((string) $next, 3, '0', STR_PAD_LEFT);
     }
+
+
+    // cuma buat foto
+    public function orgChart()
+    {
+        $employees = Employee::with(['position:id,name'])
+            ->whereNull('resign_date')
+            ->get(['id', 'first_name', 'last_name', 'manager_employee_id', 'position_id']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OK',
+            'data' => $this->buildOrgTree($employees),
+        ]);
+    }
+
+    private function buildOrgTree($employees, ?int $managerId = null): array
+    {
+        return $employees
+            ->where('manager_employee_id', $managerId)
+            ->map(fn ($employee) => [
+                'id' => $employee->id,
+                'name' => trim("{$employee->first_name} {$employee->last_name}"),
+                'position' => $employee->position?->name,
+                'children' => $this->buildOrgTree($employees, $employee->id),
+            ])
+            ->values()
+            ->all();
+    }
 }
