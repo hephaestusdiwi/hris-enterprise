@@ -34,7 +34,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x] 27. Shift
 - [x] 28. Working Schedule
 - [x] 29. Attendance Setting
-- [ ] 30. Approval Flow
+- [x] 30. Approval Flow
 
 ## PHASE 3 — Attendance
 - [ ] 31. Attendance Module
