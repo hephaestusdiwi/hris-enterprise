@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import {
   LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound,
-  CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown,
+  CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
@@ -48,6 +48,20 @@ const groups: MenuGroup[] = [
     icon: UserRound,
     items: [
       { name: 'employees', label: 'Employee', icon: UserRound, to: '/employees', permission: 'view employees' },
+    ],
+  },
+  {
+    name: 'workflow',
+    label: 'Workflow',
+    icon: GitBranch,
+    items: [
+      {
+        name: 'approval-flows',
+        label: 'Approval Flow',
+        icon: GitBranch,
+        to: '/approval-flows',
+        permission: 'view approval flows',
+      },
     ],
   },
   {

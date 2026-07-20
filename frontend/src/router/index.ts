@@ -11,6 +11,8 @@ import JobLevelListView from '@/views/JobLevelListView.vue'
 import ShiftListView from '@/views/ShiftListView.vue'
 import WorkingScheduleListView from '@/views/WorkingScheduleListView.vue'
 import AttendanceSettingListView from '@/views/AttendanceSettingListView.vue'
+import ApprovalFlowIndex from '@/views/ApprovalFlowIndex.vue'
+import ApprovalFlowDetail from '@/views/ApprovalFlowDetail.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
@@ -93,6 +95,19 @@ const router = createRouter({
       name: 'attendance-settings',
       component: AttendanceSettingListView,
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/approval-flows',
+      name: 'approval-flows.index',
+      component: ApprovalFlowIndex,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/approval-flows/:id',
+      name: 'approval-flows.show',
+      component: ApprovalFlowDetail,
+      meta: { requiresAuth: true },
+      props: true,
     },
     {
       path: '/login',
