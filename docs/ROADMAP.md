@@ -32,7 +32,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x] 25. Employee
 - [x] 26. Holiday
 - [x] 27. Shift
-- [ ] 28. Working Schedule
+- [x] 28. Working Schedule
 - [ ] 29. Attendance Setting
 - [ ] 30. Approval Flow
 
