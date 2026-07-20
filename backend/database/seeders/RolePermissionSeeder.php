@@ -66,6 +66,10 @@ class RolePermissionSeeder extends Seeder
             'create approval flows',
             'edit approval flows',
             'delete approval flows',
+            'view attendances',
+            'create attendances',
+            'edit attendances',
+            'delete attendances',
         ];
 
         foreach ($permissions as $permission) {

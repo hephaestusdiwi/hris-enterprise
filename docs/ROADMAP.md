@@ -37,7 +37,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x] 30. Approval Flow
 
 ## PHASE 3 — Attendance
-- [ ] 31. Attendance Module
+- [x] 31. Attendance Module
 - [ ] 32. Attendance API
 - [ ] 33. Attendance Kiosk
 - [ ] 34. GPS Attendance

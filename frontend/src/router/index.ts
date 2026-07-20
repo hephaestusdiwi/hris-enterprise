@@ -13,6 +13,7 @@ import WorkingScheduleListView from '@/views/WorkingScheduleListView.vue'
 import AttendanceSettingListView from '@/views/AttendanceSettingListView.vue'
 import ApprovalFlowIndex from '@/views/ApprovalFlowIndex.vue'
 import ApprovalFlowDetail from '@/views/ApprovalFlowDetail.vue'
+import AttendanceIndex from '@/views/AttendanceIndex.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
@@ -108,6 +109,12 @@ const router = createRouter({
       component: ApprovalFlowDetail,
       meta: { requiresAuth: true },
       props: true,
+    },
+    {
+      path: '/attendances',
+      name: 'attendances.index',
+      component: AttendanceIndex,
+      meta: { requiresAuth: true },
     },
     {
       path: '/login',

@@ -66,12 +66,13 @@ const groups: MenuGroup[] = [
   },
   {
     name: 'time',
-    label: 'Time',
+    label: 'Attendance',
     icon: Clock,
     items: [
       { name: 'holidays', label: 'Holiday', icon: CalendarDays, to: '/holidays', permission: 'view holidays' },
       { name: 'shifts', label: 'Shift', icon: Clock, to: '/shifts', permission: 'view shifts' },
       { name: 'working-schedules', label: 'Working Schedule', icon: CalendarClock, to: '/working-schedules', permission: 'view working schedules' },
+      { name: 'attendances', label: 'Attendances', icon: Fingerprint, to: '/attendances', permission: 'view attendances' },
       { name: 'attendance-settings', label: 'Attendance Setting', icon: Fingerprint, to: '/attendance-settings', permission: 'view attendance settings' },
     ],
   },
