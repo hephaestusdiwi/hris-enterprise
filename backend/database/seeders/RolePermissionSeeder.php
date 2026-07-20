@@ -50,6 +50,10 @@ class RolePermissionSeeder extends Seeder
             'create job levels',
             'edit job levels',
             'delete job levels',
+            'view shifts',
+            'create shifts',
+            'edit shifts',
+            'delete shifts',
         ];
 
         foreach ($permissions as $permission) {

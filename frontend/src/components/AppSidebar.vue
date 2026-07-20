@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterLink, useRoute } from 'vue-router'
-import { LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound, CalendarDays, TrendingUp } from 'lucide-vue-next'
+import { LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound, CalendarDays, TrendingUp, Clock } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -16,6 +16,7 @@ const menuItems = [
   { name: 'job-levels', label: 'Job Level', icon: TrendingUp, to: '/job-levels', permission: 'view job levels' },
   { name: 'employees', label: 'Employee', icon: UserRound, to: '/employees', permission: 'view employees' },
   { name: 'holidays', label: 'Holiday', icon: CalendarDays, to: '/holidays', permission: 'view holidays' },
+  { name: 'shifts', label: 'Shift', icon: Clock, to: '/shifts', permission: 'view shifts' },
 ]
 
 const upcomingItems: { label: string; icon: typeof LayoutDashboard }[] = []
