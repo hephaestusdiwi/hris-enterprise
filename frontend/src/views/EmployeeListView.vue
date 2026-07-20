@@ -18,6 +18,7 @@ interface EmployeeRow {
   department: Ref | null
   position: Ref | null
   job_level: Ref | null
+  working_schedule: Ref | null
   employment_status: Ref | null
 }
 
@@ -29,6 +30,7 @@ const branches = ref<Ref[]>([])
 const departments = ref<Ref[]>([])
 const positions = ref<Ref[]>([])
 const jobLevels = ref<Ref[]>([])
+const workingSchedules = ref<Ref[]>([])
 const employmentStatuses = ref<Ref[]>([])
 const managerOptions = ref<{ id: number; employee_number: string; first_name: string; last_name: string | null }[]>([])
 
@@ -48,6 +50,7 @@ const form = reactive({
   department_id: null as number | null,
   position_id: null as number | null,
   job_level_id: null as number | null,
+  working_schedule_id: null as number | null,
   employment_status_id: null as number | null,
   manager_employee_id: null as number | null,
   join_date: '',
@@ -88,21 +91,22 @@ async function loadEmployees() {
 }
 
 async function loadReferenceData() {
-  const [companyRes, branchRes, departmentRes, positionRes, jobLevelRes, statusRes, employeeRes] = await Promise.all([
+  const [companyRes, branchRes, departmentRes, positionRes, jobLevelRes, workingScheduleRes, statusRes, employeeRes] = await Promise.all([
     apiClient.get('/api/companies'),
     apiClient.get('/api/branches'),
     apiClient.get('/api/departments'),
     apiClient.get('/api/positions'),
     apiClient.get('/api/job-levels'),
+    apiClient.get('/api/working-schedules'),
     apiClient.get('/api/employment-statuses'),
     apiClient.get('/api/employees'),
   ])
-
   companies.value = companyRes.data.data.data
   branches.value = branchRes.data.data.data
   departments.value = departmentRes.data.data.data
   positions.value = positionRes.data.data.data
   jobLevels.value = jobLevelRes.data.data.data
+  workingSchedules.value = workingScheduleRes.data.data.data
   employmentStatuses.value = statusRes.data.data.data
   managerOptions.value = employeeRes.data.data.data
 }
@@ -116,6 +120,7 @@ async function resetForm() {
   form.department_id = null
   form.position_id = null
   form.job_level_id = null
+  form.working_schedule_id = null
   form.employment_status_id = null
   form.manager_employee_id = null
   form.join_date = new Date().toISOString().slice(0, 10)
@@ -159,6 +164,7 @@ async function openEditModal(row: EmployeeRow) {
   form.department_id = e.department?.id ?? null
   form.position_id = e.position?.id ?? null
   form.job_level_id = e.job_level?.id ?? null
+  form.working_schedule_id = e.working_schedule?.id ?? null
   form.employment_status_id = e.employment_status?.id ?? null
   form.manager_employee_id = e.manager?.id ?? null
   form.join_date = e.join_date?.slice(0, 10) ?? ''
@@ -198,6 +204,7 @@ async function handleSubmit() {
     department_id: form.department_id,
     position_id: form.position_id,
     job_level_id: form.job_level_id,
+    working_schedule_id: form.working_schedule_id,
     employment_status_id: form.employment_status_id,
     manager_employee_id: form.manager_employee_id,
     join_date: form.join_date,
@@ -421,6 +428,13 @@ onMounted(() => {
                   <select v-model="form.job_level_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
                     <option :value="null">-</option>
                     <option v-for="jl in jobLevels" :key="jl.id" :value="jl.id">{{ jl.name }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-slate-700">Working Schedule</label>
+                  <select v-model="form.working_schedule_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                    <option :value="null">-</option>
+                    <option v-for="ws in workingSchedules" :key="ws.id" :value="ws.id">{{ ws.name }}</option>
                   </select>
                 </div>
                 <div>

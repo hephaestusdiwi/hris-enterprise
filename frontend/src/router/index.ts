@@ -9,6 +9,7 @@ import EmployeeListView from '@/views/EmployeeListView.vue'
 import HolidayListView from '@/views/HolidayListView.vue'
 import JobLevelListView from '@/views/JobLevelListView.vue'
 import ShiftListView from '@/views/ShiftListView.vue'
+import WorkingScheduleListView from '@/views/WorkingScheduleListView.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
@@ -79,6 +80,12 @@ const router = createRouter({
       name: 'shifts',
       component:ShiftListView,
       meta: { requiresAuth:true },
+    },
+    {
+      path: '/working-schedules',
+      name: 'working-schedules',
+      component: WorkingScheduleListView,
+      meta: { requiresAuth: true },
     },
     {
       path: '/login',

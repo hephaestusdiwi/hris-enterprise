@@ -21,6 +21,7 @@ class StoreEmployeeRequest extends FormRequest
             'department_id' => ['nullable', 'exists:departments,id'],
             'position_id' => ['nullable', 'exists:positions,id'],
             'job_level_id' => ['nullable', 'exists:job_levels,id'],
+            'working_schedule_id' => ['nullable', 'exists:working_schedules,id'],
             'employment_status_id' => ['nullable', 'exists:employment_statuses,id'],
             'manager_employee_id' => ['nullable', 'exists:employees,id'],
             'user_id' => ['nullable', 'exists:users,id'],

@@ -29,4 +29,5 @@ Route::middleware('auth:sanctum')->group(function () {
     require __DIR__.'/../app/Modules/Holiday/Routes/api.php';
     require __DIR__.'/../app/Modules/JobLevel/Routes/api.php';
     require __DIR__.'/../app/Modules/Shift/Routes/api.php';
+    require __DIR__.'/../app/Modules/WorkingSchedule/Routes/api.php';
 });

@@ -54,6 +54,10 @@ class RolePermissionSeeder extends Seeder
             'create shifts',
             'edit shifts',
             'delete shifts',
+            'view working schedules',
+            'create working schedules',
+            'edit working schedules',
+            'delete working schedules',
         ];
 
         foreach ($permissions as $permission) {

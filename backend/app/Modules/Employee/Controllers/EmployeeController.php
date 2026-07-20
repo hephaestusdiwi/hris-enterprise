@@ -9,7 +9,7 @@ use App\Modules\Employee\Requests\UpdateEmployeeRequest;
 
 class EmployeeController extends Controller
 {
-    protected array $relations = ['company', 'branch', 'department', 'position', 'jobLevel', 'employmentStatus', 'manager', 'user'];
+    protected array $relations = ['company', 'branch', 'department', 'position', 'jobLevel', 'workingSchedule', 'employmentStatus', 'manager', 'user'];
 
     public function index()
     {

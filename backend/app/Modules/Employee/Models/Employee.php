@@ -9,6 +9,7 @@ use App\Modules\Department\Models\Department;
 use App\Modules\EmploymentStatus\Models\EmploymentStatus;
 use App\Modules\JobLevel\Models\JobLevel;
 use App\Modules\Position\Models\Position;
+use App\Modules\WorkingSchedule\Models\WorkingSchedule;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,6 +27,7 @@ class Employee extends Model
         'department_id',
         'position_id',
         'job_level_id',
+        'working_schedule_id',
         'employment_status_id',
         'manager_employee_id',
         'user_id',
@@ -81,6 +83,11 @@ class Employee extends Model
     public function jobLevel(): BelongsTo
     {
         return $this->belongsTo(JobLevel::class);
+    }
+
+    public function workingSchedule(): BelongsTo
+    {
+        return $this->belongsTo(WorkingSchedule::class);
     }
 
     public function employmentStatus(): BelongsTo
