@@ -58,6 +58,10 @@ class RolePermissionSeeder extends Seeder
             'create working schedules',
             'edit working schedules',
             'delete working schedules',
+            'view attendance settings',
+            'create attendance settings',
+            'edit attendance settings',
+            'delete attendance settings',
         ];
 
         foreach ($permissions as $permission) {

@@ -33,7 +33,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x] 26. Holiday
 - [x] 27. Shift
 - [x] 28. Working Schedule
-- [ ] 29. Attendance Setting
+- [x] 29. Attendance Setting
 - [ ] 30. Approval Flow
 
 ## PHASE 3 — Attendance
