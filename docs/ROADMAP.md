@@ -40,7 +40,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x] 31. Attendance Module
 - [x] 32. Attendance API
 - [x] 33. Attendance Kiosk
-- [ ] 34. GPS Attendance
+- [x] 34. GPS Attendance
 - [ ] 35. Face Recognition Integration
 - [ ] 36. Device Attendance
 - [ ] 37. Late Calculation
