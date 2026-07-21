@@ -7,6 +7,9 @@ import {
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
+const props = defineProps<{ open: boolean }>()
+const emit = defineEmits<{ 'update:open': [value: boolean] }>()
+
 const route = useRoute()
 const authStore = useAuthStore()
 
@@ -55,13 +58,7 @@ const groups: MenuGroup[] = [
     label: 'Workflow',
     icon: GitBranch,
     items: [
-      {
-        name: 'approval-flows',
-        label: 'Approval Flow',
-        icon: GitBranch,
-        to: '/approval-flows',
-        permission: 'view approval flows',
-      },
+      { name: 'approval-flows', label: 'Approval Flow', icon: GitBranch, to: '/approval-flows', permission: 'view approval flows' },
     ],
   },
   {
@@ -107,16 +104,38 @@ const openGroups = ref<Record<string, boolean>>(
 function toggleGroup(name: string) {
   openGroups.value[name] = !openGroups.value[name]
 }
+
+function handleLinkClick() {
+  // di mobile ini nutup drawer pas pindah halaman; di desktop gak ngaruh apa-apa
+  emit('update:open', false)
+}
+
+function expandGroup(name: string) {
+  openGroups.value[name] = true
+}
+
+defineExpose({ expandGroup })
 </script>
 
 <template>
-  <aside class="flex h-full w-64 flex-col overflow-y-auto bg-white">
+  <!-- Overlay: cuma render pas drawer mobile kebuka -->
+  <div
+    v-if="open"
+    @click="emit('update:open', false)"
+    class="fixed inset-0 z-40 bg-slate-900/30 lg:hidden"
+  ></div>
+
+  <aside
+    class="fixed inset-y-0 left-0 z-50 w-72 transform overflow-y-auto bg-white transition-transform duration-200 ease-out lg:static lg:z-auto lg:flex lg:h-full lg:w-64 lg:flex-col lg:translate-x-0 lg:transition-none"
+    :class="open ? 'translate-x-0' : '-translate-x-full'"
+  >
     <nav class="flex-1 space-y-1 px-3 py-4">
       <RouterLink
         v-for="item in standaloneItems"
         v-show="canAccess(item.permission)"
         :key="item.name"
         :to="item.to"
+        @click="handleLinkClick"
         class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-150"
         :class="
           route.path === item.to
@@ -156,6 +175,7 @@ function toggleGroup(name: string) {
                 v-show="canAccess(item.permission)"
                 :key="item.name"
                 :to="item.to"
+                @click="handleLinkClick"
                 class="flex items-center border-l py-2 pl-4 pr-3 text-sm transition-colors duration-150"
                 :class="
                   route.path === item.to

@@ -15,8 +15,17 @@ class AttendanceSelfServiceController extends Controller
 
     public function clockIn(Request $request)
     {
+        $validated = $request->validate([
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+        ]);
+
         try {
-            $attendance = $this->attendanceService->clockIn($request->user());
+            $attendance = $this->attendanceService->clockIn(
+                $request->user(),
+                $validated['latitude'] ?? null,
+                $validated['longitude'] ?? null,
+            );
 
             return response()->json([
                 'success' => true,
@@ -34,8 +43,17 @@ class AttendanceSelfServiceController extends Controller
 
     public function clockOut(Request $request)
     {
+        $validated = $request->validate([
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+        ]);
+
         try {
-            $attendance = $this->attendanceService->clockOut($request->user());
+            $attendance = $this->attendanceService->clockOut(
+                $request->user(),
+                $validated['latitude'] ?? null,
+                $validated['longitude'] ?? null,
+            );
 
             return response()->json([
                 'success' => true,

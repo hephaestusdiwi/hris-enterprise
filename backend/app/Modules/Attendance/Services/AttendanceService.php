@@ -15,14 +15,20 @@ use Carbon\Carbon;
 
 class AttendanceService
 {
-    public function clockIn(User $user): Attendance
+    public function clockIn(User $user, ?float $latitude = null, ?float $longitude = null): Attendance
     {
-        return $this->doClockIn($this->resolveEmployeeForUser($user));
+        $employee = $this->resolveEmployeeForUser($user);
+        $distance = $this->validateLocation($employee, $latitude, $longitude);
+
+        return $this->doClockIn($employee, $latitude, $longitude, $distance);
     }
 
-    public function clockOut(User $user): Attendance
+    public function clockOut(User $user, ?float $latitude = null, ?float $longitude = null): Attendance
     {
-        return $this->doClockOut($this->resolveEmployeeForUser($user));
+        $employee = $this->resolveEmployeeForUser($user);
+        $distance = $this->validateLocation($employee, $latitude, $longitude);
+
+        return $this->doClockOut($employee, $latitude, $longitude, $distance);
     }
 
     public function today(User $user): array
@@ -32,12 +38,12 @@ class AttendanceService
 
     public function clockInForDevice(AttendanceDevice $device, string $employeeCode): Attendance
     {
-        return $this->doClockIn($this->resolveEmployeeForDevice($device, $employeeCode));
+        return $this->doClockIn($this->resolveEmployeeForDevice($device, $employeeCode), null, null, null);
     }
 
     public function clockOutForDevice(AttendanceDevice $device, string $employeeCode): Attendance
     {
-        return $this->doClockOut($this->resolveEmployeeForDevice($device, $employeeCode));
+        return $this->doClockOut($this->resolveEmployeeForDevice($device, $employeeCode), null, null, null);
     }
 
     public function todayForDevice(AttendanceDevice $device, string $employeeCode): array
@@ -45,11 +51,10 @@ class AttendanceService
         return $this->buildTodayPayload($this->resolveEmployeeForDevice($device, $employeeCode));
     }
 
-    private function doClockIn(Employee $employee): Attendance
+    private function doClockIn(Employee $employee, ?float $latitude, ?float $longitude, ?int $distanceMeters): Attendance
     {
         $attendance = $this->getTodayAttendance($employee);
         $shift = $this->resolveShiftForToday($employee);
-        $this->resolveAttendanceSetting($employee); // di-load agar siap dipakai validasi GPS/foto di step berikutnya
 
         if ($attendance && $attendance->clock_in) {
             throw new AttendanceValidationException('Sudah melakukan clock-in hari ini.');
@@ -64,13 +69,16 @@ class AttendanceService
 
         $attendance->shift_id = $shift?->id;
         $attendance->clock_in = Carbon::now();
+        $attendance->clock_in_latitude = $latitude;
+        $attendance->clock_in_longitude = $longitude;
+        $attendance->clock_in_distance_meters = $distanceMeters;
         $attendance->status = AttendanceStatus::Present;
         $attendance->save();
 
         return $attendance->load(['employee', 'shift']);
     }
 
-    private function doClockOut(Employee $employee): Attendance
+    private function doClockOut(Employee $employee, ?float $latitude, ?float $longitude, ?int $distanceMeters): Attendance
     {
         $attendance = $this->getTodayAttendance($employee);
 
@@ -83,6 +91,9 @@ class AttendanceService
         }
 
         $attendance->clock_out = Carbon::now();
+        $attendance->clock_out_latitude = $latitude;
+        $attendance->clock_out_longitude = $longitude;
+        $attendance->clock_out_distance_meters = $distanceMeters;
         $attendance->save();
 
         return $attendance->load(['employee', 'shift']);
@@ -103,7 +114,9 @@ class AttendanceService
             'attendance_date' => Carbon::today()->toDateString(),
             'status' => $attendance?->status?->value,
             'clock_in' => $attendance?->clock_in?->toDateTimeString(),
+            'clock_in_distance_meters' => $attendance?->clock_in_distance_meters,
             'clock_out' => $attendance?->clock_out?->toDateTimeString(),
+            'clock_out_distance_meters' => $attendance?->clock_out_distance_meters,
             'can_clock_in' => ! $attendance || ! $attendance->clock_in,
             'can_clock_out' => (bool) ($attendance && $attendance->clock_in && ! $attendance->clock_out),
             'shift' => $shift ? [
@@ -113,6 +126,56 @@ class AttendanceService
                 'end_time' => $shift->end_time,
             ] : null,
         ];
+    }
+
+    private function validateLocation(Employee $employee, ?float $latitude, ?float $longitude): ?int
+    {
+        $setting = $this->resolveAttendanceSetting($employee);
+
+        if (! $setting || ! $setting->require_location) {
+            return null;
+        }
+
+        if ($latitude === null || $longitude === null) {
+            throw new AttendanceValidationException('Lokasi (GPS) wajib diisi untuk melakukan absen.');
+        }
+
+        if ($setting->office_latitude === null || $setting->office_longitude === null) {
+            throw new AttendanceValidationException('Lokasi kantor belum diatur di Attendance Setting.');
+        }
+
+        $distance = $this->calculateDistanceMeters(
+            (float) $setting->office_latitude,
+            (float) $setting->office_longitude,
+            $latitude,
+            $longitude,
+        );
+
+        if ($distance > $setting->location_radius_meters) {
+            throw new AttendanceValidationException(sprintf(
+                'Lokasi Anda %d meter dari kantor, melebihi radius yang diizinkan (%d meter).',
+                $distance,
+                $setting->location_radius_meters,
+            ));
+        }
+
+        return $distance;
+    }
+
+    private function calculateDistanceMeters(float $lat1, float $lon1, float $lat2, float $lon2): int
+    {
+        $earthRadius = 6371000;
+
+        $lat1Rad = deg2rad($lat1);
+        $lat2Rad = deg2rad($lat2);
+        $deltaLat = deg2rad($lat2 - $lat1);
+        $deltaLon = deg2rad($lon2 - $lon1);
+
+        $a = sin($deltaLat / 2) ** 2
+            + cos($lat1Rad) * cos($lat2Rad) * sin($deltaLon / 2) ** 2;
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        return (int) round($earthRadius * $c);
     }
 
     private function resolveEmployeeForUser(User $user): Employee

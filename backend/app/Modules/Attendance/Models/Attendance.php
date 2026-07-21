@@ -19,7 +19,13 @@ class Attendance extends Model
         'attendance_date',
         'shift_id',
         'clock_in',
+        'clock_in_latitude',
+        'clock_in_longitude',
+        'clock_in_distance_meters',
         'clock_out',
+        'clock_out_latitude',
+        'clock_out_longitude',
+        'clock_out_distance_meters',
         'status',
         'notes',
     ];
@@ -29,7 +35,11 @@ class Attendance extends Model
         return [
             'attendance_date' => 'date',
             'clock_in' => 'datetime',
+            'clock_in_latitude' => 'decimal:7',
+            'clock_in_longitude' => 'decimal:7',
             'clock_out' => 'datetime',
+            'clock_out_latitude' => 'decimal:7',
+            'clock_out_longitude' => 'decimal:7',
             'status' => AttendanceStatus::class,
         ];
     }
