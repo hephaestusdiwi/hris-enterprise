@@ -73,6 +73,7 @@ const groups: MenuGroup[] = [
       { name: 'shifts', label: 'Shift', icon: Clock, to: '/shifts', permission: 'view shifts' },
       { name: 'working-schedules', label: 'Working Schedule', icon: CalendarClock, to: '/working-schedules', permission: 'view working schedules' },
       { name: 'attendances', label: 'Attendances', icon: Fingerprint, to: '/attendances', permission: 'view attendances' },
+      { name: 'attendance-devices', label: 'Attendance Device', icon: Fingerprint, to: '/attendance-devices', permission: 'view attendance devices' },
       { name: 'attendance-settings', label: 'Attendance Setting', icon: Fingerprint, to: '/attendance-settings', permission: 'view attendance settings' },
     ],
   },

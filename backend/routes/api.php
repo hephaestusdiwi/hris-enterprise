@@ -34,3 +34,5 @@ Route::middleware('auth:sanctum')->group(function () {
     require __DIR__.'/../app/Modules/ApprovalFlow/Routes/api.php';
     require __DIR__.'/../app/Modules/Attendance/Routes/api.php';
 });
+
+require __DIR__.'/../app/Modules/Attendance/Routes/device.php';

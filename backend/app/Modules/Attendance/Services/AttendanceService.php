@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Attendance\Enums\AttendanceStatus;
 use App\Modules\Attendance\Exceptions\AttendanceValidationException;
 use App\Modules\Attendance\Models\Attendance;
+use App\Modules\Attendance\Models\AttendanceDevice;
 use App\Modules\AttendanceSetting\Models\AttendanceSetting;
 use App\Modules\Employee\Models\Employee;
 use App\Modules\Shift\Models\Shift;
@@ -16,7 +17,36 @@ class AttendanceService
 {
     public function clockIn(User $user): Attendance
     {
-        $employee = $this->resolveEmployeeForUser($user);
+        return $this->doClockIn($this->resolveEmployeeForUser($user));
+    }
+
+    public function clockOut(User $user): Attendance
+    {
+        return $this->doClockOut($this->resolveEmployeeForUser($user));
+    }
+
+    public function today(User $user): array
+    {
+        return $this->buildTodayPayload($this->resolveEmployeeForUser($user));
+    }
+
+    public function clockInForDevice(AttendanceDevice $device, string $employeeCode): Attendance
+    {
+        return $this->doClockIn($this->resolveEmployeeForDevice($device, $employeeCode));
+    }
+
+    public function clockOutForDevice(AttendanceDevice $device, string $employeeCode): Attendance
+    {
+        return $this->doClockOut($this->resolveEmployeeForDevice($device, $employeeCode));
+    }
+
+    public function todayForDevice(AttendanceDevice $device, string $employeeCode): array
+    {
+        return $this->buildTodayPayload($this->resolveEmployeeForDevice($device, $employeeCode));
+    }
+
+    private function doClockIn(Employee $employee): Attendance
+    {
         $attendance = $this->getTodayAttendance($employee);
         $shift = $this->resolveShiftForToday($employee);
         $this->resolveAttendanceSetting($employee); // di-load agar siap dipakai validasi GPS/foto di step berikutnya
@@ -40,9 +70,8 @@ class AttendanceService
         return $attendance->load(['employee', 'shift']);
     }
 
-    public function clockOut(User $user): Attendance
+    private function doClockOut(Employee $employee): Attendance
     {
-        $employee = $this->resolveEmployeeForUser($user);
         $attendance = $this->getTodayAttendance($employee);
 
         if (! $attendance || ! $attendance->clock_in) {
@@ -59,15 +88,18 @@ class AttendanceService
         return $attendance->load(['employee', 'shift']);
     }
 
-    public function today(User $user): array
+    private function buildTodayPayload(Employee $employee): array
     {
-        $employee = $this->resolveEmployeeForUser($user);
         $attendance = $this->getTodayAttendance($employee);
         $shift = $attendance?->shift_id
             ? $attendance->shift
             : $this->resolveShiftForToday($employee);
 
         return [
+            'employee' => [
+                'id' => $employee->id,
+                'name' => trim("{$employee->first_name} {$employee->last_name}"),
+            ],
             'attendance_date' => Carbon::today()->toDateString(),
             'status' => $attendance?->status?->value,
             'clock_in' => $attendance?->clock_in?->toDateTimeString(),
@@ -89,6 +121,20 @@ class AttendanceService
 
         if (! $employee) {
             throw new AttendanceValidationException('User ini tidak terhubung dengan data employee.');
+        }
+
+        return $employee;
+    }
+
+    private function resolveEmployeeForDevice(AttendanceDevice $device, string $employeeCode): Employee
+    {
+        $employee = Employee::where('employee_number', $employeeCode)
+            ->where('company_id', $device->company_id)
+            ->when($device->branch_id, fn ($query, $branchId) => $query->where('branch_id', $branchId))
+            ->first();
+
+        if (! $employee) {
+            throw new AttendanceValidationException('Employee tidak ditemukan atau tidak terdaftar di device ini.');
         }
 
         return $employee;

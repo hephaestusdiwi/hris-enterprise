@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { Users, Briefcase, CalendarClock, TrendingUp } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
+import AttendanceSelfServiceCard from '@/components/AttendanceSelfServiceCard.vue'
 
 interface Stat {
   label: string
@@ -72,6 +73,8 @@ onMounted(loadDashboard)
         </span>
       </div>
     </div>
+
+    <AttendanceSelfServiceCard />
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div

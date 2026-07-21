@@ -70,6 +70,10 @@ class RolePermissionSeeder extends Seeder
             'create attendances',
             'edit attendances',
             'delete attendances',
+            'view attendance devices',
+            'create attendance devices',
+            'edit attendance devices',
+            'delete attendance devices',
         ];
 
         foreach ($permissions as $permission) {
