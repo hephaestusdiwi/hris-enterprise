@@ -38,7 +38,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 
 ## PHASE 3 — Attendance
 - [x] 31. Attendance Module
-- [ ] 32. Attendance API
+- [x] 32. Attendance API
 - [ ] 33. Attendance Kiosk
 - [ ] 34. GPS Attendance
 - [ ] 35. Face Recognition Integration
