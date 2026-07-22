@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue'
-import { Plus, Pencil, Trash2, X } from 'lucide-vue-next'
+import { ref, onMounted, onUnmounted, reactive, computed } from 'vue'
+import { Plus, Pencil, Trash2, X, ScanFace, Search, ChevronDown, Building2, UserRound, Phone, IdCard } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
 import OrgChart from '@/components/employee/OrgChart.vue'
+import FaceEnrollmentModal from '@/components/FaceEnrollmentModal.vue'
 
 interface Ref {
   id: number
@@ -42,6 +43,9 @@ const isEditing = ref(false)
 const saving = ref(false)
 const formError = ref('')
 
+const showFaceEnrollment = ref(false)
+const faceEnrollmentTarget = ref<EmployeeRow | null>(null)
+
 const form = reactive({
   id: 0,
   employee_number: '',
@@ -76,6 +80,67 @@ const form = reactive({
 function fullName(row: { first_name: string; last_name: string | null }) {
   return [row.first_name, row.last_name].filter(Boolean).join(' ')
 }
+
+function initials(row: { first_name: string; last_name: string | null }) {
+  return `${row.first_name?.[0] ?? ''}${row.last_name?.[0] ?? ''}`.toUpperCase()
+}
+
+// --- Search & filter (client-side, dari data yang lagi ke-load) ---
+const searchQuery = ref('')
+const showFilters = ref(false)
+const filters = reactive({
+  company_id: null as number | null,
+  department_id: null as number | null,
+  employment_status_id: null as number | null,
+})
+
+const filteredEmployees = computed(() => {
+  return employees.value.filter((e) => {
+    if (filters.company_id && e.company?.id !== filters.company_id) return false
+    if (filters.department_id && e.department?.id !== filters.department_id) return false
+    if (filters.employment_status_id && e.employment_status?.id !== filters.employment_status_id) return false
+    if (searchQuery.value.trim()) {
+      const q = searchQuery.value.toLowerCase()
+      const haystack = `${fullName(e)} ${e.employee_number}`.toLowerCase()
+      if (!haystack.includes(q)) return false
+    }
+    return true
+  })
+})
+
+const statusBreakdown = computed(() => {
+  const counts = new Map<string, number>()
+  for (const e of employees.value) {
+    const label = e.employment_status?.name ?? 'Belum Diatur'
+    counts.set(label, (counts.get(label) ?? 0) + 1)
+  }
+  return Array.from(counts.entries()).map(([label, value]) => ({ label, value }))
+})
+
+// --- Actions dropdown (teleport, biar gak ke-clip sama overflow tabel) ---
+const openActionsRow = ref<EmployeeRow | null>(null)
+const actionsMenuStyle = ref({ top: '0px', left: '0px' })
+
+function toggleActions(row: EmployeeRow, event: Event) {
+  event.stopPropagation()
+  if (openActionsRow.value?.id === row.id) {
+    openActionsRow.value = null
+    return
+  }
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  actionsMenuStyle.value = {
+    top: `${rect.bottom + window.scrollY + 4}px`,
+    left: `${rect.right + window.scrollX - 176}px`,
+  }
+  openActionsRow.value = row
+}
+
+function closeActions() {
+  openActionsRow.value = null
+}
+
+onMounted(() => window.addEventListener('click', closeActions))
+onUnmounted(() => window.removeEventListener('click', closeActions))
 
 async function loadEmployees() {
   loading.value = true
@@ -255,6 +320,16 @@ async function handleDelete(row: EmployeeRow) {
   }
 }
 
+function openFaceEnrollment(row: EmployeeRow) {
+  faceEnrollmentTarget.value = row
+  showFaceEnrollment.value = true
+}
+
+function closeFaceEnrollment() {
+  showFaceEnrollment.value = false
+  faceEnrollmentTarget.value = null
+}
+
 onMounted(() => {
   loadEmployees()
   loadReferenceData()
@@ -262,7 +337,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-5">
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Employee</h1>
@@ -303,70 +378,175 @@ onMounted(() => {
 
     <!-- Directory view -->
     <template v-if="view === 'directory'">
+      <!-- Filter bar -->
+      <div class="rounded-2xl border border-slate-100 bg-white p-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <button
+            type="button"
+            @click="showFilters = !showFilters"
+            class="text-sm font-medium text-primary-dark hover:underline"
+          >
+            {{ showFilters ? 'Sembunyikan filter' : 'Semua filter' }}
+          </button>
+
+          <div class="relative">
+            <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" :stroke-width="1.75" />
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Cari nama / No. Karyawan"
+              class="w-64 rounded-xl border border-slate-200 py-2 pl-9 pr-3 text-sm focus:border-primary focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <Transition
+          enter-active-class="transition-all duration-150 ease-out"
+          enter-from-class="opacity-0 -translate-y-1"
+          enter-to-class="opacity-100 translate-y-0"
+        >
+          <div v-if="showFilters" class="mt-4 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4">
+            <div>
+              <label class="mb-1 block text-xs font-medium text-slate-500">Company</label>
+              <select v-model="filters.company_id" class="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                <option :value="null">Semua Company</option>
+                <option v-for="c in companies" :key="c.id" :value="c.id">{{ c.name }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-medium text-slate-500">Department</label>
+              <select v-model="filters.department_id" class="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                <option :value="null">Semua Department</option>
+                <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-medium text-slate-500">Employment Status</label>
+              <select v-model="filters.employment_status_id" class="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                <option :value="null">Semua Status</option>
+                <option v-for="s in employmentStatuses" :key="s.id" :value="s.id">{{ s.name }}</option>
+              </select>
+            </div>
+          </div>
+        </Transition>
+      </div>
+
+      <!-- Summary stat strip -->
+      <div v-if="!loading && !errorMessage" class="flex flex-wrap divide-x divide-slate-100 overflow-hidden rounded-2xl border border-slate-100 bg-white">
+        <div class="min-w-[110px] flex-1 px-5 py-4">
+          <p class="text-xl font-semibold tracking-tight text-slate-900">{{ employees.length }}</p>
+          <p class="mt-0.5 text-xs text-slate-500">Total Employee</p>
+        </div>
+        <div v-for="stat in statusBreakdown" :key="stat.label" class="min-w-[110px] flex-1 px-5 py-4">
+          <p class="text-xl font-semibold tracking-tight text-slate-900">{{ stat.value }}</p>
+          <p class="mt-0.5 truncate text-xs text-slate-500">{{ stat.label }}</p>
+        </div>
+      </div>
+
       <div v-if="loading" class="text-sm text-slate-400">Memuat data...</div>
       <div v-else-if="errorMessage" class="rounded-xl bg-red-50 p-4 text-sm text-red-600">
         {{ errorMessage }}
       </div>
+      <div v-else-if="filteredEmployees.length === 0" class="rounded-xl bg-slate-50 p-4 text-sm text-slate-400">
+        Gak ada employee yang cocok dengan filter ini.
+      </div>
 
       <div v-else class="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
-        <table class="w-full text-left text-sm">
-          <thead>
-            <tr class="border-b border-slate-100 bg-slate-50/60">
-              <th class="px-5 py-3 font-medium text-slate-500">No. Karyawan</th>
-              <th class="px-5 py-3 font-medium text-slate-500">Nama</th>
-              <th class="px-5 py-3 font-medium text-slate-500">Company</th>
-              <th class="px-5 py-3 font-medium text-slate-500">Department</th>
-              <th class="px-5 py-3 font-medium text-slate-500">Position</th>
-              <th class="px-5 py-3 font-medium text-slate-500">Job Level</th>
-              <th class="px-5 py-3 font-medium text-slate-500">Status</th>
-              <th class="px-5 py-3 text-right font-medium text-slate-500">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="row in employees"
-              :key="row.id"
-              class="border-b border-slate-50 last:border-0 hover:bg-slate-50/50"
-            >
-              <td class="px-5 py-3.5 text-slate-500">{{ row.employee_number }}</td>
-              <td class="px-5 py-3.5 font-medium text-slate-800">{{ fullName(row) }}</td>
-              <td class="px-5 py-3.5 text-slate-500">{{ row.company.name }}</td>
-              <td class="px-5 py-3.5 text-slate-500">{{ row.department?.name ?? '-' }}</td>
-              <td class="px-5 py-3.5 text-slate-500">{{ row.position?.name ?? '-' }}</td>
-              <td class="px-5 py-3.5 text-slate-500">{{ row.job_level?.name ?? '-' }}</td>
-              <td class="px-5 py-3.5">
-                <span
-                  v-if="row.employment_status"
-                  class="rounded-full bg-primary-soft px-2.5 py-1 text-xs font-medium text-primary-dark"
-                >
-                  {{ row.employment_status.name }}
-                </span>
-                <span v-else class="text-slate-400">-</span>
-              </td>
-              <td class="px-5 py-3.5">
-                <div class="flex items-center justify-end gap-1">
-                  <button
-                    @click="openEditModal(row)"
-                    class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead>
+              <tr class="border-b border-slate-100 bg-slate-50/60">
+                <th class="px-5 py-3 font-medium text-slate-500">Employee</th>
+                <th class="px-3 py-3 font-medium text-slate-500">Company</th>
+                <th class="px-3 py-3 font-medium text-slate-500">Department</th>
+                <th class="px-3 py-3 font-medium text-slate-500">Position</th>
+                <th class="px-3 py-3 font-medium text-slate-500">Job Level</th>
+                <th class="px-3 py-3 font-medium text-slate-500">Status</th>
+                <th class="px-5 py-3 text-right font-medium text-slate-500">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="row in filteredEmployees"
+                :key="row.id"
+                class="border-b border-slate-50 last:border-0 hover:bg-slate-50/50"
+              >
+                <td class="px-5 py-3.5">
+                  <div class="flex items-center gap-2.5">
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark">
+                      {{ initials(row) }}
+                    </div>
+                    <div>
+                      <p class="font-medium text-slate-800">{{ fullName(row) }}</p>
+                      <p class="text-xs text-slate-400">{{ row.employee_number }}</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-3 py-3.5 text-slate-500">{{ row.company.name }}</td>
+                <td class="px-3 py-3.5 text-slate-500">{{ row.department?.name ?? '-' }}</td>
+                <td class="px-3 py-3.5 text-slate-500">{{ row.position?.name ?? '-' }}</td>
+                <td class="px-3 py-3.5 text-slate-500">{{ row.job_level?.name ?? '-' }}</td>
+                <td class="px-3 py-3.5">
+                  <span
+                    v-if="row.employment_status"
+                    class="rounded-full bg-primary-soft px-2.5 py-1 text-xs font-medium text-primary-dark"
                   >
-                    <Pencil class="h-4 w-4" :stroke-width="1.75" />
-                  </button>
+                    {{ row.employment_status.name }}
+                  </span>
+                  <span v-else class="text-slate-400">-</span>
+                </td>
+                <td class="px-5 py-3.5 text-right">
                   <button
-                    @click="handleDelete(row)"
-                    class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                    type="button"
+                    @click="toggleActions(row, $event)"
+                    class="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                    :class="openActionsRow?.id === row.id ? 'border-primary/40 text-primary-dark' : ''"
                   >
-                    <Trash2 class="h-4 w-4" :stroke-width="1.75" />
+                    Actions
+                    <ChevronDown class="h-3.5 w-3.5" :stroke-width="2" />
                   </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </template>
 
     <!-- Org chart view -->
     <OrgChart v-else />
+
+    <!-- Actions dropdown, teleported biar gak ke-clip -->
+    <Teleport to="body">
+      <div
+        v-if="openActionsRow"
+        @click.stop
+        class="fixed z-50 w-44 overflow-hidden rounded-xl border border-slate-100 bg-white py-1 shadow-lg"
+        :style="actionsMenuStyle"
+      >
+        <button
+          @click="openFaceEnrollment(openActionsRow!); closeActions()"
+          class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-50"
+        >
+          <ScanFace class="h-3.5 w-3.5" :stroke-width="1.75" />
+          Daftarkan Wajah
+        </button>
+        <button
+          @click="openEditModal(openActionsRow!); closeActions()"
+          class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-50"
+        >
+          <Pencil class="h-3.5 w-3.5" :stroke-width="1.75" />
+          Edit
+        </button>
+        <button
+          @click="handleDelete(openActionsRow!); closeActions()"
+          class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50"
+        >
+          <Trash2 class="h-3.5 w-3.5" :stroke-width="1.75" />
+          Hapus
+        </button>
+      </div>
+    </Teleport>
 
     <Teleport to="body">
       <div
@@ -383,10 +563,15 @@ onMounted(() => {
             </button>
           </div>
 
-          <form @submit.prevent="handleSubmit" class="flex-1 space-y-6 overflow-y-auto px-6 py-5">
+          <form @submit.prevent="handleSubmit" class="flex-1 space-y-7 overflow-y-auto px-6 py-5">
             <!-- Employment Information -->
             <div>
-              <h3 class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Employment Information</h3>
+              <div class="mb-3 flex items-center gap-2">
+                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary-dark">
+                  <Building2 class="h-4 w-4" :stroke-width="1.75" />
+                </div>
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Employment Information</h3>
+              </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">No. Karyawan</label>
@@ -460,7 +645,12 @@ onMounted(() => {
 
             <!-- Personal Information -->
             <div>
-              <h3 class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Personal Information</h3>
+              <div class="mb-3 flex items-center gap-2">
+                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary-dark">
+                  <UserRound class="h-4 w-4" :stroke-width="1.75" />
+                </div>
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Personal Information</h3>
+              </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">Nama Depan</label>
@@ -500,7 +690,12 @@ onMounted(() => {
 
             <!-- Contact Information -->
             <div>
-              <h3 class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Contact Information</h3>
+              <div class="mb-3 flex items-center gap-2">
+                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary-dark">
+                  <Phone class="h-4 w-4" :stroke-width="1.75" />
+                </div>
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Contact Information</h3>
+              </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">Telepon</label>
@@ -527,7 +722,12 @@ onMounted(() => {
 
             <!-- Identity Information -->
             <div>
-              <h3 class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Identity Information</h3>
+              <div class="mb-3 flex items-center gap-2">
+                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary-dark">
+                  <IdCard class="h-4 w-4" :stroke-width="1.75" />
+                </div>
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Identity Information</h3>
+              </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">NIK</label>
@@ -567,5 +767,13 @@ onMounted(() => {
         </div>
       </div>
     </Teleport>
+
+    <FaceEnrollmentModal
+      v-if="showFaceEnrollment && faceEnrollmentTarget"
+      :employee-id="faceEnrollmentTarget.id"
+      :employee-name="fullName(faceEnrollmentTarget)"
+      @close="closeFaceEnrollment"
+      @enrolled="closeFaceEnrollment"
+    />
   </div>
 </template>

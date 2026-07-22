@@ -9,12 +9,18 @@ use App\Modules\Attendance\Models\Attendance;
 use App\Modules\Attendance\Models\AttendanceDevice;
 use App\Modules\AttendanceSetting\Models\AttendanceSetting;
 use App\Modules\Employee\Models\Employee;
+use App\Modules\FaceRecognition\Contracts\FaceRecognitionServiceInterface;
+use App\Modules\FaceRecognition\Exceptions\FaceRecognitionException;
 use App\Modules\Shift\Models\Shift;
 use App\Modules\WorkingSchedule\Models\WorkingScheduleDetail;
 use Carbon\Carbon;
 
 class AttendanceService
 {
+    public function __construct(private FaceRecognitionServiceInterface $faceRecognitionService)
+    {
+    }
+
     public function clockIn(User $user, ?float $latitude = null, ?float $longitude = null): Attendance
     {
         $employee = $this->resolveEmployeeForUser($user);
@@ -49,6 +55,21 @@ class AttendanceService
     public function todayForDevice(AttendanceDevice $device, string $employeeCode): array
     {
         return $this->buildTodayPayload($this->resolveEmployeeForDevice($device, $employeeCode));
+    }
+
+    public function todayForDeviceByFace(AttendanceDevice $device, string $imageBase64): array
+    {
+        return $this->buildTodayPayload($this->resolveEmployeeForDeviceByFace($device, $imageBase64));
+    }
+
+    public function clockInForDeviceByFace(AttendanceDevice $device, string $imageBase64): Attendance
+    {
+        return $this->doClockIn($this->resolveEmployeeForDeviceByFace($device, $imageBase64), null, null, null);
+    }
+
+    public function clockOutForDeviceByFace(AttendanceDevice $device, string $imageBase64): Attendance
+    {
+        return $this->doClockOut($this->resolveEmployeeForDeviceByFace($device, $imageBase64), null, null, null);
     }
 
     private function doClockIn(Employee $employee, ?float $latitude, ?float $longitude, ?int $distanceMeters): Attendance
@@ -198,6 +219,51 @@ class AttendanceService
 
         if (! $employee) {
             throw new AttendanceValidationException('Employee tidak ditemukan atau tidak terdaftar di device ini.');
+        }
+
+        return $employee;
+    }
+
+    private function resolveEmployeeForDeviceByFace(AttendanceDevice $device, string $imageBase64): Employee
+    {
+        try {
+            $liveness = $this->faceRecognitionService->liveness($imageBase64);
+        } catch (FaceRecognitionException $e) {
+            throw new AttendanceValidationException($e->getMessage());
+        }
+
+        if (! $liveness['is_live']) {
+            throw new AttendanceValidationException('Verifikasi wajah gagal: terindikasi bukan wajah asli (kemungkinan foto/spoofing).');
+        }
+
+        $candidateEmployees = Employee::where('company_id', $device->company_id)
+            ->when($device->branch_id, fn ($query, $branchId) => $query->where('branch_id', $branchId))
+            ->whereNotNull('face_embedding')
+            ->get(['id', 'face_embedding']);
+
+        if ($candidateEmployees->isEmpty()) {
+            throw new AttendanceValidationException('Belum ada employee dengan wajah terdaftar di device ini.');
+        }
+
+        $candidates = $candidateEmployees->map(fn (Employee $employee) => [
+            'employee_id' => $employee->id,
+            'embedding' => $employee->face_embedding,
+        ])->all();
+
+        try {
+            $recognition = $this->faceRecognitionService->recognize($imageBase64, $candidates);
+        } catch (FaceRecognitionException $e) {
+            throw new AttendanceValidationException($e->getMessage());
+        }
+
+        if (! $recognition['is_match']) {
+            throw new AttendanceValidationException('Wajah tidak dikenali.');
+        }
+
+        $employee = Employee::find($recognition['employee_id']);
+
+        if (! $employee) {
+            throw new AttendanceValidationException('Employee hasil pengenalan wajah tidak ditemukan.');
         }
 
         return $employee;

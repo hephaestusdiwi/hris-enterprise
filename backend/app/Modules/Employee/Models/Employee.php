@@ -49,6 +49,13 @@ class Employee extends Model
         'bank_name',
         'bank_account_number',
         'bank_account_holder_name',
+        'face_embedding',
+        'face_embedding_model',
+        'face_registered_at',
+    ];
+
+    protected $hidden = [
+        'face_embedding',
     ];
 
     protected function casts(): array
@@ -57,6 +64,8 @@ class Employee extends Model
             'join_date' => 'date',
             'resign_date' => 'date',
             'birth_date' => 'date',
+            'face_embedding' => 'array',
+            'face_registered_at' => 'datetime',
         ];
     }
 

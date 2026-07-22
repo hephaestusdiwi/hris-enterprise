@@ -80,6 +80,72 @@ class AttendanceDeviceApiController extends Controller
         }
     }
 
+    public function todayByFace(Request $request)
+    {
+        $device = $this->device($request);
+        $imageBase64 = $request->validate(['image_base64' => ['required', 'string']])['image_base64'];
+
+        try {
+            $data = $this->attendanceService->todayForDeviceByFace($device, $imageBase64);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'OK',
+                'data' => $data,
+            ]);
+        } catch (AttendanceValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null,
+            ], 422);
+        }
+    }
+
+    public function clockInByFace(Request $request)
+    {
+        $device = $this->device($request);
+        $imageBase64 = $request->validate(['image_base64' => ['required', 'string']])['image_base64'];
+
+        try {
+            $attendance = $this->attendanceService->clockInForDeviceByFace($device, $imageBase64);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Clock-in berhasil',
+                'data' => $attendance,
+            ], 201);
+        } catch (AttendanceValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null,
+            ], 422);
+        }
+    }
+
+    public function clockOutByFace(Request $request)
+    {
+        $device = $this->device($request);
+        $imageBase64 = $request->validate(['image_base64' => ['required', 'string']])['image_base64'];
+
+        try {
+            $attendance = $this->attendanceService->clockOutForDeviceByFace($device, $imageBase64);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Clock-out berhasil',
+                'data' => $attendance,
+            ]);
+        } catch (AttendanceValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null,
+            ], 422);
+        }
+    }
+
     private function device(Request $request): AttendanceDevice
     {
         return $request->attributes->get('attendance_device');
