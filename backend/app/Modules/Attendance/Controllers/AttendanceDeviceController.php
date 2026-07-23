@@ -6,10 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Modules\Attendance\Models\AttendanceDevice;
 use App\Modules\Attendance\Requests\StoreAttendanceDeviceRequest;
 use App\Modules\Attendance\Requests\UpdateAttendanceDeviceRequest;
+use App\Modules\Attendance\Services\AttendanceService;
 use Illuminate\Support\Str;
 
 class AttendanceDeviceController extends Controller
 {
+    public function __construct(private AttendanceService $attendanceService)
+    {
+    }
+
     public function index()
     {
         $devices = AttendanceDevice::with(['company', 'branch'])->latest()->paginate(15);
@@ -70,6 +75,17 @@ class AttendanceDeviceController extends Controller
             'success' => true,
             'message' => 'Token berhasil di-generate ulang. Token lama langsung tidak berlaku.',
             'data' => ['token' => $plainToken],
+        ]);
+    }
+
+    public function officeQr(AttendanceDevice $attendanceDevice)
+    {
+        $result = $this->attendanceService->generateOfficeQr($attendanceDevice);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OK',
+            'data' => $result,
         ]);
     }
 

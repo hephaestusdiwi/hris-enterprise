@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, reactive, computed } from 'vue'
-import { Plus, Pencil, Trash2, X, ScanFace, Search, ChevronDown, Building2, UserRound, Phone, IdCard } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, X, ScanFace, QrCode, Search, ChevronDown, Building2, UserRound, Phone, IdCard, CheckCircle2 } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
 import OrgChart from '@/components/employee/OrgChart.vue'
 import FaceEnrollmentModal from '@/components/FaceEnrollmentModal.vue'
+import EmployeeQrModal from '@/components/EmployeeQrModal.vue'
 
 interface Ref {
   id: number
@@ -15,6 +16,7 @@ interface EmployeeRow {
   employee_number: string
   first_name: string
   last_name: string | null
+  qr_generated_at: string | null
   company: Ref
   department: Ref | null
   position: Ref | null
@@ -45,6 +47,9 @@ const formError = ref('')
 
 const showFaceEnrollment = ref(false)
 const faceEnrollmentTarget = ref<EmployeeRow | null>(null)
+
+const showQrModal = ref(false)
+const qrModalTarget = ref<EmployeeRow | null>(null)
 
 const form = reactive({
   id: 0,
@@ -130,7 +135,7 @@ function toggleActions(row: EmployeeRow, event: Event) {
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
   actionsMenuStyle.value = {
     top: `${rect.bottom + window.scrollY + 4}px`,
-    left: `${rect.right + window.scrollX - 176}px`,
+    left: `${rect.right + window.scrollX - 200}px`,
   }
   openActionsRow.value = row
 }
@@ -330,6 +335,16 @@ function closeFaceEnrollment() {
   faceEnrollmentTarget.value = null
 }
 
+function openQrModal(row: EmployeeRow) {
+  qrModalTarget.value = row
+  showQrModal.value = true
+}
+
+function closeQrModal() {
+  showQrModal.value = false
+  qrModalTarget.value = null
+}
+
 onMounted(() => {
   loadEmployees()
   loadReferenceData()
@@ -521,9 +536,19 @@ onMounted(() => {
       <div
         v-if="openActionsRow"
         @click.stop
-        class="fixed z-50 w-44 overflow-hidden rounded-xl border border-slate-100 bg-white py-1 shadow-lg"
+        class="fixed z-50 w-52 overflow-hidden rounded-xl border border-slate-100 bg-white py-1 shadow-lg"
         :style="actionsMenuStyle"
       >
+        <button
+          @click="openQrModal(openActionsRow!); closeActions()"
+          class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-50"
+        >
+          <span class="flex items-center gap-2">
+            <QrCode class="h-3.5 w-3.5" :stroke-width="1.75" />
+            QR Attendance
+          </span>
+          <CheckCircle2 v-if="openActionsRow.qr_generated_at" class="h-3.5 w-3.5 text-primary" :stroke-width="2" />
+        </button>
         <button
           @click="openFaceEnrollment(openActionsRow!); closeActions()"
           class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-50"
@@ -774,6 +799,15 @@ onMounted(() => {
       :employee-name="fullName(faceEnrollmentTarget)"
       @close="closeFaceEnrollment"
       @enrolled="closeFaceEnrollment"
+    />
+
+    <EmployeeQrModal
+      v-if="showQrModal && qrModalTarget"
+      :employee-id="qrModalTarget.id"
+      :employee-name="fullName(qrModalTarget)"
+      :qr-generated-at="qrModalTarget.qr_generated_at"
+      @close="closeQrModal"
+      @updated="loadEmployees"
     />
   </div>
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { LogIn, LogOut, Clock, MapPin } from 'lucide-vue-next'
+import OfficeQrScanModal from '@/components/OfficeQrScanModal.vue'
+import { LogIn, LogOut, Clock, MapPin, QrCode as QrCodeIcon } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
 
 interface ShiftInfo {
@@ -47,6 +48,19 @@ const formattedClock = computed(() =>
 function formatTime(value: string | null): string {
   if (!value) return '-'
   return new Date(value.replace(' ', 'T')).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+}
+
+const showQrScanModal = ref(false)
+const qrScanMode = ref<'clock-in' | 'clock-out'>('clock-in')
+
+function openQrScan(mode: 'clock-in' | 'clock-out') {
+  qrScanMode.value = mode
+  showQrScanModal.value = true
+}
+
+function handleQrScanSuccess() {
+  showQrScanModal.value = false
+  loadToday()
 }
 
 async function loadToday() {
@@ -129,6 +143,29 @@ onMounted(() => {
           <p class="mt-0.5 text-lg font-medium text-slate-800">{{ formatTime(today.clock_out) }}</p>
         </div>
       </div>
+      <button
+        v-if="today.can_clock_in"
+        @click="openQrScan('clock-in')"
+        class="mt-2 flex w-full items-center justify-center gap-1.5 text-xs font-medium text-slate-400 hover:text-slate-600"
+      >
+        <QrCodeIcon class="h-3.5 w-3.5" :stroke-width="1.75" />
+        atau scan QR kantor
+      </button>
+      <button
+        v-if="today.can_clock_out"
+        @click="openQrScan('clock-out')"
+        class="mt-2 flex w-full items-center justify-center gap-1.5 text-xs font-medium text-slate-400 hover:text-slate-600"
+      >
+        <QrCodeIcon class="h-3.5 w-3.5" :stroke-width="1.75" />
+        atau scan QR kantor
+      </button>
+
+      <OfficeQrScanModal
+        v-if="showQrScanModal"
+        :mode="qrScanMode"
+        @close="showQrScanModal = false"
+        @success="handleQrScanSuccess"
+      />
 
       <p v-if="errorMessage" class="mt-3 text-sm text-red-600">{{ errorMessage }}</p>
 

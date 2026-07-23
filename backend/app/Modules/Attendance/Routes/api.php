@@ -23,6 +23,7 @@ Route::get('/attendance/today', [AttendanceSelfServiceController::class, 'today'
 Route::middleware('permission:view attendance devices')->group(function () {
     Route::get('/attendance-devices', [AttendanceDeviceController::class, 'index']);
     Route::get('/attendance-devices/{attendanceDevice}', [AttendanceDeviceController::class, 'show']);
+    Route::get('/attendance-devices/{attendanceDevice}/office-qr', [AttendanceDeviceController::class, 'officeQr']);
 });
 
 Route::middleware('permission:create attendance devices')->post('/attendance-devices', [AttendanceDeviceController::class, 'store']);

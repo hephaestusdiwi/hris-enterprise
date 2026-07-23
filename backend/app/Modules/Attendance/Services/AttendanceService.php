@@ -3,38 +3,49 @@
 namespace App\Modules\Attendance\Services;
 
 use App\Models\User;
+use App\Modules\Attendance\Enums\AttendanceIdentificationMethod;
+use App\Modules\Attendance\Enums\AttendanceMethod;
 use App\Modules\Attendance\Enums\AttendanceStatus;
 use App\Modules\Attendance\Exceptions\AttendanceValidationException;
 use App\Modules\Attendance\Models\Attendance;
 use App\Modules\Attendance\Models\AttendanceDevice;
+use App\Modules\Attendance\Strategies\AttendanceIdentificationStrategyFactory;
 use App\Modules\AttendanceSetting\Models\AttendanceSetting;
 use App\Modules\Employee\Models\Employee;
-use App\Modules\FaceRecognition\Contracts\FaceRecognitionServiceInterface;
-use App\Modules\FaceRecognition\Exceptions\FaceRecognitionException;
 use App\Modules\Shift\Models\Shift;
 use App\Modules\WorkingSchedule\Models\WorkingScheduleDetail;
 use Carbon\Carbon;
 
 class AttendanceService
 {
-    public function __construct(private FaceRecognitionServiceInterface $faceRecognitionService)
-    {
+    public function __construct(
+        private AttendanceIdentificationStrategyFactory $strategyFactory,
+        private OfficeQrTokenService $officeQrTokenService,
+    ) {
     }
 
-    public function clockIn(User $user, ?float $latitude = null, ?float $longitude = null): Attendance
+    public function clockIn(User $user, ?float $latitude = null, ?float $longitude = null, ?string $officeQrToken = null): Attendance
     {
         $employee = $this->resolveEmployeeForUser($user);
-        $distance = $this->validateLocation($employee, $latitude, $longitude);
+        [$method, $device] = $this->resolveSelfServiceMethod($employee, $officeQrToken);
 
-        return $this->doClockIn($employee, $latitude, $longitude, $distance);
+        $distance = $method === AttendanceMethod::DynamicQr
+            ? null
+            : $this->validateLocation($employee, $latitude, $longitude);
+
+        return $this->doClockIn($employee, $latitude, $longitude, $distance, $method, $device);
     }
 
-    public function clockOut(User $user, ?float $latitude = null, ?float $longitude = null): Attendance
+    public function clockOut(User $user, ?float $latitude = null, ?float $longitude = null, ?string $officeQrToken = null): Attendance
     {
         $employee = $this->resolveEmployeeForUser($user);
-        $distance = $this->validateLocation($employee, $latitude, $longitude);
+        [$method, $device] = $this->resolveSelfServiceMethod($employee, $officeQrToken);
 
-        return $this->doClockOut($employee, $latitude, $longitude, $distance);
+        $distance = $method === AttendanceMethod::DynamicQr
+            ? null
+            : $this->validateLocation($employee, $latitude, $longitude);
+
+        return $this->doClockOut($employee, $latitude, $longitude, $distance, $method, $device);
     }
 
     public function today(User $user): array
@@ -42,38 +53,94 @@ class AttendanceService
         return $this->buildTodayPayload($this->resolveEmployeeForUser($user));
     }
 
-    public function clockInForDevice(AttendanceDevice $device, string $employeeCode): Attendance
+    /**
+     * @param array<string, mixed> $payload
+     */
+    public function todayForDeviceUsing(AttendanceDevice $device, AttendanceIdentificationMethod $method, array $payload): array
     {
-        return $this->doClockIn($this->resolveEmployeeForDevice($device, $employeeCode), null, null, null);
+        return $this->buildTodayPayload($this->identifyForDevice($device, $method, $payload));
     }
 
-    public function clockOutForDevice(AttendanceDevice $device, string $employeeCode): Attendance
+    /**
+     * @param array<string, mixed> $payload
+     */
+    public function clockInForDeviceUsing(AttendanceDevice $device, AttendanceIdentificationMethod $method, array $payload): Attendance
     {
-        return $this->doClockOut($this->resolveEmployeeForDevice($device, $employeeCode), null, null, null);
+        $employee = $this->identifyForDevice($device, $method, $payload);
+        $attendanceMethod = $this->mapIdentificationMethod($method);
+
+        return $this->doClockIn($employee, null, null, null, $attendanceMethod, $device);
     }
 
-    public function todayForDevice(AttendanceDevice $device, string $employeeCode): array
+    /**
+     * @param array<string, mixed> $payload
+     */
+    public function clockOutForDeviceUsing(AttendanceDevice $device, AttendanceIdentificationMethod $method, array $payload): Attendance
     {
-        return $this->buildTodayPayload($this->resolveEmployeeForDevice($device, $employeeCode));
+        $employee = $this->identifyForDevice($device, $method, $payload);
+        $attendanceMethod = $this->mapIdentificationMethod($method);
+
+        return $this->doClockOut($employee, null, null, null, $attendanceMethod, $device);
     }
 
-    public function todayForDeviceByFace(AttendanceDevice $device, string $imageBase64): array
+    public function generateOfficeQr(AttendanceDevice $device): array
     {
-        return $this->buildTodayPayload($this->resolveEmployeeForDeviceByFace($device, $imageBase64));
+        return $this->officeQrTokenService->generate($device);
     }
 
-    public function clockInForDeviceByFace(AttendanceDevice $device, string $imageBase64): Attendance
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function identifyForDevice(AttendanceDevice $device, AttendanceIdentificationMethod $method, array $payload): Employee
     {
-        return $this->doClockIn($this->resolveEmployeeForDeviceByFace($device, $imageBase64), null, null, null);
+        return $this->strategyFactory->make($method)->identify($device, $payload);
     }
 
-    public function clockOutForDeviceByFace(AttendanceDevice $device, string $imageBase64): Attendance
+    private function mapIdentificationMethod(AttendanceIdentificationMethod $method): AttendanceMethod
     {
-        return $this->doClockOut($this->resolveEmployeeForDeviceByFace($device, $imageBase64), null, null, null);
+        return match ($method) {
+            AttendanceIdentificationMethod::EmployeeCode => AttendanceMethod::DeviceEmployeeCode,
+            AttendanceIdentificationMethod::Face => AttendanceMethod::DeviceFace,
+            AttendanceIdentificationMethod::Qr => AttendanceMethod::DeviceQrCard,
+        };
     }
 
-    private function doClockIn(Employee $employee, ?float $latitude, ?float $longitude, ?int $distanceMeters): Attendance
+    /**
+     * @return array{0: AttendanceMethod, 1: ?AttendanceDevice}
+     */
+    private function resolveSelfServiceMethod(Employee $employee, ?string $officeQrToken): array
     {
+        if (! $officeQrToken) {
+            return [AttendanceMethod::SelfService, null];
+        }
+
+        $deviceId = $this->officeQrTokenService->resolveDeviceId($officeQrToken);
+
+        if (! $deviceId) {
+            throw new AttendanceValidationException('QR kantor sudah kedaluwarsa atau tidak valid, silakan scan ulang.');
+        }
+
+        $device = AttendanceDevice::find($deviceId);
+
+        if (! $device || ! $device->is_active) {
+            throw new AttendanceValidationException('Attendance Device untuk QR ini tidak ditemukan atau nonaktif.');
+        }
+
+        if ($device->company_id !== $employee->company_id) {
+            throw new AttendanceValidationException('QR ini bukan untuk company Anda.');
+        }
+
+        return [AttendanceMethod::DynamicQr, $device];
+    }
+
+    private function doClockIn(
+        Employee $employee,
+        ?float $latitude,
+        ?float $longitude,
+        ?int $distanceMeters,
+        AttendanceMethod $method,
+        ?AttendanceDevice $device,
+    ): Attendance {
         $attendance = $this->getTodayAttendance($employee);
         $shift = $this->resolveShiftForToday($employee);
 
@@ -93,14 +160,24 @@ class AttendanceService
         $attendance->clock_in_latitude = $latitude;
         $attendance->clock_in_longitude = $longitude;
         $attendance->clock_in_distance_meters = $distanceMeters;
+        $attendance->clock_in_method = $method->value;
+        $attendance->clock_in_device_id = $device?->id;
+        $attendance->clock_in_branch_id = $device?->branch_id;
+        $attendance->clock_in_company_id = $device?->company_id;
         $attendance->status = AttendanceStatus::Present;
         $attendance->save();
 
         return $attendance->load(['employee', 'shift']);
     }
 
-    private function doClockOut(Employee $employee, ?float $latitude, ?float $longitude, ?int $distanceMeters): Attendance
-    {
+    private function doClockOut(
+        Employee $employee,
+        ?float $latitude,
+        ?float $longitude,
+        ?int $distanceMeters,
+        AttendanceMethod $method,
+        ?AttendanceDevice $device,
+    ): Attendance {
         $attendance = $this->getTodayAttendance($employee);
 
         if (! $attendance || ! $attendance->clock_in) {
@@ -115,6 +192,10 @@ class AttendanceService
         $attendance->clock_out_latitude = $latitude;
         $attendance->clock_out_longitude = $longitude;
         $attendance->clock_out_distance_meters = $distanceMeters;
+        $attendance->clock_out_method = $method->value;
+        $attendance->clock_out_device_id = $device?->id;
+        $attendance->clock_out_branch_id = $device?->branch_id;
+        $attendance->clock_out_company_id = $device?->company_id;
         $attendance->save();
 
         return $attendance->load(['employee', 'shift']);
@@ -136,8 +217,10 @@ class AttendanceService
             'status' => $attendance?->status?->value,
             'clock_in' => $attendance?->clock_in?->toDateTimeString(),
             'clock_in_distance_meters' => $attendance?->clock_in_distance_meters,
+            'clock_in_method' => $attendance?->clock_in_method,
             'clock_out' => $attendance?->clock_out?->toDateTimeString(),
             'clock_out_distance_meters' => $attendance?->clock_out_distance_meters,
+            'clock_out_method' => $attendance?->clock_out_method,
             'can_clock_in' => ! $attendance || ! $attendance->clock_in,
             'can_clock_out' => (bool) ($attendance && $attendance->clock_in && ! $attendance->clock_out),
             'shift' => $shift ? [
@@ -205,65 +288,6 @@ class AttendanceService
 
         if (! $employee) {
             throw new AttendanceValidationException('User ini tidak terhubung dengan data employee.');
-        }
-
-        return $employee;
-    }
-
-    private function resolveEmployeeForDevice(AttendanceDevice $device, string $employeeCode): Employee
-    {
-        $employee = Employee::where('employee_number', $employeeCode)
-            ->where('company_id', $device->company_id)
-            ->when($device->branch_id, fn ($query, $branchId) => $query->where('branch_id', $branchId))
-            ->first();
-
-        if (! $employee) {
-            throw new AttendanceValidationException('Employee tidak ditemukan atau tidak terdaftar di device ini.');
-        }
-
-        return $employee;
-    }
-
-    private function resolveEmployeeForDeviceByFace(AttendanceDevice $device, string $imageBase64): Employee
-    {
-        try {
-            $liveness = $this->faceRecognitionService->liveness($imageBase64);
-        } catch (FaceRecognitionException $e) {
-            throw new AttendanceValidationException($e->getMessage());
-        }
-
-        if (! $liveness['is_live']) {
-            throw new AttendanceValidationException('Verifikasi wajah gagal: terindikasi bukan wajah asli (kemungkinan foto/spoofing).');
-        }
-
-        $candidateEmployees = Employee::where('company_id', $device->company_id)
-            ->when($device->branch_id, fn ($query, $branchId) => $query->where('branch_id', $branchId))
-            ->whereNotNull('face_embedding')
-            ->get(['id', 'face_embedding']);
-
-        if ($candidateEmployees->isEmpty()) {
-            throw new AttendanceValidationException('Belum ada employee dengan wajah terdaftar di device ini.');
-        }
-
-        $candidates = $candidateEmployees->map(fn (Employee $employee) => [
-            'employee_id' => $employee->id,
-            'embedding' => $employee->face_embedding,
-        ])->all();
-
-        try {
-            $recognition = $this->faceRecognitionService->recognize($imageBase64, $candidates);
-        } catch (FaceRecognitionException $e) {
-            throw new AttendanceValidationException($e->getMessage());
-        }
-
-        if (! $recognition['is_match']) {
-            throw new AttendanceValidationException('Wajah tidak dikenali.');
-        }
-
-        $employee = Employee::find($recognition['employee_id']);
-
-        if (! $employee) {
-            throw new AttendanceValidationException('Employee hasil pengenalan wajah tidak ditemukan.');
         }
 
         return $employee;

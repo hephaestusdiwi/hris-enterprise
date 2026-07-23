@@ -3,6 +3,8 @@
 namespace App\Modules\Attendance\Models;
 
 use App\Modules\Attendance\Enums\AttendanceStatus;
+use App\Modules\Branch\Models\Branch;
+use App\Modules\Company\Models\Company;
 use App\Modules\Employee\Models\Employee;
 use App\Modules\Shift\Models\Shift;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -22,10 +24,18 @@ class Attendance extends Model
         'clock_in_latitude',
         'clock_in_longitude',
         'clock_in_distance_meters',
+        'clock_in_method',
+        'clock_in_device_id',
+        'clock_in_branch_id',
+        'clock_in_company_id',
         'clock_out',
         'clock_out_latitude',
         'clock_out_longitude',
         'clock_out_distance_meters',
+        'clock_out_method',
+        'clock_out_device_id',
+        'clock_out_branch_id',
+        'clock_out_company_id',
         'status',
         'notes',
     ];
@@ -52,5 +62,35 @@ class Attendance extends Model
     public function shift(): BelongsTo
     {
         return $this->belongsTo(Shift::class);
+    }
+
+    public function clockInDevice(): BelongsTo
+    {
+        return $this->belongsTo(AttendanceDevice::class, 'clock_in_device_id');
+    }
+
+    public function clockOutDevice(): BelongsTo
+    {
+        return $this->belongsTo(AttendanceDevice::class, 'clock_out_device_id');
+    }
+
+    public function clockInBranch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class, 'clock_in_branch_id');
+    }
+
+    public function clockOutBranch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class, 'clock_out_branch_id');
+    }
+
+    public function clockInCompany(): BelongsTo
+    {
+        return $this->belongsTo(Company::class, 'clock_in_company_id');
+    }
+
+    public function clockOutCompany(): BelongsTo
+    {
+        return $this->belongsTo(Company::class, 'clock_out_company_id');
     }
 }

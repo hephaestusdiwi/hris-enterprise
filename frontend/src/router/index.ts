@@ -15,6 +15,7 @@ import ApprovalFlowIndex from '@/views/ApprovalFlowIndex.vue'
 import ApprovalFlowDetail from '@/views/ApprovalFlowDetail.vue'
 import AttendanceIndex from '@/views/AttendanceIndex.vue'
 import AttendanceDeviceListView from '@/views/AttendanceDeviceListView.vue'
+import AttendanceDeviceOfficeQrDisplayView from '@/views/AttendanceDeviceOfficeQrDisplayView.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
@@ -121,6 +122,12 @@ const router = createRouter({
       path: '/attendance-devices',
       name: 'attendance-devices.list',
       component: AttendanceDeviceListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/attendance-devices/:id/office-qr',
+      name: 'attendance-devices.office-qr',
+      component: AttendanceDeviceOfficeQrDisplayView,
       meta: { requiresAuth: true },
     },
     {

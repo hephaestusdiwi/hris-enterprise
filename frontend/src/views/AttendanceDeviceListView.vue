@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive, computed } from 'vue'
-import { Plus, Pencil, Trash2, X, RefreshCw, Copy, Check, AlertTriangle } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, X, RefreshCw, Copy, Check, AlertTriangle, MonitorSmartphone } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
 import apiClient from '@/lib/axios'
 
 interface Company {
@@ -41,6 +42,7 @@ const companies = ref<Company[]>([])
 const branches = ref<Branch[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
+const router = useRouter()
 
 const showModal = ref(false)
 const isEditing = ref(false)
@@ -276,6 +278,13 @@ onMounted(() => {
                   title="Generate ulang token"
                 >
                   <RefreshCw class="h-4 w-4" :stroke-width="1.75" />
+                </button>
+                <button
+                  @click="router.push(`/attendance-devices/${row.id}/office-qr`)"
+                  class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                  title="Tampilkan Office QR"
+                >
+                  <MonitorSmartphone class="h-4 w-4" :stroke-width="1.75" />
                 </button>
                 <button
                   @click="openEditModal(row)"

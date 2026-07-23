@@ -52,10 +52,13 @@ class Employee extends Model
         'face_embedding',
         'face_embedding_model',
         'face_registered_at',
+        'qr_token',
+        'qr_generated_at',
     ];
 
     protected $hidden = [
         'face_embedding',
+        'qr_token',
     ];
 
     protected function casts(): array
@@ -66,6 +69,7 @@ class Employee extends Model
             'birth_date' => 'date',
             'face_embedding' => 'array',
             'face_registered_at' => 'datetime',
+            'qr_generated_at' => 'datetime',
         ];
     }
 
