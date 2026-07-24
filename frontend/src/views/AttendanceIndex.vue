@@ -1,22 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, reactive, watch, computed } from 'vue'
-import { Plus, Pencil, Trash2, X, Clock, ChevronDown, Search, Download, SlidersHorizontal, MoreVertical } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, X, Clock, Timer, ChevronDown, Search, SlidersHorizontal } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
-
-interface Ref {
-  id: number
-  name: string
-}
 
 interface Employee {
   id: number
   first_name: string
   last_name: string
-  employee_number?: string
-  branch?: Ref | null
-  department?: Ref | null
-  position?: Ref | null
-  employment_status?: Ref | null
 }
 
 interface Shift {
@@ -35,6 +25,10 @@ interface AttendanceRow {
   clock_out: string | null
   status: AttendanceStatus
   notes: string | null
+  late_minutes: number | null
+  within_grace: boolean | null
+  detected_overtime_minutes: number | null
+  approved_overtime_minutes: number | null
   employee: Employee
   shift: Shift | null
 }
@@ -101,11 +95,7 @@ const dateRangeLabel = computed(() => {
 const filteredAttendances = computed(() => {
   if (!searchQuery.value.trim()) return attendances.value
   const q = searchQuery.value.toLowerCase()
-  return attendances.value.filter(
-    (row) =>
-      employeeName(row.employee).toLowerCase().includes(q) ||
-      (row.employee.employee_number ?? '').toLowerCase().includes(q)
-  )
+  return attendances.value.filter((row) => employeeName(row.employee).toLowerCase().includes(q))
 })
 
 const statusCounts = computed(() => {
@@ -115,6 +105,18 @@ const statusCounts = computed(() => {
   for (const row of attendances.value) counts[row.status]++
   return counts
 })
+
+const totalOvertimeMinutes = computed(() =>
+  attendances.value.reduce((sum, row) => sum + (row.approved_overtime_minutes ?? row.detected_overtime_minutes ?? 0), 0)
+)
+const totalLateEmployees = computed(() => attendances.value.filter((row) => (row.late_minutes ?? 0) > 0 && !row.within_grace).length)
+
+function formatMinutesAsHours(minutes: number): string {
+  if (minutes <= 0) return '0j'
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return m ? `${h}j ${m}m` : `${h}j`
+}
 
 const summaryStats = computed(() => [
   { label: 'Tepat Waktu', value: statusCounts.value.present },
@@ -126,27 +128,7 @@ const summaryStats = computed(() => [
   { label: 'Alpha', value: statusCounts.value.alpha },
 ])
 
-// --- Row selection (visual only, belum ada bulk action) ---
-const selectedIds = ref<number[]>([])
-const allSelected = computed(
-  () => filteredAttendances.value.length > 0 && filteredAttendances.value.every((r) => selectedIds.value.includes(r.id))
-)
-function toggleSelectAll() {
-  if (allSelected.value) {
-    const ids = new Set(filteredAttendances.value.map((r) => r.id))
-    selectedIds.value = selectedIds.value.filter((id) => !ids.has(id))
-  } else {
-    const newIds = filteredAttendances.value.map((r) => r.id)
-    selectedIds.value = Array.from(new Set([...selectedIds.value, ...newIds]))
-  }
-}
-function toggleSelectRow(id: number) {
-  selectedIds.value = selectedIds.value.includes(id)
-    ? selectedIds.value.filter((x) => x !== id)
-    : [...selectedIds.value, id]
-}
-
-// --- Per-row actions dropdown ---
+// --- Actions dropdown (teleport, biar gak ke-clip sama overflow tabel) ---
 const openActionsRow = ref<AttendanceRow | null>(null)
 const actionsMenuStyle = ref({ top: '0px', left: '0px' })
 
@@ -159,7 +141,7 @@ function toggleActions(row: AttendanceRow, event: Event) {
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
   actionsMenuStyle.value = {
     top: `${rect.bottom + window.scrollY + 4}px`,
-    left: `${rect.right + window.scrollX - 144}px`, // 144px = lebar menu (w-36)
+    left: `${rect.right + window.scrollX - 144}px`,
   }
   openActionsRow.value = row
 }
@@ -311,7 +293,10 @@ onMounted(() => {
   <div class="space-y-5">
     <!-- Header -->
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Attendance Data</h1>
+      <div>
+        <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Attendance Data</h1>
+        <p class="mt-1 text-sm text-slate-500">Kelola record kehadiran, keterlambatan, dan lembur karyawan.</p>
+      </div>
       <div class="flex items-center gap-2">
         <button type="button" class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50">
           Help
@@ -355,15 +340,12 @@ onMounted(() => {
           <button type="button" class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600">
             <SlidersHorizontal class="h-[18px] w-[18px]" :stroke-width="1.75" />
           </button>
-          <button type="button" class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600">
-            <Download class="h-[18px] w-[18px]" :stroke-width="1.75" />
-          </button>
           <div class="relative">
             <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" :stroke-width="1.75" />
             <input
               v-model="searchQuery"
               type="text"
-              placeholder="Cari nama / ID karyawan"
+              placeholder="Cari nama karyawan"
               class="w-56 rounded-xl border border-slate-200 py-2 pl-9 pr-3 text-sm focus:border-primary focus:outline-none"
             />
           </div>
@@ -397,11 +379,23 @@ onMounted(() => {
 
     <!-- Summary stat strip -->
     <div v-if="!loading && !errorMessage" class="flex flex-wrap divide-x divide-slate-100 overflow-hidden rounded-2xl border border-slate-100 bg-white">
-      <div v-for="stat in summaryStats" :key="stat.label" class="flex-1 min-w-[110px] px-5 py-4">
+      <div v-for="stat in summaryStats" :key="stat.label" class="min-w-[110px] flex-1 px-5 py-4">
         <p class="text-xl font-semibold tracking-tight" :class="stat.value > 0 ? 'text-slate-900' : 'text-slate-300'">
           {{ stat.value }}
         </p>
         <p class="mt-0.5 text-xs text-slate-500">{{ stat.label }}</p>
+      </div>
+      <div class="min-w-[130px] flex-1 px-5 py-4">
+        <p class="text-xl font-semibold tracking-tight" :class="totalLateEmployees > 0 ? 'text-amber-600' : 'text-slate-300'">
+          {{ totalLateEmployees }}
+        </p>
+        <p class="mt-0.5 text-xs text-slate-500">Telat di Luar Grace</p>
+      </div>
+      <div class="min-w-[130px] flex-1 px-5 py-4">
+        <p class="text-xl font-semibold tracking-tight" :class="totalOvertimeMinutes > 0 ? 'text-primary-dark' : 'text-slate-300'">
+          {{ formatMinutesAsHours(totalOvertimeMinutes) }}
+        </p>
+        <p class="mt-0.5 text-xs text-slate-500">Total Lembur</p>
       </div>
     </div>
 
@@ -423,16 +417,12 @@ onMounted(() => {
         <table class="w-full text-left text-sm">
           <thead>
             <tr class="border-b border-slate-100 bg-slate-50/60">
-              <th class="w-10 px-5 py-3">
-                <input type="checkbox" :checked="allSelected" @change="toggleSelectAll" class="rounded border-slate-300 text-primary focus:ring-primary" />
-              </th>
-              <th class="px-3 py-3 font-medium text-slate-500">Employee</th>
-              <th class="px-3 py-3 font-medium text-slate-500">Branch</th>
-              <th class="px-3 py-3 font-medium text-slate-500">Organization</th>
-              <th class="px-3 py-3 font-medium text-slate-500">Employment Status</th>
+              <th class="px-5 py-3 font-medium text-slate-500">Employee</th>
               <th class="px-3 py-3 font-medium text-slate-500">Tanggal</th>
               <th class="px-3 py-3 font-medium text-slate-500">Shift</th>
               <th class="px-3 py-3 font-medium text-slate-500">Clock In / Out</th>
+              <th class="px-3 py-3 font-medium text-slate-500">Keterlambatan</th>
+              <th class="px-3 py-3 font-medium text-slate-500">Lembur</th>
               <th class="px-3 py-3 font-medium text-slate-500">Status</th>
               <th class="px-5 py-3 text-right font-medium text-slate-500">Aksi</th>
             </tr>
@@ -444,33 +434,42 @@ onMounted(() => {
               class="border-b border-slate-50 last:border-0 hover:bg-slate-50/50"
             >
               <td class="px-5 py-3.5">
-                <input
-                  type="checkbox"
-                  :checked="selectedIds.includes(row.id)"
-                  @change="toggleSelectRow(row.id)"
-                  class="rounded border-slate-300 text-primary focus:ring-primary"
-                />
-              </td>
-              <td class="px-3 py-3.5">
                 <div class="flex items-center gap-2.5">
                   <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark">
                     {{ employeeInitials(row.employee) }}
                   </div>
-                  <div>
-                    <p class="font-medium text-slate-800">{{ employeeName(row.employee) }}</p>
-                    <p v-if="row.employee.employee_number" class="text-xs text-slate-400">{{ row.employee.employee_number }}</p>
-                  </div>
+                  <p class="font-medium text-slate-800">{{ employeeName(row.employee) }}</p>
                 </div>
               </td>
-              <td class="px-3 py-3.5 text-slate-500">{{ row.employee.branch?.name ?? '-' }}</td>
-              <td class="px-3 py-3.5 text-slate-500">{{ row.employee.department?.name ?? '-' }}</td>
-              <td class="px-3 py-3.5 text-slate-500">{{ row.employee.employment_status?.name ?? '-' }}</td>
               <td class="px-3 py-3.5 whitespace-nowrap text-slate-500">{{ formatDateLabel(row.attendance_date) }}</td>
               <td class="px-3 py-3.5 text-slate-500">{{ row.shift?.name ?? '-' }}</td>
               <td class="px-3 py-3.5 whitespace-nowrap text-slate-500">
                 <div class="flex items-center gap-1.5">
                   <Clock class="h-3.5 w-3.5 text-slate-300" :stroke-width="1.75" />
                   {{ formatDateTime(row.clock_in) }} - {{ formatDateTime(row.clock_out) }}
+                </div>
+              </td>
+              <td class="px-3 py-3.5">
+                <span v-if="row.late_minutes === null" class="text-slate-400">-</span>
+                <span
+                  v-else
+                  class="rounded-full px-2.5 py-1 text-xs font-medium"
+                  :class="row.within_grace ? 'bg-slate-100 text-slate-500' : 'bg-amber-50 text-amber-600'"
+                >
+                  {{ row.late_minutes }} mnt{{ row.within_grace ? ' (grace)' : '' }}
+                </span>
+              </td>
+              <td class="px-3 py-3.5">
+                <span v-if="!row.detected_overtime_minutes && !row.approved_overtime_minutes" class="text-slate-400">-</span>
+                <div v-else class="flex items-center gap-1.5">
+                  <Timer class="h-3.5 w-3.5 text-slate-300" :stroke-width="1.75" />
+                  <span
+                    class="rounded-full px-2.5 py-1 text-xs font-medium"
+                    :class="row.approved_overtime_minutes ? 'bg-primary-soft text-primary-dark' : 'bg-blue-50 text-blue-600'"
+                  >
+                    {{ row.approved_overtime_minutes ?? row.detected_overtime_minutes }} mnt
+                    {{ row.approved_overtime_minutes ? '(approved)' : '(terdeteksi)' }}
+                  </span>
                 </div>
               </td>
               <td class="px-3 py-3.5">
@@ -495,6 +494,7 @@ onMounted(() => {
       </div>
     </div>
 
+    <!-- Actions dropdown, teleported biar gak ke-clip -->
     <Teleport to="body">
       <div
         v-if="openActionsRow"
@@ -596,6 +596,10 @@ onMounted(() => {
                 />
               </div>
             </div>
+
+            <p class="text-xs text-slate-400">
+              Keterlambatan dan lembur dihitung otomatis oleh sistem dari Clock In/Out via jalur clock-in/out (self-service, kiosk, dsb) — mengisi manual di sini tidak memicu perhitungan ulang.
+            </p>
 
             <div>
               <label class="mb-1 block text-sm font-medium text-slate-700">Catatan</label>

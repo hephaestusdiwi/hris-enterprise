@@ -14,6 +14,7 @@ use App\Modules\AttendanceSetting\Models\AttendanceSetting;
 use App\Modules\Employee\Models\Employee;
 use App\Modules\Shift\Models\Shift;
 use App\Modules\WorkingSchedule\Models\WorkingScheduleDetail;
+use App\Modules\Attendance\Contracts\AttendanceCalculationEngineInterface;
 use Carbon\Carbon;
 
 class AttendanceService
@@ -21,6 +22,7 @@ class AttendanceService
     public function __construct(
         private AttendanceIdentificationStrategyFactory $strategyFactory,
         private OfficeQrTokenService $officeQrTokenService,
+        private AttendanceCalculationEngineInterface $calculationEngine,
     ) {
     }
 
@@ -155,8 +157,11 @@ class AttendanceService
             ]);
         }
 
+        $clockInAt = Carbon::now();
+        $calculation = $this->calculationEngine->calculateClockIn($employee, Carbon::today(), $clockInAt, $shift);
+
         $attendance->shift_id = $shift?->id;
-        $attendance->clock_in = Carbon::now();
+        $attendance->clock_in = $clockInAt;
         $attendance->clock_in_latitude = $latitude;
         $attendance->clock_in_longitude = $longitude;
         $attendance->clock_in_distance_meters = $distanceMeters;
@@ -164,19 +169,21 @@ class AttendanceService
         $attendance->clock_in_device_id = $device?->id;
         $attendance->clock_in_branch_id = $device?->branch_id;
         $attendance->clock_in_company_id = $device?->company_id;
-        $attendance->status = AttendanceStatus::Present;
+        $attendance->late_minutes = $calculation->lateMinutes;
+        $attendance->within_grace = $calculation->withinGrace;
+        $attendance->status = $calculation->status;
         $attendance->save();
 
         return $attendance->load(['employee', 'shift']);
     }
 
     private function doClockOut(
-        Employee $employee,
-        ?float $latitude,
-        ?float $longitude,
-        ?int $distanceMeters,
-        AttendanceMethod $method,
-        ?AttendanceDevice $device,
+    Employee $employee,
+    ?float $latitude,
+    ?float $longitude,
+    ?int $distanceMeters,
+    AttendanceMethod $method,
+    ?AttendanceDevice $device,
     ): Attendance {
         $attendance = $this->getTodayAttendance($employee);
 
@@ -188,7 +195,11 @@ class AttendanceService
             throw new AttendanceValidationException('Sudah melakukan clock-out hari ini.');
         }
 
-        $attendance->clock_out = Carbon::now();
+        $clockOutAt = Carbon::now();
+        $shift = $attendance->shift_id ? $attendance->shift : null;
+        $overtime = $this->calculationEngine->calculateClockOut($employee, Carbon::today(), $clockOutAt, $shift);
+
+        $attendance->clock_out = $clockOutAt;
         $attendance->clock_out_latitude = $latitude;
         $attendance->clock_out_longitude = $longitude;
         $attendance->clock_out_distance_meters = $distanceMeters;
@@ -196,6 +207,7 @@ class AttendanceService
         $attendance->clock_out_device_id = $device?->id;
         $attendance->clock_out_branch_id = $device?->branch_id;
         $attendance->clock_out_company_id = $device?->company_id;
+        $attendance->detected_overtime_minutes = $overtime->detectedOvertimeMinutes;
         $attendance->save();
 
         return $attendance->load(['employee', 'shift']);
@@ -218,9 +230,13 @@ class AttendanceService
             'clock_in' => $attendance?->clock_in?->toDateTimeString(),
             'clock_in_distance_meters' => $attendance?->clock_in_distance_meters,
             'clock_in_method' => $attendance?->clock_in_method,
+            'late_minutes' => $attendance?->late_minutes,
+            'within_grace' => $attendance?->within_grace,
             'clock_out' => $attendance?->clock_out?->toDateTimeString(),
             'clock_out_distance_meters' => $attendance?->clock_out_distance_meters,
             'clock_out_method' => $attendance?->clock_out_method,
+            'detected_overtime_minutes' => $attendance?->detected_overtime_minutes,
+            'approved_overtime_minutes' => $attendance?->approved_overtime_minutes,
             'can_clock_in' => ! $attendance || ! $attendance->clock_in,
             'can_clock_out' => (bool) ($attendance && $attendance->clock_in && ! $attendance->clock_out),
             'shift' => $shift ? [

@@ -15,8 +15,11 @@ interface TodayAttendance {
   status: string | null
   clock_in: string | null
   clock_in_distance_meters: number | null
+  late_minutes: number | null
+  within_grace: boolean | null
   clock_out: string | null
   clock_out_distance_meters: number | null
+  detected_overtime_minutes: number | null
   can_clock_in: boolean
   can_clock_out: boolean
   shift: ShiftInfo | null
@@ -166,6 +169,13 @@ onMounted(() => {
           </p>
         </div>
       </div>
+
+      <p v-if="today.late_minutes !== null" class="mt-2 text-xs" :class="today.within_grace ? 'text-slate-400' : 'text-amber-600'">
+        Terlambat {{ today.late_minutes }} menit{{ today.within_grace ? ' (masih grace period)' : '' }}
+      </p>
+      <p v-if="today.detected_overtime_minutes" class="mt-1 text-xs text-blue-600">
+        Lembur terdeteksi {{ today.detected_overtime_minutes }} menit (menunggu approval)
+      </p>
 
       <p v-if="locationNote" class="mt-3 text-xs text-amber-600">{{ locationNote }}</p>
       <p v-if="errorMessage" class="mt-3 text-sm text-red-600">{{ errorMessage }}</p>

@@ -22,6 +22,7 @@ class Shift extends Model
         'break_start_time',
         'break_end_time',
         'late_tolerance_minutes',
+        'overtime_threshold_minutes',
         'check_in_before_minutes',
         'check_out_after_minutes',
         'is_active',
@@ -33,6 +34,7 @@ class Shift extends Model
             'is_overnight' => 'boolean',
             'is_active' => 'boolean',
             'late_tolerance_minutes' => 'integer',
+            'overtime_threshold_minutes' => 'integer',
             'check_in_before_minutes' => 'integer',
             'check_out_after_minutes' => 'integer',
         ];

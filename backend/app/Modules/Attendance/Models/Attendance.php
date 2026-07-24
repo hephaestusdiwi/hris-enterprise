@@ -28,6 +28,8 @@ class Attendance extends Model
         'clock_in_device_id',
         'clock_in_branch_id',
         'clock_in_company_id',
+        'late_minutes',
+        'within_grace',
         'clock_out',
         'clock_out_latitude',
         'clock_out_longitude',
@@ -38,6 +40,8 @@ class Attendance extends Model
         'clock_out_company_id',
         'status',
         'notes',
+        'detected_overtime_minutes',
+        'approved_overtime_minutes',
     ];
 
     protected function casts(): array
@@ -47,6 +51,7 @@ class Attendance extends Model
             'clock_in' => 'datetime',
             'clock_in_latitude' => 'decimal:7',
             'clock_in_longitude' => 'decimal:7',
+            'within_grace' => 'boolean',
             'clock_out' => 'datetime',
             'clock_out_latitude' => 'decimal:7',
             'clock_out_longitude' => 'decimal:7',
