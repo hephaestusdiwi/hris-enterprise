@@ -22,6 +22,7 @@ class AttendanceSetting extends Model
         'office_longtitude',
         'location_radius_meters',
         'allow_mobile_checkin',
+        'approval_mode',
     ];
 
     protected function casts(): array

@@ -16,6 +16,9 @@ import ApprovalFlowDetail from '@/views/ApprovalFlowDetail.vue'
 import AttendanceIndex from '@/views/AttendanceIndex.vue'
 import AttendanceDeviceListView from '@/views/AttendanceDeviceListView.vue'
 import AttendanceDeviceOfficeQrDisplayView from '@/views/AttendanceDeviceOfficeQrDisplayView.vue'
+import AttendanceApprovalListView from '@/views/AttendanceApprovalListView.vue'
+import WorkingScheduleAssignmentListView from '@/views/WorkingScheduleAssignmentListView.vue'
+import SchedulerView from '@/views/SchedulerView.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
@@ -128,6 +131,24 @@ const router = createRouter({
       path: '/attendance-devices/:id/office-qr',
       name: 'attendance-devices.office-qr',
       component: AttendanceDeviceOfficeQrDisplayView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/attendance-approvals',
+      name: 'attendance-approvals.list',
+      component: AttendanceApprovalListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/working-schedule-assignments',
+      name: 'working-schedule-assignments.list',
+      component: WorkingScheduleAssignmentListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/scheduler',
+      name: 'scheduler.list',
+      component: SchedulerView,
       meta: { requiresAuth: true },
     },
     {

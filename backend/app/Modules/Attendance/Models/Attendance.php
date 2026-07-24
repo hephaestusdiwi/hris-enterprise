@@ -30,6 +30,7 @@ class Attendance extends Model
         'clock_in_company_id',
         'late_minutes',
         'within_grace',
+        'approved_late_minutes',
         'clock_out',
         'clock_out_latitude',
         'clock_out_longitude',
@@ -38,10 +39,10 @@ class Attendance extends Model
         'clock_out_device_id',
         'clock_out_branch_id',
         'clock_out_company_id',
-        'status',
-        'notes',
         'detected_overtime_minutes',
         'approved_overtime_minutes',
+        'status',
+        'notes',
     ];
 
     protected function casts(): array

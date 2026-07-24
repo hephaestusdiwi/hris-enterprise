@@ -15,6 +15,8 @@ use App\Modules\Employee\Models\Employee;
 use App\Modules\Shift\Models\Shift;
 use App\Modules\WorkingSchedule\Models\WorkingScheduleDetail;
 use App\Modules\Attendance\Contracts\AttendanceCalculationEngineInterface;
+use App\Modules\Attendance\Services\AttendanceApprovalService;
+use App\Modules\WorkingSchedule\Contracts\WorkingScheduleResolverInterface;
 use Carbon\Carbon;
 
 class AttendanceService
@@ -23,6 +25,8 @@ class AttendanceService
         private AttendanceIdentificationStrategyFactory $strategyFactory,
         private OfficeQrTokenService $officeQrTokenService,
         private AttendanceCalculationEngineInterface $calculationEngine,
+        private AttendanceApprovalService $approvalService,
+        private WorkingScheduleResolverInterface $workingScheduleResolver,
     ) {
     }
 
@@ -174,16 +178,20 @@ class AttendanceService
         $attendance->status = $calculation->status;
         $attendance->save();
 
+        if ($calculation->status === AttendanceStatus::Late && $calculation->lateMinutes !== null) {
+            $this->approvalService->handleLateDetected($attendance, $calculation->lateMinutes);
+        }
+
         return $attendance->load(['employee', 'shift']);
     }
 
     private function doClockOut(
-    Employee $employee,
-    ?float $latitude,
-    ?float $longitude,
-    ?int $distanceMeters,
-    AttendanceMethod $method,
-    ?AttendanceDevice $device,
+        Employee $employee,
+        ?float $latitude,
+        ?float $longitude,
+        ?int $distanceMeters,
+        AttendanceMethod $method,
+        ?AttendanceDevice $device,
     ): Attendance {
         $attendance = $this->getTodayAttendance($employee);
 
@@ -209,6 +217,10 @@ class AttendanceService
         $attendance->clock_out_company_id = $device?->company_id;
         $attendance->detected_overtime_minutes = $overtime->detectedOvertimeMinutes;
         $attendance->save();
+
+        if ($overtime->detectedOvertimeMinutes !== null) {
+            $this->approvalService->handleOvertimeDetected($attendance, $overtime->detectedOvertimeMinutes);
+        }
 
         return $attendance->load(['employee', 'shift']);
     }
@@ -318,11 +330,13 @@ class AttendanceService
 
     private function resolveShiftForToday(Employee $employee): ?Shift
     {
-        if (! $employee->working_schedule_id) {
+        $workingScheduleId = $this->workingScheduleResolver->resolveWorkingScheduleId($employee);
+
+        if (! $workingScheduleId) {
             return null;
         }
 
-        $detail = WorkingScheduleDetail::where('working_schedule_id', $employee->working_schedule_id)
+        $detail = WorkingScheduleDetail::where('working_schedule_id', $workingScheduleId)
             ->where('day_of_week', Carbon::today()->dayOfWeek)
             ->first();
 

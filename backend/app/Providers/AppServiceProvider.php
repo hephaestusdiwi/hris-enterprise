@@ -11,6 +11,7 @@ use App\Modules\Attendance\Services\NullLeaveChecker;
 use App\Modules\FaceRecognition\Contracts\FaceRecognitionServiceInterface;
 use App\Modules\FaceRecognition\Services\HttpFaceRecognitionService;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,6 +25,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(HolidayCheckerInterface::class, HolidayChecker::class);
         $this->app->bind(LeaveCheckerInterface::class, NullLeaveChecker::class);
         $this->app->bind(AttendanceCalculationEngineInterface::class, AttendanceCalculationEngine::class);
+        $this->app->bind(
+            \App\Modules\WorkingSchedule\Contracts\WorkingScheduleResolverInterface::class,
+            \App\Modules\WorkingSchedule\Services\WorkingScheduleResolver::class,
+        );
     }
 
     /**
@@ -31,6 +36,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Relation::morphMap([
+            'company' => \App\Modules\Company\Models\Company::class,
+            'branch' => \App\Modules\Branch\Models\Branch::class,
+            'department' => \App\Modules\Department\Models\Department::class,
+            'position' => \App\Modules\Position\Models\Position::class,
+            'employee' => \App\Modules\Employee\Models\Employee::class,
+        ]);
     }
 }
