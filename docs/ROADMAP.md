@@ -43,7 +43,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x] 34. GPS Attendance
 - [x]  35. Face Recognition Integration
 - [x]  36. Device Attendance
-- [ ] 37. Late Calculation
+- [x]  37. Late Calculation
 - [ ] 38. Overtime
 - [ ] 39. Attendance Approval
 - [ ] 40. Attendance Report
