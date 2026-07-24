@@ -45,7 +45,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x]  36. Device Attendance
 - [x]  37. Late Calculation
 - [x]  38. Overtime
-- [ ] 39. Attendance Approval
+- [x]  39. Attendance Approval
 - [ ] 40. Attendance Report
 
 ## PHASE 4 — Leave
