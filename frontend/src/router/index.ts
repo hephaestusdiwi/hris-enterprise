@@ -20,6 +20,7 @@ import AttendanceApprovalListView from '@/views/AttendanceApprovalListView.vue'
 import WorkingScheduleAssignmentListView from '@/views/WorkingScheduleAssignmentListView.vue'
 import SchedulerView from '@/views/SchedulerView.vue'
 import AttendanceReportView from '@/views/AttendanceReportView.vue'
+import LeaveTypeListView from '@/views/LeaveTypeListView.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
@@ -156,6 +157,12 @@ const router = createRouter({
       path: '/attendance-report',
       name: 'attendance-report.list',
       component: AttendanceReportView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/leave-types',
+      name: 'leave-types.list',
+      component: LeaveTypeListView,
       meta: { requiresAuth: true },
     },
     {

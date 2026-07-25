@@ -3,7 +3,8 @@ import { ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import {
   LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound,
-  CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch, CheckCircle2, Layers, CalendarRange, BarChart3
+  CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch, CheckCircle2, Layers, CalendarRange, BarChart3,
+  Palmtree
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
@@ -60,6 +61,14 @@ const groups: MenuGroup[] = [
     items: [
       { name: 'approval-flows', label: 'Approval Flow', icon: GitBranch, to: '/approval-flows', permission: 'view approval flows' },
       { name: 'scheduler', label: 'Scheduler', icon: CalendarRange, to: '/scheduler', permission: 'view working schedules' },
+    ],
+  },
+  {
+    name: 'leave',
+    label: 'Leave',
+    icon: Palmtree,
+    items: [
+      { name: 'leave-types', label: 'Leave Type', icon: Palmtree, to: '/leave-types', permission: 'view leave types' },
     ],
   },
   {

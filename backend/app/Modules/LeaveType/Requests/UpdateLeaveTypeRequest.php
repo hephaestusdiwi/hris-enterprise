@@ -24,7 +24,7 @@ class UpdateLeaveTypeRequest extends FormRequest
                 'max:50',
                 Rule::unique('leave_types', 'code')
                     ->where('company_id', $this->input('company_id'))
-                    ->ignore($this->route('leave_type')),
+                    ->ignore($this->route('leaveType')),
             ],
             'description' => ['nullable', 'string'],
             'color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],

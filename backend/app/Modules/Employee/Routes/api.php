@@ -2,6 +2,7 @@
 
 use App\Modules\Employee\Controllers\EmployeeController;
 use App\Modules\Employee\Controllers\EmployeeFaceController;
+use App\Modules\Employee\Controllers\EmployeePhotoController;
 use App\Modules\Employee\Controllers\EmployeeQrController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,4 +26,9 @@ Route::middleware('permission:edit employees')->group(function () {
 Route::middleware('permission:edit employees')->group(function () {
     Route::post('/employees/{employee}/qr/generate', [EmployeeQrController::class, 'generate']);
     Route::delete('/employees/{employee}/qr', [EmployeeQrController::class, 'destroy']);
+});
+
+Route::middleware('permission:edit employees')->group(function () {
+    Route::post('/employees/{employee}/photo', [EmployeePhotoController::class, 'upload']);
+    Route::delete('/employees/{employee}/photo', [EmployeePhotoController::class, 'destroy']);
 });
