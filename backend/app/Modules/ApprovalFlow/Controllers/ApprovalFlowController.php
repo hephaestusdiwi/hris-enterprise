@@ -12,7 +12,7 @@ class ApprovalFlowController extends Controller
 {
     public function index()
     {
-        $approvalFlows = ApprovalFlow::with(['company', 'branch', 'department'])
+        $approvalFlows = ApprovalFlow::with(['company', 'branch', 'department', 'jobLevel'])
             ->withCount('steps')
             ->latest()
             ->paginate(15);
@@ -49,7 +49,7 @@ class ApprovalFlowController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'OK',
-            'data' => $approvalFlow->load(['company', 'branch', 'department', 'steps', 'assignments.employee']),
+            'data' => $approvalFlow->load(['company', 'branch', 'department', 'jobLevel', 'steps', 'assignments.employee']),
         ]);
     }
 

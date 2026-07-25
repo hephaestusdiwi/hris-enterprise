@@ -2,7 +2,9 @@
 
 namespace App\Modules\Employee\Requests;
 
+use App\Modules\Employee\Models\Employee;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class StoreEmployeeRequest extends FormRequest
 {
@@ -24,7 +26,15 @@ class StoreEmployeeRequest extends FormRequest
             'working_schedule_id' => ['nullable', 'exists:working_schedules,id'],
             'employment_status_id' => ['nullable', 'exists:employment_statuses,id'],
             'manager_employee_id' => ['nullable', 'exists:employees,id'],
-            'user_id' => ['nullable', 'exists:users,id'],
+
+            // User Account — WAJIB salah satu (lihat withValidator() di bawah):
+            // - "user_id": link ke User yang sudah ada
+            // - "new_user.email" (+ optional "new_user.password"): auto-provision User baru
+            'user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'new_user' => ['nullable', 'array'],
+            'new_user.email' => ['required_with:new_user', 'email', 'max:255', 'unique:users,email'],
+            'new_user.password' => ['nullable', 'string', 'min:8'],
+
             'join_date' => ['required', 'date'],
             'resign_date' => ['nullable', 'date', 'after_or_equal:join_date'],
 
@@ -50,5 +60,37 @@ class StoreEmployeeRequest extends FormRequest
             'bank_account_number' => ['nullable', 'string', 'max:50'],
             'bank_account_holder_name' => ['nullable', 'string', 'max:255'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $hasExisting = $this->filled('user_id');
+            $hasNew = $this->filled('new_user.email');
+
+            if (! $hasExisting && ! $hasNew) {
+                $validator->errors()->add(
+                    'user_id',
+                    'Employee wajib punya User Account: isi "user_id" (akun yang sudah ada) atau "new_user" (buat akun baru).'
+                );
+            }
+
+            if ($hasExisting && $hasNew) {
+                $validator->errors()->add(
+                    'user_id',
+                    'Pilih salah satu saja: "user_id" ATAU "new_user", jangan dua-duanya.'
+                );
+            }
+
+            if ($hasExisting) {
+                $alreadyLinked = Employee::where('user_id', $this->input('user_id'))
+                    ->whereNull('deleted_at')
+                    ->exists();
+
+                if ($alreadyLinked) {
+                    $validator->errors()->add('user_id', 'User ini sudah terhubung dengan Employee lain yang aktif.');
+                }
+            }
+        });
     }
 }

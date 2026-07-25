@@ -154,6 +154,24 @@ services:
     networks:
       - hris_network
 
+  face-service:
+    build:
+      context: ./face-service
+      dockerfile: Dockerfile
+    container_name: hris_face_service
+    restart: unless-stopped
+    environment:
+      FACE_API_KEY: ${FACE_API_KEY:-secret}
+      FACE_MODEL_NAME: ${FACE_MODEL_NAME:-ArcFace}
+      FACE_DETECTOR_BACKEND: ${FACE_DETECTOR_BACKEND:-retinaface}
+      FACE_DISTANCE_METRIC: ${FACE_DISTANCE_METRIC:-cosine}
+    volumes:
+      - hris_face_models:/app/.deepface
+    ports:
+      - "${FACE_SERVICE_PORT:-8001}:8000"
+    networks:
+      - hris_network
+
 networks:
   hris_network:
     driver: bridge
@@ -161,3 +179,4 @@ networks:
 volumes:
   hris_postgres_data:
   hris_redis_data:
+  hris_face_models:

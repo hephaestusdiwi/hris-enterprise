@@ -3,7 +3,7 @@
 namespace App\Modules\Attendance\Services;
 
 use App\Models\User;
-use App\Modules\ApprovalFlow\Models\ApprovalFlowAssignment;
+use App\Modules\ApprovalFlow\Services\ApprovalFlowResolver;
 use App\Modules\Attendance\Enums\ApprovalMode;
 use App\Modules\Attendance\Enums\AttendanceApprovalRequestStatus;
 use App\Modules\Attendance\Enums\AttendanceApprovalRequestType;
@@ -17,8 +17,10 @@ use App\Modules\Employee\Models\Employee;
 
 class AttendanceApprovalService
 {
-    public function __construct(private ApprovalStepApproverResolver $resolver)
-    {
+    public function __construct(
+        private ApprovalStepApproverResolver $resolver,
+        private ApprovalFlowResolver $approvalFlowResolver,
+    ) {
     }
 
     public function handleLateDetected(Attendance $attendance, int $lateMinutes): void
@@ -48,17 +50,15 @@ class AttendanceApprovalService
             return;
         }
 
-        $assignment = ApprovalFlowAssignment::where('employee_id', $employee->id)
-            ->where('is_active', true)
-            ->first();
+        $approvalFlow = $this->approvalFlowResolver->resolveFor($employee);
 
-        if (! $assignment) {
+        if (! $approvalFlow) {
             $this->applyApprovedValue($attendance, $type, $detectedValue);
 
             return;
         }
 
-        $steps = $assignment->approvalFlow->steps()->where('is_active', true)->orderBy('sequence')->get();
+        $steps = $approvalFlow->steps()->where('is_active', true)->orderBy('sequence')->get();
 
         if ($steps->isEmpty()) {
             $this->applyApprovedValue($attendance, $type, $detectedValue);
@@ -69,7 +69,7 @@ class AttendanceApprovalService
         $request = AttendanceApprovalRequest::create([
             'attendance_id' => $attendance->id,
             'employee_id' => $employee->id,
-            'approval_flow_id' => $assignment->approval_flow_id,
+            'approval_flow_id' => $approvalFlow->id,
             'type' => $type->value,
             'status' => AttendanceApprovalRequestStatus::Pending->value,
             'current_step_sequence' => $steps->first()->sequence,

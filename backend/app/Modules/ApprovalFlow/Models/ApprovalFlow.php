@@ -5,6 +5,7 @@ namespace App\Modules\ApprovalFlow\Models;
 use App\Modules\Branch\Models\Branch;
 use App\Modules\Company\Models\Company;
 use App\Modules\Department\Models\Department;
+use App\Modules\JobLevel\Models\JobLevel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +20,7 @@ class ApprovalFlow extends Model
         'company_id',
         'branch_id',
         'department_id',
+        'job_level_id',
         'name',
         'code',
         'description',
@@ -45,6 +47,11 @@ class ApprovalFlow extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function jobLevel(): BelongsTo
+    {
+        return $this->belongsTo(JobLevel::class);
     }
 
     public function steps(): HasMany

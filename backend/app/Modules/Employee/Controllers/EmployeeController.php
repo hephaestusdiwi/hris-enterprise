@@ -6,10 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Modules\Employee\Models\Employee;
 use App\Modules\Employee\Requests\StoreEmployeeRequest;
 use App\Modules\Employee\Requests\UpdateEmployeeRequest;
+use App\Modules\Employee\Services\EmployeeService;
+use App\Models\User;
 
 class EmployeeController extends Controller
 {
     protected array $relations = ['company', 'branch', 'department', 'position', 'jobLevel', 'workingSchedule', 'employmentStatus', 'manager', 'user'];
+
+    public function __construct(private EmployeeService $employeeService)
+    {
+    }
 
     public function index()
     {
@@ -19,6 +25,22 @@ class EmployeeController extends Controller
             'success' => true,
             'message' => 'OK',
             'data' => $employees,
+        ]);
+    }
+
+    public function availableUsers()
+    {
+        $linkedUserIds = Employee::whereNotNull('user_id')->pluck('user_id');
+
+        $users = User::select('id', 'name', 'email')
+            ->whereNotIn('id', $linkedUserIds)
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OK',
+            'data' => $users,
         ]);
     }
 
@@ -33,12 +55,17 @@ class EmployeeController extends Controller
 
     public function store(StoreEmployeeRequest $request)
     {
-        $employee = Employee::create($request->validated());
+        $result = $this->employeeService->createWithUserAccount($request->validated());
+
+        $message = 'Employee berhasil dibuat';
+        if ($result['generated_password']) {
+            $message .= '. Password akun baru: '.$result['generated_password'].' (catat sekarang, tidak ditampilkan lagi).';
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'Employee berhasil dibuat',
-            'data' => $employee->load($this->relations),
+            'message' => $message,
+            'data' => $result['employee']->load($this->relations),
         ], 201);
     }
 
@@ -90,7 +117,6 @@ class EmployeeController extends Controller
 
         return $prefix.str_pad((string) $next, 3, '0', STR_PAD_LEFT);
     }
-
 
     // cuma buat foto
     public function orgChart()

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, reactive, computed } from 'vue'
-import { Plus, Pencil, Trash2, X, ScanFace, QrCode, Search, ChevronDown, Building2, UserRound, Phone, IdCard, CheckCircle2 } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, X, ScanFace, QrCode, Search, ChevronDown, Building2, UserRound, Phone, IdCard, CheckCircle2, KeyRound } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
 import OrgChart from '@/components/employee/OrgChart.vue'
 import FaceEnrollmentModal from '@/components/FaceEnrollmentModal.vue'
@@ -9,6 +9,12 @@ import EmployeeQrModal from '@/components/EmployeeQrModal.vue'
 interface Ref {
   id: number
   name: string
+}
+
+interface UserRef {
+  id: number
+  name: string
+  email: string
 }
 
 interface EmployeeRow {
@@ -23,6 +29,7 @@ interface EmployeeRow {
   job_level: Ref | null
   working_schedule: Ref | null
   employment_status: Ref | null
+  user: UserRef | null
 }
 
 const view = ref<'directory' | 'orgchart'>('directory')
@@ -36,6 +43,7 @@ const jobLevels = ref<Ref[]>([])
 const workingSchedules = ref<Ref[]>([])
 const employmentStatuses = ref<Ref[]>([])
 const managerOptions = ref<{ id: number; employee_number: string; first_name: string; last_name: string | null }[]>([])
+const availableUsers = ref<UserRef[]>([])
 
 const loading = ref(true)
 const errorMessage = ref('')
@@ -50,6 +58,10 @@ const faceEnrollmentTarget = ref<EmployeeRow | null>(null)
 
 const showQrModal = ref(false)
 const qrModalTarget = ref<EmployeeRow | null>(null)
+
+// User yang lagi ke-link ke employee yang diedit — dipertahankan di daftar pilihan
+// meskipun dia gak muncul di /available-users (karena udah kepake).
+const currentEditUser = ref<UserRef | null>(null)
 
 const form = reactive({
   id: 0,
@@ -80,6 +92,11 @@ const form = reactive({
   bank_name: '',
   bank_account_number: '',
   bank_account_holder_name: '',
+  // --- Akun / login ---
+  account_mode: 'new' as 'existing' | 'new',
+  user_id: null as number | null,
+  new_user_email: '',
+  new_user_password: '',
 })
 
 function fullName(row: { first_name: string; last_name: string | null }) {
@@ -89,6 +106,15 @@ function fullName(row: { first_name: string; last_name: string | null }) {
 function initials(row: { first_name: string; last_name: string | null }) {
   return `${row.first_name?.[0] ?? ''}${row.last_name?.[0] ?? ''}`.toUpperCase()
 }
+
+// Daftar user buat dropdown: available-users + (kalau lagi edit) user yang udah ke-link
+const userOptions = computed(() => {
+  const list = [...availableUsers.value]
+  if (currentEditUser.value && !list.some((u) => u.id === currentEditUser.value!.id)) {
+    list.unshift(currentEditUser.value)
+  }
+  return list
+})
 
 // --- Search & filter (client-side, dari data yang lagi ke-load) ---
 const searchQuery = ref('')
@@ -161,7 +187,17 @@ async function loadEmployees() {
 }
 
 async function loadReferenceData() {
-  const [companyRes, branchRes, departmentRes, positionRes, jobLevelRes, workingScheduleRes, statusRes, employeeRes] = await Promise.all([
+  const [
+    companyRes,
+    branchRes,
+    departmentRes,
+    positionRes,
+    jobLevelRes,
+    workingScheduleRes,
+    statusRes,
+    employeeRes,
+    availableUsersRes,
+  ] = await Promise.all([
     apiClient.get('/api/companies'),
     apiClient.get('/api/branches'),
     apiClient.get('/api/departments'),
@@ -170,6 +206,7 @@ async function loadReferenceData() {
     apiClient.get('/api/working-schedules'),
     apiClient.get('/api/employment-statuses'),
     apiClient.get('/api/employees'),
+    apiClient.get('/api/employees/available-users'),
   ])
   companies.value = companyRes.data.data.data
   branches.value = branchRes.data.data.data
@@ -179,6 +216,7 @@ async function loadReferenceData() {
   workingSchedules.value = workingScheduleRes.data.data.data
   employmentStatuses.value = statusRes.data.data.data
   managerOptions.value = employeeRes.data.data.data
+  availableUsers.value = availableUsersRes.data.data
 }
 
 async function resetForm() {
@@ -211,6 +249,11 @@ async function resetForm() {
   form.bank_name = ''
   form.bank_account_number = ''
   form.bank_account_holder_name = ''
+  form.account_mode = 'new'
+  form.user_id = null
+  form.new_user_email = ''
+  form.new_user_password = ''
+  currentEditUser.value = null
 }
 
 async function openCreateModal() {
@@ -255,6 +298,8 @@ async function openEditModal(row: EmployeeRow) {
   form.bank_name = e.bank_name ?? ''
   form.bank_account_number = e.bank_account_number ?? ''
   form.bank_account_holder_name = e.bank_account_holder_name ?? ''
+  form.user_id = e.user?.id ?? null
+  currentEditUser.value = e.user ?? null
 
   showModal.value = true
 }
@@ -297,11 +342,24 @@ async function handleSubmit() {
     bank_account_holder_name: form.bank_account_holder_name || null,
   }
 
+  if (isEditing.value) {
+    payload.user_id = form.user_id
+  } else if (form.account_mode === 'existing') {
+    payload.user_id = form.user_id
+  } else {
+    payload.new_user = { email: form.new_user_email, password: form.new_user_password || null }
+  }
+
   try {
     if (isEditing.value) {
       await apiClient.put(`/api/employees/${form.id}`, payload)
     } else {
-      await apiClient.post('/api/employees', payload)
+      const response = await apiClient.post('/api/employees', payload)
+      const message: string | undefined = response.data?.message
+      if (message && message.includes('Password akun baru')) {
+        // Satu-satunya kesempatan password auto-generate ini ketampil ke HR.
+        alert(message)
+      }
     }
 
     showModal.value = false
@@ -664,6 +722,67 @@ onMounted(() => {
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">Tanggal Resign</label>
                   <input v-model="form.resign_date" type="date" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Akun / Login -->
+            <div>
+              <div class="mb-3 flex items-center gap-2">
+                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary-dark">
+                  <KeyRound class="h-4 w-4" :stroke-width="1.75" />
+                </div>
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Akun / Login</h3>
+              </div>
+
+              <!-- Mode toggle, cuma pas create -->
+              <div v-if="!isEditing" class="mb-3 flex gap-2">
+                <button
+                  type="button"
+                  @click="form.account_mode = 'new'"
+                  class="rounded-xl border px-3 py-1.5 text-sm font-medium transition-colors"
+                  :class="form.account_mode === 'new' ? 'border-primary/40 bg-primary-soft text-primary-dark' : 'border-slate-200 text-slate-500 hover:bg-slate-50'"
+                >
+                  Buat akun baru
+                </button>
+                <button
+                  type="button"
+                  @click="form.account_mode = 'existing'"
+                  class="rounded-xl border px-3 py-1.5 text-sm font-medium transition-colors"
+                  :class="form.account_mode === 'existing' ? 'border-primary/40 bg-primary-soft text-primary-dark' : 'border-slate-200 text-slate-500 hover:bg-slate-50'"
+                >
+                  Pakai akun existing
+                </button>
+              </div>
+
+              <!-- Edit mode: user yang terhubung, wajib dan boleh diganti -->
+              <div v-if="isEditing">
+                <label class="mb-1 block text-sm font-medium text-slate-700">User Terhubung</label>
+                <select v-model="form.user_id" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                  <option :value="null" disabled>Pilih user</option>
+                  <option v-for="u in userOptions" :key="u.id" :value="u.id">{{ u.name }} ({{ u.email }})</option>
+                </select>
+              </div>
+
+              <!-- Create mode: existing -->
+              <div v-else-if="form.account_mode === 'existing'">
+                <label class="mb-1 block text-sm font-medium text-slate-700">Pilih Akun</label>
+                <select v-model="form.user_id" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                  <option :value="null" disabled>Pilih user</option>
+                  <option v-for="u in userOptions" :key="u.id" :value="u.id">{{ u.name }} ({{ u.email }})</option>
+                </select>
+                <p v-if="userOptions.length === 0" class="mt-1 text-xs text-slate-400">Gak ada akun yang belum ke-link.</p>
+              </div>
+
+              <!-- Create mode: new -->
+              <div v-else class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-slate-700">Email Akun</label>
+                  <input v-model="form.new_user_email" type="email" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
+                </div>
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-slate-700">Password (opsional)</label>
+                  <input v-model="form.new_user_password" type="text" placeholder="Kosongkan buat auto-generate" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
                 </div>
               </div>
             </div>

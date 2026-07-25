@@ -2,8 +2,10 @@
 
 namespace App\Modules\Employee\Requests;
 
+use App\Modules\Employee\Models\Employee;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UpdateEmployeeRequest extends FormRequest
 {
@@ -32,7 +34,11 @@ class UpdateEmployeeRequest extends FormRequest
                     }
                 },
             ],
-            'user_id' => ['nullable', 'exists:users,id'],
+
+            // Employee WAJIB punya User (Architecture Decision) — boleh direassign
+            // ke User lain, tapi tidak boleh dikosongkan.
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+
             'join_date' => ['required', 'date'],
             'resign_date' => ['nullable', 'date', 'after_or_equal:join_date'],
 
@@ -55,5 +61,25 @@ class UpdateEmployeeRequest extends FormRequest
             'bank_account_number' => ['nullable', 'string', 'max:50'],
             'bank_account_holder_name' => ['nullable', 'string', 'max:255'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $userId = $this->input('user_id');
+
+            if (! $userId) {
+                return;
+            }
+
+            $alreadyLinked = Employee::where('user_id', $userId)
+                ->where('id', '!=', $this->route('employee')->id)
+                ->whereNull('deleted_at')
+                ->exists();
+
+            if ($alreadyLinked) {
+                $validator->errors()->add('user_id', 'User ini sudah terhubung dengan Employee lain yang aktif.');
+            }
+        });
     }
 }
