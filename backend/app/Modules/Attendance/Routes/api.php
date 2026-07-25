@@ -2,6 +2,7 @@
 
 use App\Modules\Attendance\Controllers\AttendanceController;
 use App\Modules\Attendance\Controllers\AttendanceDeviceController;
+use App\Modules\Attendance\Controllers\AttendanceReportController;
 use App\Modules\Attendance\Controllers\AttendanceSelfServiceController;
 use Illuminate\Support\Facades\Route;
 
@@ -34,3 +35,9 @@ Route::middleware('permission:edit attendance devices')->group(function () {
 });
 
 Route::middleware('permission:delete attendance devices')->delete('/attendance-devices/{attendanceDevice}', [AttendanceDeviceController::class, 'destroy']);
+
+Route::middleware('permission:view attendances')->group(function () {
+    Route::get('/attendance-report', [AttendanceReportController::class, 'index']);
+    Route::get('/attendance-report/employees/{employee}/daily', [AttendanceReportController::class, 'daily']);
+    Route::get('/attendance-report/export', [AttendanceReportController::class, 'export']);
+});

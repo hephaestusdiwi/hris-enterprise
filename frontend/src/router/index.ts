@@ -19,6 +19,7 @@ import AttendanceDeviceOfficeQrDisplayView from '@/views/AttendanceDeviceOfficeQ
 import AttendanceApprovalListView from '@/views/AttendanceApprovalListView.vue'
 import WorkingScheduleAssignmentListView from '@/views/WorkingScheduleAssignmentListView.vue'
 import SchedulerView from '@/views/SchedulerView.vue'
+import AttendanceReportView from '@/views/AttendanceReportView.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
@@ -149,6 +150,12 @@ const router = createRouter({
       path: '/scheduler',
       name: 'scheduler.list',
       component: SchedulerView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/attendance-report',
+      name: 'attendance-report.list',
+      component: AttendanceReportView,
       meta: { requiresAuth: true },
     },
     {

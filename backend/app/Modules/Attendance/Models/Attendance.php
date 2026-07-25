@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Modules\Attendance\Models\AttendanceApprovalRequest;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Attendance extends Model
 {
@@ -98,5 +100,10 @@ class Attendance extends Model
     public function clockOutCompany(): BelongsTo
     {
         return $this->belongsTo(Company::class, 'clock_out_company_id');
+    }
+
+    public function approvalRequests(): HasMany
+    {
+        return $this->hasMany(AttendanceApprovalRequest::class);
     }
 }
