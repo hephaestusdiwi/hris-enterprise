@@ -27,6 +27,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'account_status',
+        'invited_at',
+        'activation_token_hash',
+        'activation_token_expires_at',
     ];
 
     /**
@@ -37,6 +41,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'activation_token_hash',
     ];
 
     /**
@@ -49,7 +54,27 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'invited_at' => 'datetime',
+            'activation_token_expires_at' => 'datetime',
         ];
+    }
+
+    public function isPendingInvite(): bool
+    {
+        return $this->account_status === 'pending_invite';
+    }
+
+    public function isActivationTokenValid(string $plainToken): bool
+    {
+        if (! $this->activation_token_hash || ! $this->activation_token_expires_at) {
+            return false;
+        }
+
+        if ($this->activation_token_expires_at->isPast()) {
+            return false;
+        }
+
+        return hash_equals($this->activation_token_hash, hash('sha256', $plainToken));
     }
 
     public function employee(): HasOne

@@ -32,3 +32,5 @@ Route::middleware('permission:edit employees')->group(function () {
     Route::post('/employees/{employee}/photo', [EmployeePhotoController::class, 'upload']);
     Route::delete('/employees/{employee}/photo', [EmployeePhotoController::class, 'destroy']);
 });
+
+Route::middleware('permission:edit employees')->post('/employees/{employee}/resend-invite', [EmployeeController::class, 'resendInvite']);

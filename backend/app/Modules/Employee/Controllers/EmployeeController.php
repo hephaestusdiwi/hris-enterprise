@@ -57,16 +57,25 @@ class EmployeeController extends Controller
     {
         $result = $this->employeeService->createWithUserAccount($request->validated());
 
-        $message = 'Employee berhasil dibuat';
-        if ($result['generated_password']) {
-            $message .= '. Password akun baru: '.$result['generated_password'].' (catat sekarang, tidak ditampilkan lagi).';
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Employee berhasil dibuat',
+            'data' => [
+                ...$result['employee']->load($this->relations)->toArray(),
+                'invite_link' => $result['invite_link'],
+            ],
+        ], 201);
+    }
+
+    public function resendInvite(Employee $employee)
+    {
+        $inviteLink = $this->employeeService->resendInvite($employee);
 
         return response()->json([
             'success' => true,
-            'message' => $message,
-            'data' => $result['employee']->load($this->relations),
-        ], 201);
+            'message' => 'Invite link berhasil digenerate ulang. Link lama sudah tidak berlaku.',
+            'data' => ['invite_link' => $inviteLink],
+        ]);
     }
 
     public function show(Employee $employee)

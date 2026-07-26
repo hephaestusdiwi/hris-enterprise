@@ -1,9 +1,14 @@
 <?php
 
+use App\Http\Controllers\Auth\AccountActivationController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+
+// Publik — tidak butuh login, employee baru buka ini dari invite link
+Route::post('/account-activation/validate', [AccountActivationController::class, 'validateToken']);
+Route::post('/account-activation/complete', [AccountActivationController::class, 'complete']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'me']);
