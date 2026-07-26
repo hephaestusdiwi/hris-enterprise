@@ -10,3 +10,10 @@ Artisan::command('inspire', function () {
 
 Schedule::command('working-schedule:apply-scheduled-changes')
     ->dailyAt('00:05');
+
+// Batch tahunan — generate balance seluruh employee + proses carry over di awal periode baru
+Schedule::command('leave-balance:sync')->yearlyOn(1, 1, '00:10');
+
+// Safety net harian — nangkep employee yang baru eligible di tengah tahun murni karena
+// waktu berjalan (mis. baru genap min_service_months), yang gak ke-trigger oleh event Employee.
+Schedule::command('leave-balance:sync')->dailyAt('01:00');

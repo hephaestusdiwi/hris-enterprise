@@ -18,7 +18,8 @@ RUN apk add --no-cache --virtual .build-deps \
         freetype-dev \
         icu-dev \
         linux-headers \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+        libwebp-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j"$(nproc)" \
         pdo_pgsql \
         pgsql \

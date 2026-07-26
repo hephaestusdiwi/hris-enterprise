@@ -29,6 +29,10 @@ class AppServiceProvider extends ServiceProvider
             \App\Modules\WorkingSchedule\Contracts\WorkingScheduleResolverInterface::class,
             \App\Modules\WorkingSchedule\Services\WorkingScheduleResolver::class,
         );
+        $this->app->bind(
+            \App\Modules\LeaveBalance\Contracts\LeaveQuotaProrationStrategyInterface::class,
+            \App\Modules\LeaveBalance\Strategies\MonthlyProratedQuotaStrategy::class,
+        );
     }
 
     /**
@@ -43,5 +47,8 @@ class AppServiceProvider extends ServiceProvider
             'position' => \App\Modules\Position\Models\Position::class,
             'employee' => \App\Modules\Employee\Models\Employee::class,
         ]);
+        \App\Modules\Employee\Models\Employee::observe(
+            $this->app->make(\App\Modules\LeaveBalance\Observers\EmployeeLeaveBalanceObserver::class)
+        );
     }
 }
