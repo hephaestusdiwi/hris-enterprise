@@ -50,7 +50,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 
 ## PHASE 4 — Leave
 - [x]  41. Leave Type
-- [ ] 42. Leave Balance
+- [x]   42. Leave Balance
 - [ ] 43. Leave Request
 - [ ] 44. Leave Approval
 - [ ] 45. Leave Calendar
