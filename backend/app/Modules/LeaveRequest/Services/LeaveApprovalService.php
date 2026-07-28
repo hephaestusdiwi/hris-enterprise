@@ -3,7 +3,7 @@
 namespace App\Modules\LeaveRequest\Services;
 
 use App\Models\User;
-use App\Modules\ApprovalFlow\Models\ApprovalFlowAssignment;
+use App\Modules\ApprovalFlow\Services\ApprovalFlowResolver;
 use App\Modules\Attendance\Services\ApprovalStepApproverResolver;
 use App\Modules\LeaveBalance\Support\LeaveBalanceMath;
 use App\Modules\LeaveRequest\Enums\LeaveApprovalRequestStatus;
@@ -16,25 +16,25 @@ use App\Modules\LeaveRequest\Models\LeaveRequest;
 
 class LeaveApprovalService
 {
-    public function __construct(private ApprovalStepApproverResolver $resolver)
-    {
+    public function __construct(
+        private ApprovalStepApproverResolver $resolver,
+        private ApprovalFlowResolver $approvalFlowResolver,
+    ) {
     }
 
     public function initiate(LeaveRequest $leaveRequest): void
     {
         $employee = $leaveRequest->employee;
 
-        $assignment = ApprovalFlowAssignment::where('employee_id', $employee->id)
-            ->where('is_active', true)
-            ->first();
+        $approvalFlow = $this->approvalFlowResolver->resolveFor($employee);
 
-        if (! $assignment) {
+        if (! $approvalFlow) {
             $this->autoApprove($leaveRequest);
 
             return;
         }
 
-        $steps = $assignment->approvalFlow->steps()->where('is_active', true)->orderBy('sequence')->get();
+        $steps = $approvalFlow->steps()->where('is_active', true)->orderBy('sequence')->get();
 
         if ($steps->isEmpty()) {
             $this->autoApprove($leaveRequest);
@@ -45,7 +45,7 @@ class LeaveApprovalService
         $request = LeaveApprovalRequest::create([
             'leave_request_id' => $leaveRequest->id,
             'employee_id' => $employee->id,
-            'approval_flow_id' => $assignment->approval_flow_id,
+            'approval_flow_id' => $approvalFlow->id,
             'status' => LeaveApprovalRequestStatus::Pending->value,
             'current_step_sequence' => $steps->first()->sequence,
             'requested_at' => now(),
