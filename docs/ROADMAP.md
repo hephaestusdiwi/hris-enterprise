@@ -52,7 +52,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x]  41. Leave Type
 - [x]   42. Leave Balance
 - [x]   43. Leave Request
-- [ ] 44. Leave Approval
+- [x] 44. Leave Approval
 - [ ] 45. Leave Calendar
 
 ## PHASE 5 — Payroll
