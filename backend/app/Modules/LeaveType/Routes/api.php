@@ -3,6 +3,8 @@
 use App\Modules\LeaveType\Controllers\LeaveTypeController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/leave-types/self-service', [LeaveTypeController::class, 'activeForSelfService']);
+
 Route::middleware('permission:view leave types')->group(function () {
     Route::get('/leave-types', [LeaveTypeController::class, 'index']);
     Route::get('/leave-types/{leaveType}', [LeaveTypeController::class, 'show']);

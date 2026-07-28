@@ -5,6 +5,8 @@ import apiClient from '@/lib/axios'
 import OrgChart from '@/components/employee/OrgChart.vue'
 import FaceEnrollmentModal from '@/components/FaceEnrollmentModal.vue'
 import EmployeeQrModal from '@/components/EmployeeQrModal.vue'
+import EmployeeCreateWizard from '@/components/employee/EmployeeCreateWizard.vue'
+import EmployeePhotoModal from '@/components/EmployeePhotoModal.vue'
 
 interface Ref {
   id: number
@@ -23,6 +25,7 @@ interface EmployeeRow {
   first_name: string
   last_name: string | null
   qr_generated_at: string | null
+  photo_url: string | null
   company: Ref
   department: Ref | null
   position: Ref | null
@@ -256,11 +259,16 @@ async function resetForm() {
   currentEditUser.value = null
 }
 
-async function openCreateModal() {
-  isEditing.value = false
-  formError.value = ''
-  await resetForm()
-  showModal.value = true
+const showWizard = ref(false)
+
+function openCreateModal() {
+  showWizard.value = true
+}
+
+function handleWizardCreated() {
+  showWizard.value = false
+  loadEmployees()
+  loadReferenceData()
 }
 
 async function openEditModal(row: EmployeeRow) {
@@ -386,6 +394,19 @@ async function handleDelete(row: EmployeeRow) {
 function openFaceEnrollment(row: EmployeeRow) {
   faceEnrollmentTarget.value = row
   showFaceEnrollment.value = true
+}
+
+const showPhotoModal = ref(false)
+const photoModalTarget = ref<EmployeeRow | null>(null)
+
+function openPhotoModal(row: EmployeeRow) {
+  photoModalTarget.value = row
+  showPhotoModal.value = true
+}
+
+function closePhotoModal() {
+  showPhotoModal.value = false
+  photoModalTarget.value = null
 }
 
 function closeFaceEnrollment() {
@@ -546,7 +567,16 @@ onMounted(() => {
               >
                 <td class="px-5 py-3.5">
                   <div class="flex items-center gap-2.5">
-                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark">
+                    <img
+                      v-if="row.photo_url"
+                      :src="row.photo_url"
+                      alt=""
+                      class="h-8 w-8 shrink-0 rounded-full object-cover"
+                    />
+                    <div
+                      v-else
+                      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark"
+                    >
                       {{ initials(row) }}
                     </div>
                     <div>
@@ -606,6 +636,13 @@ onMounted(() => {
             QR Attendance
           </span>
           <CheckCircle2 v-if="openActionsRow.qr_generated_at" class="h-3.5 w-3.5 text-primary" :stroke-width="2" />
+        </button>
+        <button
+          @click="openPhotoModal(openActionsRow!); closeActions()"
+          class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-50"
+        >
+          <UserRound class="h-3.5 w-3.5" :stroke-width="1.75" />
+          Upload/Ubah Foto Profil
         </button>
         <button
           @click="openFaceEnrollment(openActionsRow!); closeActions()"
@@ -920,6 +957,15 @@ onMounted(() => {
       @enrolled="closeFaceEnrollment"
     />
 
+    <EmployeePhotoModal
+      v-if="showPhotoModal && photoModalTarget"
+      :employee-id="photoModalTarget.id"
+      :employee-name="fullName(photoModalTarget)"
+      :current-photo-url="photoModalTarget.photo_url"
+      @close="closePhotoModal"
+      @updated="loadEmployees"
+    />
+
     <EmployeeQrModal
       v-if="showQrModal && qrModalTarget"
       :employee-id="qrModalTarget.id"
@@ -927,6 +973,12 @@ onMounted(() => {
       :qr-generated-at="qrModalTarget.qr_generated_at"
       @close="closeQrModal"
       @updated="loadEmployees"
+    />
+
+    <EmployeeCreateWizard
+      v-if="showWizard"
+      @close="showWizard = false"
+      @created="handleWizardCreated"
     />
   </div>
 </template>

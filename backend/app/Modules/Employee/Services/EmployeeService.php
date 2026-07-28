@@ -4,11 +4,16 @@ namespace App\Modules\Employee\Services;
 
 use App\Models\User;
 use App\Modules\Employee\Models\Employee;
+use App\Modules\LeaveBalance\Services\LeaveBalanceGenerationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class EmployeeService
 {
+    public function __construct(private LeaveBalanceGenerationService $leaveBalanceGenerationService)
+    {
+    }
+
     /**
      * Buat Employee baru sekaligus User account-nya (Architecture Decision:
      * Employee WAJIB punya User — lihat docs/EMPLOYEE-USER-ACCOUNT.md).
@@ -38,6 +43,12 @@ class EmployeeService
             unset($data['new_user']);
 
             $employee = Employee::create($data);
+
+            // Generate leave balance periode berjalan otomatis begitu Employee
+            // dibuat — supaya karyawan baru bisa langsung ajukan cuti tanpa
+            // perlu command manual (lihat GenerateLeaveBalances untuk backfill
+            // massal / generate ulang tahunan).
+            $this->leaveBalanceGenerationService->generateForEmployee($employee, now());
 
             return [
                 'employee' => $employee,

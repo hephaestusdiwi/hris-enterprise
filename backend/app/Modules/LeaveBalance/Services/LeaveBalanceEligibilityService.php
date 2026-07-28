@@ -10,7 +10,22 @@ class LeaveBalanceEligibilityService
 {
     public function isEligible(Employee $employee, LeaveType $leaveType, Carbon $asOfDate): bool
     {
-        if (! $leaveType->is_active || ! $leaveType->requires_balance) {
+        if (! $leaveType->requires_balance) {
+            return false;
+        }
+
+        return $this->meetsServiceRequirement($employee, $leaveType, $asOfDate);
+    }
+
+    /**
+     * Cek kelayakan employee terhadap leave type (masa kerja, gender, status aktif),
+     * TANPA peduli apakah leave type itu requires_balance atau tidak.
+     * Dipakai Leave Request (yang tetap perlu jalan untuk leave type non-balance
+     * seperti Sick Leave), sedangkan isEligible() dipakai khusus Leave Balance Generation.
+     */
+    public function meetsServiceRequirement(Employee $employee, LeaveType $leaveType, Carbon $asOfDate): bool
+    {
+        if (! $leaveType->is_active) {
             return false;
         }
 

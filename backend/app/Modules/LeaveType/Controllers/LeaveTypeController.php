@@ -61,6 +61,15 @@ class LeaveTypeController extends Controller
             'data' => null,
         ]);
     }
+    
+    public function activeForSelfService()
+    {
+        $leaveTypes = LeaveType::where('company_id', request()->user()->employee?->company_id)
+            ->where('is_active', true)
+            ->get(['id', 'name', 'color', 'allow_half_day', 'allow_hourly', 'requires_attachment']);
+
+        return response()->json(['success' => true, 'message' => 'OK', 'data' => $leaveTypes]);
+    }
 
     private function normalizeCarryOver(array $data): array
     {

@@ -10,7 +10,7 @@ class LeaveBalanceController extends Controller
 {
     public function index(Request $request)
     {
-        $balances = LeaveBalance::with(['employee', 'leaveType', 'adjustments'])
+        $balances = LeaveBalance::with(['employee', 'leaveType', 'adjustments.createdBy'])
             ->when($request->query('employee_id'), fn ($q, $v) => $q->where('employee_id', $v))
             ->when($request->query('leave_type_id'), fn ($q, $v) => $q->where('leave_type_id', $v))
             ->when($request->query('year'), fn ($q, $v) => $q->whereYear('period_start', $v))

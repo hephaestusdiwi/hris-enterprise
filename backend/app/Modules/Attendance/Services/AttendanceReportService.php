@@ -135,6 +135,7 @@ class AttendanceReportService
                 'id' => $employee->id,
                 'employee_number' => $employee->employee_number,
                 'name' => trim("{$employee->first_name} {$employee->last_name}"),
+                'photo_url' => $employee->photo_url,
             ],
             'present_days' => $presentDays,
             'late_days' => $lateDays,

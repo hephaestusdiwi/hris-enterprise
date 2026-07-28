@@ -9,7 +9,7 @@ import apiClient from '@/lib/axios'
 interface Ref { id: number; name: string }
 
 interface SummaryRow {
-  employee: { id: number; employee_number: string; name: string }
+  employee: { id: number; employee_number: string; name: string; photo_url: string | null }
   present_days: number
   late_days: number
   overtime_minutes: number
@@ -487,11 +487,24 @@ onMounted(() => {
               class="cursor-pointer border-b border-slate-50 last:border-0 hover:bg-slate-50/50"
             >
               <td class="px-5 py-3.5">
-                <div class="flex items-center gap-1.5">
-                  <p class="font-medium text-slate-800">{{ row.employee.name }}</p>
-                  <AlertTriangle v-if="needsAttention(row)" class="h-3.5 w-3.5 text-amber-500" :stroke-width="2" />
+                <div class="flex items-center gap-2.5">
+                  <img
+                    v-if="row.employee.photo_url"
+                    :src="row.employee.photo_url"
+                    alt=""
+                    class="h-8 w-8 shrink-0 rounded-full object-cover"
+                  />
+                  <div v-else class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark">
+                    {{ row.employee.name.slice(0, 2).toUpperCase() }}
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-1.5">
+                      <p class="font-medium text-slate-800">{{ row.employee.name }}</p>
+                      <AlertTriangle v-if="needsAttention(row)" class="h-3.5 w-3.5 text-amber-500" :stroke-width="2" />
+                    </div>
+                    <p class="text-xs text-slate-400">{{ row.employee.employee_number }}</p>
+                  </div>
                 </div>
-                <p class="text-xs text-slate-400">{{ row.employee.employee_number }}</p>
               </td>
               <td class="px-3 py-3.5 text-center text-slate-600">{{ row.present_days }}</td>
               <td class="px-3 py-3.5 text-center">
@@ -589,11 +602,22 @@ onMounted(() => {
         >
           <aside class="absolute right-0 top-0 flex h-full w-full max-w-5xl flex-col bg-white shadow-2xl">
             <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <div>
-                <h2 class="text-lg font-semibold text-slate-900">{{ drilldownEmployee?.employee.name }}</h2>
-                <p class="text-sm text-slate-500">
-                  {{ drilldownEmployee?.employee.employee_number }} · {{ filters.date_from }} s/d {{ filters.date_to }}
-                </p>
+              <div class="flex items-center gap-3">
+                <img
+                  v-if="drilldownEmployee?.employee.photo_url"
+                  :src="drilldownEmployee.employee.photo_url"
+                  alt=""
+                  class="h-11 w-11 shrink-0 rounded-full object-cover"
+                />
+                <div v-else class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary-dark">
+                  {{ drilldownEmployee?.employee.name.slice(0, 2).toUpperCase() }}
+                </div>
+                <div>
+                  <h2 class="text-lg font-semibold text-slate-900">{{ drilldownEmployee?.employee.name }}</h2>
+                  <p class="text-sm text-slate-500">
+                    {{ drilldownEmployee?.employee.employee_number }} · {{ filters.date_from }} s/d {{ filters.date_to }}
+                  </p>
+                </div>
               </div>
               <button @click="closeDrilldown" class="rounded-lg p-1 text-slate-400 hover:bg-slate-50">
                 <X class="h-5 w-5" />

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue'
-import { Filter, Plus, History, X, Loader2 } from 'lucide-vue-next'
+import { ref, onMounted, reactive, computed } from 'vue'
+import { Filter, History, X, Loader2, ChevronDown, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
 
 interface Ref { id: number; name: string }
@@ -44,6 +44,10 @@ function employeeName(e: Employee) {
   return [e.first_name, e.last_name].filter(Boolean).join(' ')
 }
 
+function employeeInitials(e: Employee) {
+  return `${e.first_name?.[0] ?? ''}${e.last_name?.[0] ?? ''}`.toUpperCase()
+}
+
 function formatDate(value: string | null) {
   if (!value) return '-'
   return new Date(value).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -63,6 +67,31 @@ const filters = reactive({
   year: currentYear,
   page: 1,
 })
+
+const showFilters = ref(false)
+const activeFilterCount = computed(() => [filters.employee_id, filters.leave_type_id].filter((v) => v !== null).length)
+
+// --- Ringkasan visual (dari data yang lagi ke-load) ---
+const LOW_BALANCE_THRESHOLD = 2
+
+function totalAvailable(row: LeaveBalanceRow): number | null {
+  if (row.initial_quota === null) return null
+  return Number(row.initial_quota) + Number(row.carry_over_days)
+}
+
+function usagePercent(row: LeaveBalanceRow): number {
+  const total = totalAvailable(row)
+  if (!total || total <= 0) return 0
+  return Math.min(100, Math.round((Number(row.used_days) / total) * 100))
+}
+
+function isLowBalance(row: LeaveBalanceRow): boolean {
+  return row.remaining_days !== null && row.remaining_days <= LOW_BALANCE_THRESHOLD
+}
+
+const lowBalanceCount = computed(() => balances.value.filter(isLowBalance).length)
+const totalUsedDays = computed(() => balances.value.reduce((sum, r) => sum + Number(r.used_days || 0), 0))
+const withAdjustmentCount = computed(() => balances.value.filter((r) => r.adjustments.length > 0).length)
 
 async function loadBalances() {
   loading.value = true
@@ -104,9 +133,27 @@ function applyFilters() {
 }
 
 function goToPage(page: number) {
+  if (page < 1 || page > meta.value.last_page || page === meta.value.current_page) return
   filters.page = page
   loadBalances()
 }
+
+const paginationItems = computed(() => {
+  const total = meta.value.last_page
+  const current = meta.value.current_page
+  if (total <= 1) return []
+
+  const items: (number | '...')[] = [1]
+  const left = Math.max(2, current - 1)
+  const right = Math.min(total - 1, current + 1)
+
+  if (left > 2) items.push('...')
+  for (let i = left; i <= right; i++) items.push(i)
+  if (right < total - 1) items.push('...')
+  items.push(total)
+
+  return items
+})
 
 // ---------- ADJUSTMENT MODAL ----------
 const showModal = ref(false)
@@ -169,38 +216,84 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-5">
     <div>
       <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Leave Balance</h1>
       <p class="mt-1 text-sm text-slate-500">Saldo cuti employee, digenerate otomatis oleh sistem berdasarkan Leave Type.</p>
     </div>
 
-    <div class="flex flex-wrap items-end gap-3 rounded-2xl border border-slate-100 bg-white p-4">
-      <div class="flex items-center gap-1.5 text-xs font-medium text-slate-400">
-        <Filter class="h-3.5 w-3.5" :stroke-width="1.75" />
-        Filter
+    <!-- Filter bar -->
+    <div class="rounded-2xl border border-slate-100 bg-white p-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <button
+          type="button"
+          @click="showFilters = !showFilters"
+          class="flex items-center gap-1.5 text-sm font-medium text-primary-dark hover:underline"
+        >
+          <Filter class="h-3.5 w-3.5" :stroke-width="1.75" />
+          {{ showFilters ? 'Sembunyikan filter' : 'Semua filter' }}
+          <span v-if="activeFilterCount > 0" class="rounded-full bg-primary-soft px-1.5 py-0.5 text-[11px] font-semibold text-primary-dark">
+            {{ activeFilterCount }}
+          </span>
+        </button>
+
+        <div class="flex items-center gap-3">
+          <div>
+            <label class="mb-1 block text-xs font-medium text-slate-500">Tahun</label>
+            <input v-model.number="filters.year" type="number" class="w-24 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
+          </div>
+          <button @click="applyFilters" class="mt-5 rounded-xl bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900">
+            Terapkan
+          </button>
+        </div>
       </div>
-      <div>
-        <label class="mb-1 block text-xs font-medium text-slate-500">Employee</label>
-        <select v-model="filters.employee_id" class="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
-          <option :value="null">Semua Employee</option>
-          <option v-for="e in employees" :key="e.id" :value="e.id">{{ employeeName(e) }}</option>
-        </select>
+
+      <Transition
+        enter-active-class="transition-all duration-150 ease-out"
+        enter-from-class="opacity-0 -translate-y-1"
+        enter-to-class="opacity-100 translate-y-0"
+      >
+        <div v-if="showFilters" class="mt-4 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4">
+          <div>
+            <label class="mb-1 block text-xs font-medium text-slate-500">Employee</label>
+            <select v-model="filters.employee_id" class="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+              <option :value="null">Semua Employee</option>
+              <option v-for="e in employees" :key="e.id" :value="e.id">{{ employeeName(e) }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="mb-1 block text-xs font-medium text-slate-500">Leave Type</label>
+            <select v-model="filters.leave_type_id" class="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+              <option :value="null">Semua Leave Type</option>
+              <option v-for="lt in leaveTypes" :key="lt.id" :value="lt.id">{{ lt.name }}</option>
+            </select>
+          </div>
+        </div>
+      </Transition>
+    </div>
+
+    <!-- Summary stat strip -->
+    <div v-if="!loading && !errorMessage" class="flex flex-wrap divide-x divide-slate-100 overflow-hidden rounded-2xl border border-slate-100 bg-white">
+      <div class="min-w-[120px] flex-1 px-5 py-4">
+        <p class="text-xl font-semibold tracking-tight text-slate-900">{{ meta.total }}</p>
+        <p class="mt-0.5 text-xs text-slate-500">Total Balance</p>
       </div>
-      <div>
-        <label class="mb-1 block text-xs font-medium text-slate-500">Leave Type</label>
-        <select v-model="filters.leave_type_id" class="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
-          <option :value="null">Semua Leave Type</option>
-          <option v-for="lt in leaveTypes" :key="lt.id" :value="lt.id">{{ lt.name }}</option>
-        </select>
+      <div class="min-w-[140px] flex-1 px-5 py-4">
+        <p class="text-xl font-semibold tracking-tight" :class="lowBalanceCount > 0 ? 'text-red-600' : 'text-slate-300'">
+          {{ lowBalanceCount }}
+        </p>
+        <p class="mt-0.5 text-xs text-slate-500">Saldo Menipis (halaman ini)</p>
       </div>
-      <div>
-        <label class="mb-1 block text-xs font-medium text-slate-500">Tahun</label>
-        <input v-model.number="filters.year" type="number" class="w-28 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
+      <div class="min-w-[140px] flex-1 px-5 py-4">
+        <p class="text-xl font-semibold tracking-tight text-slate-900">{{ totalUsedDays }}</p>
+        <p class="mt-0.5 text-xs text-slate-500">Total Hari Terpakai</p>
       </div>
-      <button @click="applyFilters" class="rounded-xl bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900">
-        Terapkan
-      </button>
+      <div class="min-w-[140px] flex-1 px-5 py-4">
+        <p class="text-xl font-semibold tracking-tight" :class="withAdjustmentCount > 0 ? 'text-primary-dark' : 'text-slate-300'">
+          {{ withAdjustmentCount }}
+        </p>
+        <p class="mt-0.5 text-xs text-slate-500">Ada Adjustment</p>
+      </div>
     </div>
 
     <div v-if="loading" class="text-sm text-slate-400">Memuat data...</div>
@@ -210,77 +303,119 @@ onMounted(() => {
     </div>
 
     <div v-else class="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
-      <table class="w-full text-left text-sm">
-        <thead>
-          <tr class="border-b border-slate-100 bg-slate-50/60">
-            <th class="px-5 py-3 font-medium text-slate-500">Employee</th>
-            <th class="px-5 py-3 font-medium text-slate-500">Leave Type</th>
-            <th class="px-5 py-3 font-medium text-slate-500">Periode</th>
-            <th class="px-5 py-3 text-center font-medium text-slate-500">Kuota Awal</th>
-            <th class="px-5 py-3 text-center font-medium text-slate-500">Carry Over</th>
-            <th class="px-5 py-3 text-center font-medium text-slate-500">Terpakai</th>
-            <th class="px-5 py-3 text-center font-medium text-slate-500">Sisa</th>
-            <th class="px-5 py-3 text-right font-medium text-slate-500">Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="row in balances" :key="row.id" class="border-b border-slate-50 last:border-0 hover:bg-slate-50/50">
-            <td class="px-5 py-3.5 font-medium text-slate-800">{{ employeeName(row.employee) }}</td>
-            <td class="px-5 py-3.5">
-              <div class="flex items-center gap-2">
-                <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ backgroundColor: row.leave_type.color ?? '#94A3B8' }"></span>
-                {{ row.leave_type.name }}
-              </div>
-            </td>
-            <td class="px-5 py-3.5 text-xs text-slate-500">{{ formatDate(row.period_start) }} - {{ formatDate(row.period_end) }}</td>
-            <td class="px-5 py-3.5 text-center text-slate-600">
-              {{ row.initial_quota !== null ? row.initial_quota : 'Unlimited' }}
-            </td>
-            <td class="px-5 py-3.5 text-center text-slate-600">
-              {{ row.carry_over_days }}
-              <span v-if="row.carry_over_expiry_date" class="block text-xs text-slate-400">exp. {{ formatDate(row.carry_over_expiry_date) }}</span>
-            </td>
-            <td class="px-5 py-3.5 text-center text-slate-600">{{ row.used_days }}</td>
-            <td class="px-5 py-3.5 text-center">
-              <span
-                v-if="row.remaining_days !== null"
-                class="rounded-full px-2.5 py-1 text-xs font-medium"
-                :class="row.remaining_days > 0 ? 'bg-primary-soft text-primary-dark' : 'bg-red-50 text-red-600'"
-              >
-                {{ row.remaining_days }}
-              </span>
-              <span v-else class="text-slate-400">-</span>
-            </td>
-            <td class="px-5 py-3.5">
-              <div class="flex items-center justify-end gap-1">
-                <span v-if="row.adjustments.length > 0" class="flex items-center gap-1 text-xs text-slate-400" :title="`${row.adjustments.length} adjustment`">
-                  <History class="h-3.5 w-3.5" :stroke-width="1.75" />
-                  {{ row.adjustments.length }}
-                </span>
-                <button
-                  @click="openAdjustment(row)"
-                  class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                >
-                  Adjustment
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-slate-100 bg-slate-50/60">
+              <th class="px-5 py-3 font-medium text-slate-500">Employee</th>
+              <th class="px-3 py-3 font-medium text-slate-500">Leave Type</th>
+              <th class="px-3 py-3 font-medium text-slate-500">Periode</th>
+              <th class="px-3 py-3 text-center font-medium text-slate-500">Kuota Awal</th>
+              <th class="px-3 py-3 text-center font-medium text-slate-500">Carry Over</th>
+              <th class="px-3 py-3 text-center font-medium text-slate-500">Terpakai</th>
+              <th class="px-3 py-3 font-medium text-slate-500">Sisa</th>
+              <th class="px-5 py-3 text-right font-medium text-slate-500">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in balances" :key="row.id" class="border-b border-slate-50 last:border-0 hover:bg-slate-50/50">
+              <td class="px-5 py-3.5">
+                <div class="flex items-center gap-2.5">
+                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark">
+                    {{ employeeInitials(row.employee) }}
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-1.5">
+                      <p class="font-medium text-slate-800">{{ employeeName(row.employee) }}</p>
+                      <AlertTriangle v-if="isLowBalance(row)" class="h-3.5 w-3.5 text-red-500" :stroke-width="2" />
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-3 py-3.5">
+                <div class="flex items-center gap-2">
+                  <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ backgroundColor: row.leave_type.color ?? '#94A3B8' }"></span>
+                  {{ row.leave_type.name }}
+                </div>
+              </td>
+              <td class="px-3 py-3.5 text-xs text-slate-500">{{ formatDate(row.period_start) }} - {{ formatDate(row.period_end) }}</td>
+              <td class="px-3 py-3.5 text-center text-slate-600">
+                {{ row.initial_quota !== null ? row.initial_quota : 'Unlimited' }}
+              </td>
+              <td class="px-3 py-3.5 text-center text-slate-600">
+                {{ row.carry_over_days }}
+                <span v-if="row.carry_over_expiry_date" class="block text-xs text-slate-400">exp. {{ formatDate(row.carry_over_expiry_date) }}</span>
+              </td>
+              <td class="px-3 py-3.5 text-center text-slate-600">{{ row.used_days }}</td>
+              <td class="px-3 py-3.5">
+                <div v-if="row.initial_quota !== null" class="flex items-center gap-2">
+                  <div class="h-1.5 w-16 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      class="h-full rounded-full transition-all"
+                      :class="isLowBalance(row) ? 'bg-red-400' : 'bg-primary'"
+                      :style="{ width: `${usagePercent(row)}%` }"
+                    ></div>
+                  </div>
+                  <span
+                    class="text-xs font-medium"
+                    :class="row.remaining_days !== null && row.remaining_days > 0 ? (isLowBalance(row) ? 'text-red-600' : 'text-primary-dark') : 'text-red-600'"
+                  >
+                    {{ row.remaining_days ?? '-' }}
+                  </span>
+                </div>
+                <span v-else class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">Unlimited</span>
+              </td>
+              <td class="px-5 py-3.5">
+                <div class="flex items-center justify-end gap-2">
+                  <span v-if="row.adjustments.length > 0" class="flex items-center gap-1 text-xs text-slate-400" :title="`${row.adjustments.length} adjustment`">
+                    <History class="h-3.5 w-3.5" :stroke-width="1.75" />
+                    {{ row.adjustments.length }}
+                  </span>
+                  <button
+                    @click="openAdjustment(row)"
+                    class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-primary/40 hover:text-primary-dark"
+                  >
+                    Adjustment
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
+    <!-- Pagination -->
     <div v-if="meta.last_page > 1" class="flex items-center justify-between text-sm text-slate-500">
       <p>Total {{ meta.total }} balance</p>
-      <div class="flex gap-1">
+      <div class="flex items-center gap-1">
         <button
-          v-for="page in meta.last_page"
-          :key="page"
-          @click="goToPage(page)"
-          class="rounded-lg px-3 py-1.5 text-xs font-medium"
-          :class="page === meta.current_page ? 'bg-primary text-white' : 'text-slate-500 hover:bg-slate-100'"
+          type="button"
+          @click="goToPage(meta.current_page - 1)"
+          :disabled="meta.current_page === 1"
+          class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30 disabled:hover:bg-transparent"
         >
-          {{ page }}
+          <ChevronLeft class="h-4 w-4" :stroke-width="2" />
+        </button>
+        <template v-for="(item, i) in paginationItems" :key="i">
+          <span v-if="item === '...'" class="px-2 text-xs text-slate-300">...</span>
+          <button
+            v-else
+            type="button"
+            @click="goToPage(item)"
+            class="min-w-[32px] rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors"
+            :class="item === meta.current_page ? 'bg-primary text-white' : 'text-slate-500 hover:bg-slate-100'"
+          >
+            {{ item }}
+          </button>
+        </template>
+        <button
+          type="button"
+          @click="goToPage(meta.current_page + 1)"
+          :disabled="meta.current_page === meta.last_page"
+          class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30 disabled:hover:bg-transparent"
+        >
+          <ChevronRight class="h-4 w-4" :stroke-width="2" />
         </button>
       </div>
     </div>

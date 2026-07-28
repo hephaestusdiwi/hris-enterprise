@@ -4,7 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import {
   LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound,
   CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch, CheckCircle2, Layers, CalendarRange, BarChart3,
-  Wallet, Palmtree
+  Wallet, Palmtree, KeyRound, Send, ClipboardCheck
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
@@ -70,6 +70,8 @@ const groups: MenuGroup[] = [
     items: [
       { name: 'leave-types', label: 'Leave Type', icon: Palmtree, to: '/leave-types', permission: 'view leave types' },
       { name: 'leave-balances', label: 'Leave Balance', icon: Wallet, to: '/leave-balances', permission: 'view leave balances' },
+      { name: 'my-leave-requests', label: 'Leave Request', icon: Send, to: '/my-leave-requests', permission: null },
+      { name: 'leave-approvals', label: 'Leave Approval', icon: ClipboardCheck, to: '/leave-approvals', permission: null },
     ],
   },
   {

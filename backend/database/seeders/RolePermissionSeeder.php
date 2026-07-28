@@ -79,6 +79,8 @@ class RolePermissionSeeder extends Seeder
             'edit leave types',
             'delete leave types',
             'view leave balances',
+            'view leave requests',
+            'view leave types',
         ];
 
         foreach ($permissions as $permission) {
