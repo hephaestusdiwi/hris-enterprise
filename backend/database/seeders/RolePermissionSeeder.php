@@ -81,6 +81,10 @@ class RolePermissionSeeder extends Seeder
             'view leave balances',
             'view leave requests',
             'view leave types',
+            'view salary components',
+            'create salary components',
+            'edit salary components',
+            'delete salary components',
         ];
 
         foreach ($permissions as $permission) {

@@ -24,6 +24,8 @@ import LeaveTypeListView from '@/views/LeaveTypeListView.vue'
 import LeaveBalanceListView from '@/views/LeaveBalanceListView.vue'
 import MyLeaveRequestView from '@/views/MyLeaveRequestView.vue'
 import LeaveApprovalListView from '@/views/LeaveApprovalListView.vue'
+import LeaveCalendarView from '@/views/LeaveCalendarView.vue'
+import SalaryComponentListView from '@/views/SalaryComponentListView.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
@@ -184,6 +186,18 @@ const router = createRouter({
       path: '/leave-approvals',
       name: 'leave-approvals.list',
       component: LeaveApprovalListView,
+      meta: { requiresAuth:true },
+    },
+    {
+      path: '/leave-calendar',
+      name: 'leave-calendar.list',
+      component: LeaveCalendarView,
+      meta: { requiresAuth:true },
+    },
+    {
+      path: '/salary-components',
+      name: 'salary-components.list',
+      component: SalaryComponentListView,
       meta: { requiresAuth:true },
     },
     {

@@ -72,6 +72,7 @@ const groups: MenuGroup[] = [
       { name: 'leave-balances', label: 'Leave Balance', icon: Wallet, to: '/leave-balances', permission: 'view leave balances' },
       { name: 'my-leave-requests', label: 'Leave Request', icon: Send, to: '/my-leave-requests', permission: null },
       { name: 'leave-approvals', label: 'Leave Approval', icon: ClipboardCheck, to: '/leave-approvals', permission: null },
+      { name: 'leave-calendar', label: 'Leave Calendar', icon: ClipboardCheck, to: '/leave-calendar', permission: null },
     ],
   },
   {
@@ -88,6 +89,14 @@ const groups: MenuGroup[] = [
       { name: 'attendance-settings', label: 'Attendance Setting', icon: Fingerprint, to: '/attendance-settings', permission: 'view attendance settings' },
       { name: 'attendance-approvals', label: 'Approval Attendance', icon: CheckCircle2, to: '/attendance-approvals', permission: null },
       { name: 'attendance-report', label: 'Attendance Report', icon: BarChart3, to: '/attendance-report', permission: 'view attendances' },
+    ],
+  },
+  {
+    name: 'payroll',
+    label: 'Payroll',
+    icon: Wallet,
+    items: [
+      { name: 'salary-components', label: 'Salary Component', icon: Wallet, to: '/salary-components', permission: 'view salary components' },
     ],
   },
   {

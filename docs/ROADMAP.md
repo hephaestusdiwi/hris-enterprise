@@ -53,10 +53,10 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x]   42. Leave Balance
 - [x]   43. Leave Request
 - [x] 44. Leave Approval
-- [ ] 45. Leave Calendar
+- [x]   45. Leave Calendar
 
 ## PHASE 5 — Payroll
-- [ ] 46. Salary Component
+- [x]   46. Salary Component
 - [ ] 47. Salary Structure
 - [ ] 48. Employee Salary
 - [ ] 49. Allowance
