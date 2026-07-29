@@ -57,7 +57,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 
 ## PHASE 5 — Payroll
 - [x]   46. Salary Component
-- [ ] 47. Salary Structure
+- [x]  47. Salary Structure
 - [ ] 48. Employee Salary
 - [ ] 49. Allowance
 - [ ] 50. Deduction
