@@ -33,6 +33,10 @@ class AppServiceProvider extends ServiceProvider
             \App\Modules\LeaveBalance\Contracts\LeaveQuotaProrationStrategyInterface::class,
             \App\Modules\LeaveBalance\Strategies\MonthlyProratedQuotaStrategy::class,
         );
+        $this->app->bind(
+            \App\Modules\SalaryStructure\Contracts\SalaryStructureResolverInterface::class,
+            \App\Modules\SalaryStructure\Services\SalaryStructureResolver::class,
+        );
     }
 
     /**

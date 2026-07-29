@@ -26,6 +26,7 @@ import MyLeaveRequestView from '@/views/MyLeaveRequestView.vue'
 import LeaveApprovalListView from '@/views/LeaveApprovalListView.vue'
 import LeaveCalendarView from '@/views/LeaveCalendarView.vue'
 import SalaryComponentListView from '@/views/SalaryComponentListView.vue'
+import SalaryStructureListView from '@/views/SalaryStructureListView.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
@@ -198,6 +199,12 @@ const router = createRouter({
       path: '/salary-components',
       name: 'salary-components.list',
       component: SalaryComponentListView,
+      meta: { requiresAuth:true },
+    },
+    {
+      path: '/salary-structures',
+      name: 'salary-structures.list',
+      component: SalaryStructureListView,
       meta: { requiresAuth:true },
     },
     {

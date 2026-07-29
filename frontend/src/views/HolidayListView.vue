@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { Plus, Pencil, Trash2, X } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, X, Download } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
+import ImportNationalModal from '@/components/ImportNationalModal.vue'
 
 interface Company {
   id: number
@@ -14,6 +15,7 @@ interface HolidayRow {
   name: string
   type: string
   is_active: boolean
+  source: string
   company: Company | null
 }
 
@@ -26,6 +28,8 @@ const showModal = ref(false)
 const isEditing = ref(false)
 const saving = ref(false)
 const formError = ref('')
+
+const showImportModal = ref(false)
 
 const form = reactive({
   id: 0,
@@ -133,6 +137,11 @@ async function handleDelete(holiday: HolidayRow) {
   }
 }
 
+function handleImported() {
+  showImportModal.value = false
+  loadHolidays()
+}
+
 onMounted(() => {
   loadHolidays()
   loadCompanies()
@@ -146,13 +155,22 @@ onMounted(() => {
         <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Holiday</h1>
         <p class="mt-1 text-sm text-slate-500">Kelola hari libur nasional dan cuti bersama.</p>
       </div>
-      <button
-        @click="openCreateModal"
-        class="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-dark"
-      >
-        <Plus class="h-4 w-4" :stroke-width="2" />
-        Tambah Holiday
-      </button>
+      <div class="flex items-center gap-2">
+        <button
+          @click="showImportModal = true"
+          class="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+        >
+          <Download class="h-4 w-4" :stroke-width="2" />
+          Import National Holidays
+        </button>
+        <button
+          @click="openCreateModal"
+          class="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-dark"
+        >
+          <Plus class="h-4 w-4" :stroke-width="2" />
+          Tambah Holiday
+        </button>
+      </div>
     </div>
 
     <div v-if="loading" class="text-sm text-slate-400">Memuat data...</div>
@@ -179,7 +197,15 @@ onMounted(() => {
             class="border-b border-slate-50 last:border-0 hover:bg-slate-50/50"
           >
             <td class="px-5 py-3.5 text-slate-500">{{ holiday.date.slice(0, 10) }}</td>
-            <td class="px-5 py-3.5 font-medium text-slate-800">{{ holiday.name }}</td>
+            <td class="px-5 py-3.5 font-medium text-slate-800">
+              {{ holiday.name }}
+              <span
+                v-if="holiday.source === 'import'"
+                class="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-400"
+              >
+                Import
+              </span>
+            </td>
             <td class="px-5 py-3.5 text-slate-500">{{ typeLabel(holiday.type) }}</td>
             <td class="px-5 py-3.5 text-slate-500">{{ holiday.company?.name ?? 'Semua Company' }}</td>
             <td class="px-5 py-3.5">
@@ -291,5 +317,11 @@ onMounted(() => {
         </div>
       </div>
     </Teleport>
+
+    <ImportNationalModal
+      v-if="showImportModal"
+      @close="showImportModal = false"
+      @imported="handleImported"
+    />
   </div>
 </template>

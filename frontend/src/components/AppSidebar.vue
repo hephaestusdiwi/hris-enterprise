@@ -97,6 +97,7 @@ const groups: MenuGroup[] = [
     icon: Wallet,
     items: [
       { name: 'salary-components', label: 'Salary Component', icon: Wallet, to: '/salary-components', permission: 'view salary components' },
+      { name: 'salary-structures', label: 'Salary Structure', icon: Layers, to: '/salary-structures', permission: 'view salary structures' },
     ],
   },
   {

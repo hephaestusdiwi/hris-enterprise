@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { LogIn, LogOut, Clock, MapPin } from 'lucide-vue-next'
+import { LogIn, LogOut, MapPin } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
 
 interface ShiftInfo {
@@ -54,6 +54,46 @@ function formatTime(value: string | null): string {
   if (!value) return '-'
   return new Date(value.replace(' ', 'T')).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
 }
+
+// --- Working hours & ring progress (VISUAL APPROXIMATION di frontend, lihat catatan di chat) ---
+function toMinutes(t: string): number {
+  const [h, m] = t.split(':').map(Number)
+  return h * 60 + m
+}
+
+const workingMinutes = computed(() => {
+  if (!today.value?.clock_in) return 0
+  const start = new Date(today.value.clock_in.replace(' ', 'T'))
+  const end = today.value.clock_out ? new Date(today.value.clock_out.replace(' ', 'T')) : currentTime.value
+  return Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000))
+})
+
+const workingHoursLabel = computed(() => {
+  const mins = workingMinutes.value
+  if (mins <= 0) return '-'
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return m ? `${h}j ${m}m` : `${h}j`
+})
+
+const shiftDurationMinutes = computed(() => {
+  if (!today.value?.shift) return 0
+  let dur = toMinutes(today.value.shift.end_time) - toMinutes(today.value.shift.start_time)
+  if (dur <= 0) dur += 24 * 60 // asumsi shift lintas hari, kasar karena gak ada flag is_overnight di sini
+  return dur
+})
+
+function formatShiftTime(time: string): string {
+  return time.slice(0, 5)
+}
+
+const ringPercent = computed(() => {
+  if (!shiftDurationMinutes.value) return 0
+  return Math.min(100, Math.round((workingMinutes.value / shiftDurationMinutes.value) * 100))
+})
+
+const ringCircumference = 2 * Math.PI * 44
+const ringDashOffset = computed(() => ringCircumference * (1 - ringPercent.value / 100))
 
 function getCurrentPosition(): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
@@ -123,85 +163,105 @@ async function handleClockOut() {
 onMounted(() => {
   loadToday()
 })
+
+defineExpose({ loadToday })
 </script>
 
 <template>
-  <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+  <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
     <div v-if="loading" class="text-sm text-slate-400">Memuat status attendance...</div>
 
     <template v-else-if="today">
-      <div class="flex items-start justify-between">
-        <div>
-          <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Attendance Hari Ini</p>
-          <p class="mt-1 text-3xl font-semibold tabular-nums tracking-tight text-slate-900">{{ formattedClock }}</p>
-          <p class="mt-1 text-sm text-slate-500">
-            {{ new Date(today.attendance_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }}
-          </p>
-        </div>
-        <span
-          v-if="today.status"
-          class="rounded-full bg-primary-soft px-3 py-1 text-xs font-medium text-primary-dark"
-        >
-          {{ statusLabels[today.status] ?? today.status }}
-        </span>
+
+      <div class="mb-4 flex items-center justify-between">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Attendance Hari Ini</h3>
+        <button type="button" class="text-xs font-medium text-primary-dark hover:underline">View detail ›</button>
       </div>
 
-      <div v-if="today.shift" class="mt-4 flex items-center gap-2 rounded-xl bg-slate-50/60 px-4 py-2.5 text-sm text-slate-500">
-        <Clock class="h-4 w-4 text-slate-400" :stroke-width="1.75" />
-        Shift {{ today.shift.name }} · {{ today.shift.start_time }} - {{ today.shift.end_time }}
+       <div class="flex items-center gap-4">
+        <div class="flex-1">
+          <p class="text-2xl font-bold tabular-nums tracking-tight text-slate-900">{{ formattedClock }}</p>
+          <p class="mt-0.5 text-xs text-slate-400">
+            {{ new Date(today.attendance_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }) }}
+          </p>
+
+          <dl class="mt-3 grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1.5 text-xs">
+            <dt class="text-slate-400">Clock In</dt>
+            <dd class="text-right font-medium text-slate-700">{{ formatTime(today.clock_in) }}</dd>
+
+            <dt class="text-slate-400">Clock Out</dt>
+            <dd class="text-right font-medium text-slate-700">{{ formatTime(today.clock_out) }}</dd>
+
+            <dt class="text-slate-400">Working Hours</dt>
+            <dd class="text-right font-medium text-slate-700">{{ workingHoursLabel }}</dd>
+
+            <dt class="text-slate-400">Status</dt>
+            <dd class="text-right font-medium text-primary-dark">{{ today.status ? (statusLabels[today.status] ?? today.status) : '-' }}</dd>
+
+            <template v-if="today.shift">
+              <dt class="text-slate-400">Shift</dt>
+              <dd class="text-right font-medium text-slate-700">
+  {{ today.shift.name }}
+  ({{ formatShiftTime(today.shift.start_time) }} -
+   {{ formatShiftTime(today.shift.end_time) }})
+</dd>
+            </template>
+          </dl>
+        </div>
+
+        <div v-if="today.shift" class="flex shrink-0 flex-col items-center">
+          <div class="relative flex h-24 w-24 items-center justify-center">
+            <svg viewBox="0 0 100 100" class="h-24 w-24 -rotate-90">
+              <circle cx="50" cy="50" r="44" fill="none" stroke="#E2E8F0" stroke-width="9" />
+              <circle
+                cx="50" cy="50" r="44" fill="none" stroke-width="9" stroke-linecap="round"
+                class="stroke-primary transition-[stroke-dashoffset] duration-500"
+                :stroke-dasharray="ringCircumference"
+                :stroke-dashoffset="ringDashOffset"
+              />
+            </svg>
+            <span class="absolute text-base font-bold text-slate-900">{{ ringPercent }}%</span>
+          </div>
+          <p class="mt-1.5 text-[11px] text-slate-400">Today's Working Time</p>
+        </div>
       </div>
 
-      <div class="mt-5 grid grid-cols-2 gap-3">
-        <div class="rounded-xl border border-slate-100 px-4 py-3">
-          <p class="text-xs text-slate-400">Clock In</p>
-          <p class="mt-0.5 text-lg font-medium text-slate-800">{{ formatTime(today.clock_in) }}</p>
-          <p v-if="today.clock_in_distance_meters !== null" class="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
-            <MapPin class="h-3 w-3" :stroke-width="1.75" />
-            {{ today.clock_in_distance_meters }}m dari kantor
-          </p>
-        </div>
-        <div class="rounded-xl border border-slate-100 px-4 py-3">
-          <p class="text-xs text-slate-400">Clock Out</p>
-          <p class="mt-0.5 text-lg font-medium text-slate-800">{{ formatTime(today.clock_out) }}</p>
-          <p v-if="today.clock_out_distance_meters !== null" class="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
-            <MapPin class="h-3 w-3" :stroke-width="1.75" />
-            {{ today.clock_out_distance_meters }}m dari kantor
-          </p>
-        </div>
-      </div>
-
-      <p v-if="today.late_minutes !== null" class="mt-2 text-xs" :class="today.within_grace ? 'text-slate-400' : 'text-amber-600'">
+      <p v-if="today.late_minutes !== null" class="mt-3 text-xs" :class="today.within_grace ? 'text-slate-400' : 'text-amber-600'">
         Terlambat {{ today.late_minutes }} menit{{ today.within_grace ? ' (masih grace period)' : '' }}
       </p>
       <p v-if="today.detected_overtime_minutes" class="mt-1 text-xs text-blue-600">
         Lembur terdeteksi {{ today.detected_overtime_minutes }} menit (menunggu approval)
       </p>
+      <p v-if="today.clock_in_distance_meters !== null" class="mt-1 flex items-center gap-1 text-xs text-slate-400">
+        <MapPin class="h-3 w-3" :stroke-width="1.75" />
+        Clock-in {{ today.clock_in_distance_meters }}m dari kantor
+      </p>
 
-      <p v-if="locationNote" class="mt-3 text-xs text-amber-600">{{ locationNote }}</p>
-      <p v-if="errorMessage" class="mt-3 text-sm text-red-600">{{ errorMessage }}</p>
+      <p v-if="locationNote" class="mt-2 text-xs text-amber-600">{{ locationNote }}</p>
+      <p v-if="errorMessage" class="mt-2 text-xs text-red-600">{{ errorMessage }}</p>
 
-      <div class="mt-5 flex gap-3">
+      <div class="mt-4 flex gap-2">
         <button
           v-if="today.can_clock_in"
           @click="handleClockIn"
           :disabled="submitting"
-          class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
+          class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-2.5 text-xs font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
         >
-          <LogIn class="h-4 w-4" :stroke-width="2" />
+          <LogIn class="h-3.5 w-3.5" :stroke-width="2" />
           {{ submitting ? 'Memproses...' : 'Clock In' }}
         </button>
         <button
           v-if="today.can_clock_out"
           @click="handleClockOut"
           :disabled="submitting"
-          class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-800 py-3 text-sm font-medium text-white transition-colors hover:bg-slate-900 disabled:opacity-50"
+          class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-slate-800 py-2.5 text-xs font-medium text-white transition-colors hover:bg-slate-900 disabled:opacity-50"
         >
-          <LogOut class="h-4 w-4" :stroke-width="2" />
+          <LogOut class="h-3.5 w-3.5" :stroke-width="2" />
           {{ submitting ? 'Memproses...' : 'Clock Out' }}
         </button>
         <p
           v-if="!today.can_clock_in && !today.can_clock_out"
-          class="flex flex-1 items-center justify-center rounded-xl bg-slate-50 py-3 text-sm text-slate-400"
+          class="flex flex-1 items-center justify-center rounded-xl bg-slate-50 py-2.5 text-xs text-slate-400"
         >
           Attendance hari ini sudah selesai
         </p>

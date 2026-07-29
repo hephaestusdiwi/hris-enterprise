@@ -1,31 +1,31 @@
 <?php
 
-namespace App\Modules\Holiday\Models;
+namespace App\Modules\SalaryStructure\Models;
 
 use App\Modules\Company\Models\Company;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Holiday extends Model
+class SalaryStructure extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'company_id',
-        'date',
+        'code',
         'name',
-        'type',
+        'description',
+        'effective_date',
         'is_active',
-        'source',      
-        'external_id', 
     ];
 
     protected function casts(): array
     {
         return [
-            'date' => 'date:Y-m-d',   // <- tambahkan format ini
+            'effective_date' => 'date',
             'is_active' => 'boolean',
         ];
     }
@@ -33,5 +33,10 @@ class Holiday extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function details(): HasMany
+    {
+        return $this->hasMany(SalaryStructureDetail::class)->orderBy('display_order');
     }
 }

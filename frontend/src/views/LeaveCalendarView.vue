@@ -2,7 +2,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import {
   ChevronLeft, ChevronRight, UserRound, X, AlertTriangle, Search,
-  Users, Clock, Thermometer, CalendarClock, Loader2, Paperclip, Check, Ban,
+  Users, Clock, Thermometer, CalendarClock, Loader2, Paperclip, Check, Ban, Printer,
 } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
 
@@ -35,8 +35,29 @@ const statusBadge: Record<string, string> = {
   rejected: 'bg-red-50 text-red-600',
 }
 
+const statusDotColor: Record<string, string> = {
+  pending: 'bg-amber-400',
+  approved: 'bg-primary',
+  rejected: 'bg-red-400',
+}
+
 function fullEmployeeName(e: { first_name: string; last_name: string | null }) {
   return [e.first_name, e.last_name].filter(Boolean).join(' ')
+}
+
+function initialsFromName(name: string): string {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('')
+}
+
+function formatDateRange(start: string, end: string) {
+  const s = new Date(start).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+  const e = new Date(end).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+  return start === end ? s : `${s} - ${e}`
 }
 
 // ---------- Summary panel ----------
@@ -127,15 +148,20 @@ const today = new Date()
 const currentYear = ref(today.getFullYear())
 const currentMonth = ref(today.getMonth() + 1)
 
+const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+
+const yearOptions = computed(() => {
+  const base = today.getFullYear()
+  const years = new Set(Array.from({ length: 7 }, (_, i) => base - 3 + i))
+  years.add(currentYear.value)
+  return Array.from(years).sort((a, b) => a - b)
+})
+
 const holidays = ref<Holiday[]>([])
 const leaves = ref<LeaveEvent[]>([])
 const departmentHeadcount = ref<Record<string, number>>({})
 const loading = ref(true)
 const errorMessage = ref('')
-
-const monthLabel = computed(() =>
-  new Date(currentYear.value, currentMonth.value - 1, 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }),
-)
 
 const weekDays = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
 
@@ -209,6 +235,15 @@ const calendarDays = computed<DayCell[]>(() => {
   return days
 })
 
+// ---------- Upcoming leave panel (dari data bulan yang lagi ditampilin) ----------
+const upcomingLeaves = computed(() => {
+  const todayStr = toDateStr(today)
+  return leaves.value
+    .filter((lv) => lv.end_date >= todayStr)
+    .sort((a, b) => a.start_date.localeCompare(b.start_date))
+    .slice(0, 8)
+})
+
 async function loadCalendar() {
   loading.value = true
   errorMessage.value = ''
@@ -255,6 +290,10 @@ function goToToday() {
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+function handlePrint() {
+  window.print()
 }
 
 // ---------- Legend dinamis ----------
@@ -336,9 +375,18 @@ onMounted(() => {
 
 <template>
   <div class="space-y-5">
-    <div>
-      <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Leave Planning Dashboard</h1>
-      <p class="mt-1 text-sm text-slate-500">Rencana cuti tim, hari libur, dan potensi kekurangan manpower.</p>
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Leave Planning Dashboard</h1>
+        <p class="mt-1 text-sm text-slate-500">Rencana cuti tim, hari libur, dan potensi kekurangan manpower.</p>
+      </div>
+      <button
+        @click="handlePrint"
+        class="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+      >
+        <Printer class="h-4 w-4" :stroke-width="1.75" />
+        Print
+      </button>
     </div>
 
     <!-- Summary panel -->
@@ -380,7 +428,18 @@ onMounted(() => {
           <button @click="goToPrevMonth" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
             <ChevronLeft class="h-4 w-4" :stroke-width="2" />
           </button>
-          <h2 class="w-40 text-center text-sm font-semibold text-slate-800">{{ monthLabel }}</h2>
+          <select
+            v-model.number="currentMonth"
+            class="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-medium text-slate-700 focus:border-primary focus:outline-none"
+          >
+            <option v-for="(name, i) in monthNames" :key="i" :value="i + 1">{{ name }}</option>
+          </select>
+          <select
+            v-model.number="currentYear"
+            class="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-medium text-slate-700 focus:border-primary focus:outline-none"
+          >
+            <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
+          </select>
           <button @click="goToNextMonth" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
             <ChevronRight class="h-4 w-4" :stroke-width="2" />
           </button>
@@ -506,79 +565,143 @@ onMounted(() => {
       </Transition>
     </div>
 
-    <div v-if="loading" class="text-sm text-slate-400">Memuat data...</div>
-    <div v-else-if="errorMessage" class="rounded-xl bg-red-50 p-4 text-sm text-red-600">{{ errorMessage }}</div>
+    <div v-if="errorMessage" class="rounded-xl bg-red-50 p-4 text-sm text-red-600">{{ errorMessage }}</div>
 
-    <!-- Grid kalender -->
-    <div v-else class="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
-      <div class="grid grid-cols-7 border-b border-slate-100 bg-slate-50/60">
-        <div v-for="wd in weekDays" :key="wd" class="px-2 py-2.5 text-center text-xs font-medium text-slate-500">{{ wd }}</div>
-      </div>
+    <div v-else class="grid grid-cols-1 gap-5 lg:grid-cols-3">
+      <!-- Kalender -->
+      <div class="lg:col-span-2">
+        <!-- Skeleton loading -->
+        <div v-if="loading" class="overflow-hidden rounded-2xl border border-slate-100 bg-white">
+          <div class="grid grid-cols-7 border-b border-slate-100 bg-slate-50/60">
+            <div v-for="wd in weekDays" :key="wd" class="px-2 py-2.5 text-center text-xs font-medium text-slate-500">{{ wd }}</div>
+          </div>
+          <div class="grid grid-cols-7">
+            <div v-for="i in 42" :key="i" class="min-h-[96px] animate-pulse border-b border-r border-slate-50 p-2 [&:nth-child(7n)]:border-r-0">
+              <div class="h-6 w-6 rounded-full bg-slate-100"></div>
+              <div class="mt-3 h-3 w-3/4 rounded bg-slate-100"></div>
+            </div>
+          </div>
+        </div>
 
-      <div class="grid grid-cols-7">
-        <div
-          v-for="day in calendarDays"
-          :key="day.date"
-          @click="openDayDrawer(day)"
-          class="relative min-h-[104px] border-b border-r border-slate-50 p-2 transition-colors [&:nth-child(7n)]:border-r-0"
-          :class="[
-            day.holiday ? 'bg-red-50/40' : day.isWeekend ? 'bg-slate-50/60' : day.isCurrentMonth ? 'bg-white' : 'bg-slate-50/30',
-            (day.leavesToday.length > 0 || day.holiday) ? 'cursor-pointer hover:bg-slate-50' : '',
-          ]"
-        >
-          <div class="flex items-center justify-between">
-            <span
-              class="flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium"
-              :class="day.isToday ? 'bg-primary text-white' : day.isCurrentMonth ? 'text-slate-700' : 'text-slate-300'"
-            >
-              {{ day.dayNumber }}
-            </span>
-            <AlertTriangle
-              v-if="day.capacityWarning"
-              class="h-3.5 w-3.5 text-amber-500"
-              :stroke-width="2"
-              :title="`${day.capacityWarning.departmentName}: ${day.capacityWarning.percent}% sedang cuti`"
-            />
+        <!-- Grid kalender -->
+        <div v-else class="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+          <div class="grid grid-cols-7 border-b border-slate-100 bg-slate-50/60">
+            <div v-for="wd in weekDays" :key="wd" class="px-2 py-2.5 text-center text-xs font-medium text-slate-500">{{ wd }}</div>
           </div>
 
-          <div v-if="day.holiday" class="mt-1 truncate rounded-md bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-700">
-            {{ day.holiday.name }}
-          </div>
-
-          <div v-if="day.leavesToday.length > 0" class="mt-1 flex items-center gap-1 text-[10px] font-medium text-slate-500">
-            <Users class="h-3 w-3" :stroke-width="2" />
-            {{ day.leavesToday.length }} cuti
-            <span v-if="day.pendingCount > 0" class="ml-1 flex items-center gap-0.5 rounded-full bg-amber-50 px-1.5 py-0.5 text-amber-600">
-              <Clock class="h-2.5 w-2.5" :stroke-width="2.5" />{{ day.pendingCount }}
-            </span>
-          </div>
-
-          <div class="mt-1 space-y-0.5">
+          <div class="grid grid-cols-7">
             <div
-              v-for="lv in day.leavesToday.slice(0, 2)"
-              :key="lv.id"
-              @click.stop="openEventDrawer(lv.id)"
-              @mouseenter="hoveredEventId = lv.id"
-              @mouseleave="hoveredEventId = null"
-              class="relative truncate rounded-md px-1.5 py-0.5 text-[10px] font-medium"
-              :style="{ backgroundColor: (lv.leave_type.color ?? '#94A3B8') + '25', color: lv.leave_type.color ?? '#64748B' }"
+              v-for="day in calendarDays"
+              :key="day.date"
+              @click="openDayDrawer(day)"
+              class="relative min-h-[96px] border-b border-r border-slate-50 p-2 transition-colors [&:nth-child(7n)]:border-r-0"
+              :class="[
+                day.holiday ? 'bg-red-50/40' : day.isWeekend ? 'bg-slate-50/60' : day.isCurrentMonth ? 'bg-white' : 'bg-slate-50/30',
+                (day.leavesToday.length > 0 || day.holiday) ? 'cursor-pointer hover:bg-slate-50' : '',
+              ]"
             >
-              {{ lv.employee.name }}
+              <div class="flex items-center justify-between">
+                <span
+                  class="flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium"
+                  :class="day.isToday ? 'bg-primary text-white' : day.isCurrentMonth ? 'text-slate-700' : 'text-slate-300'"
+                >
+                  {{ day.dayNumber }}
+                </span>
+                <AlertTriangle
+                  v-if="day.capacityWarning"
+                  class="h-3.5 w-3.5 text-amber-500"
+                  :stroke-width="2"
+                  :title="`${day.capacityWarning.departmentName}: ${day.capacityWarning.percent}% sedang cuti`"
+                />
+              </div>
 
-              <!-- Tooltip -->
-              <div
-                v-if="hoveredEventId === lv.id"
-                class="absolute left-0 top-full z-20 mt-1 w-48 rounded-lg bg-slate-900 px-3 py-2 text-[11px] text-white shadow-lg"
-              >
-                <p class="font-medium">{{ lv.employee.name }}</p>
-                <p class="text-slate-300">{{ lv.leave_type.name }} · {{ lv.total_days }} hari</p>
-                <p class="capitalize text-slate-400">{{ lv.status }}</p>
+              <div v-if="day.holiday" class="mt-1 truncate rounded-md bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-700">
+                {{ day.holiday.name }}
+              </div>
+
+              <!-- Avatar stack -->
+              <div v-if="day.leavesToday.length > 0" class="mt-1.5 flex items-center gap-1">
+                <div class="flex -space-x-1.5">
+                  <div
+                    v-for="lv in day.leavesToday.slice(0, 4)"
+                    :key="lv.id"
+                    class="relative h-5 w-5 shrink-0 cursor-pointer"
+                    @click.stop="openEventDrawer(lv.id)"
+                    @mouseenter="hoveredEventId = lv.id"
+                    @mouseleave="hoveredEventId = null"
+                  >
+                    <img
+                      v-if="lv.employee.photo_url"
+                      :src="lv.employee.photo_url"
+                      alt=""
+                      class="h-5 w-5 rounded-full object-cover ring-2 ring-white"
+                    />
+                    <div
+                      v-else
+                      class="flex h-5 w-5 items-center justify-center rounded-full bg-primary-soft text-[8px] font-semibold text-primary-dark ring-2 ring-white"
+                    >
+                      {{ initialsFromName(lv.employee.name) }}
+                    </div>
+                    <span class="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full border border-white" :class="statusDotColor[lv.status]"></span>
+
+                    <!-- Tooltip -->
+                    <div
+                      v-if="hoveredEventId === lv.id"
+                      class="absolute left-1/2 top-full z-20 mt-1 w-48 -translate-x-1/2 rounded-lg bg-slate-900 px-3 py-2 text-[11px] text-white shadow-lg"
+                    >
+                      <p class="font-medium">{{ lv.employee.name }}</p>
+                      <p class="text-slate-300">{{ lv.leave_type.name }} · {{ lv.total_days }} hari</p>
+                      <p class="capitalize text-slate-400">{{ lv.status }}</p>
+                    </div>
+                  </div>
+                </div>
+                <span v-if="day.leavesToday.length > 4" class="text-[10px] font-medium text-primary-dark">
+                  +{{ day.leavesToday.length - 4 }}
+                </span>
               </div>
             </div>
-            <p v-if="day.leavesToday.length > 2" class="px-1.5 text-[10px] font-medium text-primary-dark">
-              +{{ day.leavesToday.length - 2 }} more
-            </p>
           </div>
+        </div>
+      </div>
+
+      <!-- Panel Cuti Mendatang -->
+      <div class="rounded-2xl border border-slate-100 bg-white p-4 lg:col-span-1">
+        <div class="mb-3 flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-slate-800">Cuti Mendatang</h3>
+          <span class="text-xs text-slate-400">Bulan ini</span>
+        </div>
+
+        <div v-if="loading" class="space-y-2">
+          <div v-for="i in 5" :key="i" class="flex animate-pulse items-center gap-3 px-2 py-2">
+            <div class="h-8 w-8 rounded-full bg-slate-100"></div>
+            <div class="flex-1 space-y-1.5">
+              <div class="h-2.5 w-2/3 rounded bg-slate-100"></div>
+              <div class="h-2 w-1/2 rounded bg-slate-100"></div>
+            </div>
+          </div>
+        </div>
+
+        <div v-else-if="upcomingLeaves.length === 0" class="py-8 text-center text-sm text-slate-400">
+          Tidak ada cuti mendatang di bulan ini.
+        </div>
+
+        <div v-else class="space-y-1">
+          <button
+            v-for="lv in upcomingLeaves"
+            :key="lv.id"
+            @click="openEventDrawer(lv.id)"
+            class="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-slate-50"
+          >
+            <img v-if="lv.employee.photo_url" :src="lv.employee.photo_url" alt="" class="h-8 w-8 shrink-0 rounded-full object-cover" />
+            <div v-else class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark">
+              {{ initialsFromName(lv.employee.name) }}
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-slate-800">{{ lv.employee.name }}</p>
+              <p class="truncate text-xs text-slate-500">{{ lv.leave_type.name }} · {{ formatDateRange(lv.start_date, lv.end_date) }}</p>
+            </div>
+            <span class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium capitalize" :class="statusBadge[lv.status]">{{ lv.status }}</span>
+          </button>
         </div>
       </div>
     </div>
