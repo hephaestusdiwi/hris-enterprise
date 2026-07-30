@@ -37,6 +37,10 @@ class AppServiceProvider extends ServiceProvider
             \App\Modules\SalaryStructure\Contracts\SalaryStructureResolverInterface::class,
             \App\Modules\SalaryStructure\Services\SalaryStructureResolver::class,
         );
+        $this->app->bind(
+            \App\Modules\EmployeeSalary\Contracts\EmployeeSalaryResolverInterface::class,
+            \App\Modules\EmployeeSalary\Services\EmployeeSalaryResolver::class,
+        );
     }
 
     /**

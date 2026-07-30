@@ -28,6 +28,7 @@ import LeaveCalendarView from '@/views/LeaveCalendarView.vue'
 import SalaryComponentListView from '@/views/SalaryComponentListView.vue'
 import SalaryStructureListView from '@/views/SalaryStructureListView.vue'
 import { useAuthStore } from '@/stores/auth'
+import EmployeeSalaryListView from '@/views/EmployeeSalaryListView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -205,6 +206,12 @@ const router = createRouter({
       path: '/salary-structures',
       name: 'salary-structures.list',
       component: SalaryStructureListView,
+      meta: { requiresAuth:true },
+    },
+    {
+      path: '/employee-salaries',
+      name: 'employee-salaries.list',
+      component: EmployeeSalaryListView,
       meta: { requiresAuth:true },
     },
     {

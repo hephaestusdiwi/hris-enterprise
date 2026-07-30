@@ -19,7 +19,7 @@ class AttendanceSetting extends Model
         'require_photo',
         'require_location',
         'office_latitude',
-        'office_longtitude',
+        'office_longitude',
         'location_radius_meters',
         'allow_mobile_checkin',
         'approval_mode',

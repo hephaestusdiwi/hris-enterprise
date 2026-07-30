@@ -120,8 +120,11 @@ function closeModal() {
 
 function validateForm(): string {
   if (form.require_location) {
-    if (form.office_latitude === null || form.office_longitude === null) {
-      return 'Latitude dan longitude wajib diisi karena verifikasi lokasi aktif.'
+    const latOk = typeof form.office_latitude === 'number' && Number.isFinite(form.office_latitude)
+    const lngOk = typeof form.office_longitude === 'number' && Number.isFinite(form.office_longitude)
+
+    if (!latOk || !lngOk) {
+      return 'Latitude dan longitude wajib diisi angka yang valid (pakai titik, bukan koma, sebagai desimal).'
     }
     if (form.office_latitude < -90 || form.office_latitude > 90) {
       return 'Latitude harus di antara -90 dan 90.'

@@ -4,7 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import {
   LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound,
   CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch, CheckCircle2, Layers, CalendarRange, BarChart3,
-  Wallet, Palmtree, KeyRound, Send, ClipboardCheck
+  Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
@@ -52,6 +52,7 @@ const groups: MenuGroup[] = [
     icon: UserRound,
     items: [
       { name: 'employees', label: 'Employee', icon: UserRound, to: '/employees', permission: 'view employees' },
+      { name: 'employee-salaries', label: 'Employee Salary', icon: UserCircle, to: '/employee-salaries', permission: 'view employee salaries' },
     ],
   },
   {
@@ -59,8 +60,12 @@ const groups: MenuGroup[] = [
     label: 'Workflow',
     icon: GitBranch,
     items: [
+      { name: 'holidays', label: 'Holiday', icon: CalendarDays, to: '/holidays', permission: 'view holidays' },
+      { name: 'shifts', label: 'Shift', icon: Clock, to: '/shifts', permission: 'view shifts' },
       { name: 'approval-flows', label: 'Approval Flow', icon: GitBranch, to: '/approval-flows', permission: 'view approval flows' },
       { name: 'scheduler', label: 'Scheduler', icon: CalendarRange, to: '/scheduler', permission: 'view working schedules' },
+      { name: 'working-schedules', label: 'Working Schedule', icon: CalendarClock, to: '/working-schedules', permission: 'view working schedules' },
+      { name: 'working-schedule-assignments', label: 'Schedule Assignment', icon: Layers, to: '/working-schedule-assignments', permission: 'view working schedules' },
     ],
   },
   {
@@ -80,10 +85,6 @@ const groups: MenuGroup[] = [
     label: 'Attendance',
     icon: Clock,
     items: [
-      { name: 'holidays', label: 'Holiday', icon: CalendarDays, to: '/holidays', permission: 'view holidays' },
-      { name: 'shifts', label: 'Shift', icon: Clock, to: '/shifts', permission: 'view shifts' },
-      { name: 'working-schedules', label: 'Working Schedule', icon: CalendarClock, to: '/working-schedules', permission: 'view working schedules' },
-      { name: 'working-schedule-assignments', label: 'Schedule Assignment', icon: Layers, to: '/working-schedule-assignments', permission: 'view working schedules' },
       { name: 'attendances', label: 'Attendances', icon: Fingerprint, to: '/attendances', permission: 'view attendances' },
       { name: 'attendance-devices', label: 'Attendance Device', icon: Fingerprint, to: '/attendance-devices', permission: 'view attendance devices' },
       { name: 'attendance-settings', label: 'Attendance Setting', icon: Fingerprint, to: '/attendance-settings', permission: 'view attendance settings' },
