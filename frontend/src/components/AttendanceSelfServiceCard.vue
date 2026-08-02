@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import OfficeQrScanModal from '@/components/OfficeQrScanModal.vue'
+import FaceAttendanceModal from './FaceAttendanceModal.vue'
 import { LogIn, LogOut, Clock, MapPin, QrCode as QrCodeIcon } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
 
@@ -19,6 +20,9 @@ interface TodayAttendance {
   can_clock_in: boolean
   can_clock_out: boolean
   shift: ShiftInfo | null
+  requires_photo: boolean
+  requires_face_verification: boolean
+  requires_location: boolean
 }
 
 const today = ref<TodayAttendance | null>(null)
@@ -63,6 +67,14 @@ function handleQrScanSuccess() {
   loadToday()
 }
 
+const showFaceModal = ref(false)
+const faceModalType = ref<'clock-in' | 'clock-out'>('clock-in')
+
+function handleFaceAttendanceSuccess() {
+  showFaceModal.value = false
+  loadToday()
+}
+
 async function loadToday() {
   loading.value = true
   errorMessage.value = ''
@@ -77,6 +89,12 @@ async function loadToday() {
 }
 
 async function handleClockIn() {
+  if (today.value?.requires_photo || today.value?.requires_face_verification) {
+     faceModalType.value = 'clock-in'
+     showFaceModal.value = true
+     return
+  }
+
   submitting.value = true
   errorMessage.value = ''
   try {
@@ -90,6 +108,12 @@ async function handleClockIn() {
 }
 
 async function handleClockOut() {
+  if (today.value?.requires_photo || today.value?.requires_face_verification) {
+     faceModalType.value = 'clock-out'
+     showFaceModal.value = true
+     return
+   }
+
   submitting.value = true
   errorMessage.value = ''
   try {
@@ -166,6 +190,15 @@ onMounted(() => {
         @close="showQrScanModal = false"
         @success="handleQrScanSuccess"
       />
+
+      <FaceAttendanceModal
+       v-if="showFaceModal"
+       :type="faceModalType"
+       :requires-face-verification="today?.requires_face_verification ?? false"
+       :requires-location="today?.requires_location ?? false"
+       @close="showFaceModal = false"
+       @success="handleFaceAttendanceSuccess"
+     />
 
       <p v-if="errorMessage" class="mt-3 text-sm text-red-600">{{ errorMessage }}</p>
 

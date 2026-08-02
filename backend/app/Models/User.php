@@ -33,6 +33,10 @@ class User extends Authenticatable
         'activation_token_expires_at',
     ];
 
+    protected $appends = [
+        'photo_url',
+    ];
+
     /**
      * The attributes that should be hidden for serialization.
      *
@@ -80,5 +84,10 @@ class User extends Authenticatable
     public function employee(): HasOne
     {
         return $this->hasOne(Employee::class);
+    }
+
+    public function getPhotoUrlAttribute(): ?string
+    {
+        return $this->employee?->photo_url;
     }
 }

@@ -19,6 +19,7 @@ class AttendanceSelfServiceController extends Controller
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'office_qr_token' => ['nullable', 'string'],
+            'photo_base64' => ['nullable', 'string'],
         ]);
 
         try {
@@ -27,6 +28,7 @@ class AttendanceSelfServiceController extends Controller
                 $validated['latitude'] ?? null,
                 $validated['longitude'] ?? null,
                 $validated['office_qr_token'] ?? null,
+                $validated['photo_base64'] ?? null,
             );
 
             return response()->json([
@@ -49,6 +51,7 @@ class AttendanceSelfServiceController extends Controller
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'office_qr_token' => ['nullable', 'string'],
+            'photo_base64' => ['nullable', 'string'],
         ]);
 
         try {
@@ -57,6 +60,7 @@ class AttendanceSelfServiceController extends Controller
                 $validated['latitude'] ?? null,
                 $validated['longitude'] ?? null,
                 $validated['office_qr_token'] ?? null,
+                $validated['photo_base64'] ?? null,
             );
 
             return response()->json([

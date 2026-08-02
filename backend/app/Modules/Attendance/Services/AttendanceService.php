@@ -17,7 +17,10 @@ use App\Modules\WorkingSchedule\Models\WorkingScheduleDetail;
 use App\Modules\Attendance\Contracts\AttendanceCalculationEngineInterface;
 use App\Modules\Attendance\Services\AttendanceApprovalService;
 use App\Modules\WorkingSchedule\Contracts\WorkingScheduleResolverInterface;
+use App\Modules\FaceRecognition\Contracts\FaceRecognitionServiceInterface;
+use App\Modules\FaceRecognition\Exceptions\FaceRecognitionException;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 class AttendanceService
 {
@@ -27,10 +30,11 @@ class AttendanceService
         private AttendanceCalculationEngineInterface $calculationEngine,
         private AttendanceApprovalService $approvalService,
         private WorkingScheduleResolverInterface $workingScheduleResolver,
+        private FaceRecognitionServiceInterface $faceRecognitionService,
     ) {
     }
 
-    public function clockIn(User $user, ?float $latitude = null, ?float $longitude = null, ?string $officeQrToken = null): Attendance
+    public function clockIn(User $user, ?float $latitude = null, ?float $longitude = null, ?string $officeQrToken = null, ?string $photoBase64 = null): Attendance
     {
         $employee = $this->resolveEmployeeForUser($user);
         [$method, $device] = $this->resolveSelfServiceMethod($employee, $officeQrToken);
@@ -39,10 +43,12 @@ class AttendanceService
             ? null
             : $this->validateLocation($employee, $latitude, $longitude);
 
-        return $this->doClockIn($employee, $latitude, $longitude, $distance, $method, $device);
+        $photoPath = $this->resolveAndSavePhoto($employee, $photoBase64, 'in');
+
+        return $this->doClockIn($employee, $latitude, $longitude, $distance, $method, $device, $photoPath);
     }
 
-    public function clockOut(User $user, ?float $latitude = null, ?float $longitude = null, ?string $officeQrToken = null): Attendance
+    public function clockOut(User $user, ?float $latitude = null, ?float $longitude = null, ?string $officeQrToken = null, ?string $photoBase64 = null): Attendance
     {
         $employee = $this->resolveEmployeeForUser($user);
         [$method, $device] = $this->resolveSelfServiceMethod($employee, $officeQrToken);
@@ -51,7 +57,9 @@ class AttendanceService
             ? null
             : $this->validateLocation($employee, $latitude, $longitude);
 
-        return $this->doClockOut($employee, $latitude, $longitude, $distance, $method, $device);
+        $photoPath = $this->resolveAndSavePhoto($employee, $photoBase64, 'out');
+
+        return $this->doClockOut($employee, $latitude, $longitude, $distance, $method, $device, $photoPath);
     }
 
     public function today(User $user): array
@@ -146,6 +154,7 @@ class AttendanceService
         ?int $distanceMeters,
         AttendanceMethod $method,
         ?AttendanceDevice $device,
+        ?string $photoPath = null,
     ): Attendance {
         $attendance = $this->getTodayAttendance($employee);
         $shift = $this->resolveShiftForToday($employee);
@@ -170,6 +179,7 @@ class AttendanceService
         $attendance->clock_in_longitude = $longitude;
         $attendance->clock_in_distance_meters = $distanceMeters;
         $attendance->clock_in_method = $method->value;
+        $attendance->clock_in_photo_path = $photoPath;
         $attendance->clock_in_device_id = $device?->id;
         $attendance->clock_in_branch_id = $device?->branch_id;
         $attendance->clock_in_company_id = $device?->company_id;
@@ -192,6 +202,7 @@ class AttendanceService
         ?int $distanceMeters,
         AttendanceMethod $method,
         ?AttendanceDevice $device,
+        ?string $photoPath = null,
     ): Attendance {
         $attendance = $this->getTodayAttendance($employee);
 
@@ -212,6 +223,7 @@ class AttendanceService
         $attendance->clock_out_longitude = $longitude;
         $attendance->clock_out_distance_meters = $distanceMeters;
         $attendance->clock_out_method = $method->value;
+        $attendance->clock_out_photo_path = $photoPath;
         $attendance->clock_out_device_id = $device?->id;
         $attendance->clock_out_branch_id = $device?->branch_id;
         $attendance->clock_out_company_id = $device?->company_id;
@@ -231,12 +243,16 @@ class AttendanceService
         $shift = $attendance?->shift_id
             ? $attendance->shift
             : $this->resolveShiftForToday($employee);
+        $setting = $this->resolveAttendanceSetting($employee);
 
         return [
             'employee' => [
                 'id' => $employee->id,
                 'name' => trim("{$employee->first_name} {$employee->last_name}"),
             ],
+            'requires_photo' => (bool) ($setting->require_photo ?? false),
+            'requires_face_verification' => (bool) ($setting->require_face_verification ?? false),
+            'requires_location' => (bool) ($setting->require_location ?? false),
             'attendance_date' => Carbon::today()->toDateString(),
             'status' => $attendance?->status?->value,
             'clock_in' => $attendance?->clock_in?->toDateTimeString(),
@@ -308,6 +324,87 @@ class AttendanceService
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
 
         return (int) round($earthRadius * $c);
+    }
+
+    /**
+     * Simpan foto (base64) kalau dikirim. Kalau Attendance Setting mewajibkan
+     * foto atau verifikasi wajah tapi tidak ada foto yang dikirim, tolak dengan
+     * error yang jelas alih-alih diam-diam lolos tanpa foto. Kalau verifikasi
+     * wajah aktif, foto dicocokkan ke face_embedding milik employee sendiri
+     * (1-ke-1) SEBELUM disimpan.
+     */
+    private function resolveAndSavePhoto(Employee $employee, ?string $photoBase64, string $type): ?string
+    {
+        $setting = $this->resolveAttendanceSetting($employee);
+        $requiresPhoto = (bool) ($setting->require_photo ?? false);
+        $requiresFaceVerification = (bool) ($setting->require_face_verification ?? false);
+
+        if (($requiresPhoto || $requiresFaceVerification) && ! $photoBase64) {
+            throw new AttendanceValidationException('Foto wajib diambil untuk melakukan absen ini.');
+        }
+
+        if (! $photoBase64) {
+            return null;
+        }
+
+        $raw = preg_replace('/^data:image\/\w+;base64,/', '', $photoBase64);
+
+        if ($requiresFaceVerification) {
+            $this->verifyFace($employee, $raw);   // ✅ sudah bersih dari prefix
+        }
+
+        $decoded = base64_decode($raw);
+        $image = @imagecreatefromstring($decoded);
+
+        if (! $image) {
+            throw new AttendanceValidationException('Format foto tidak valid.');
+        }
+
+        imagepalettetotruecolor($image);
+        imagealphablending($image, true);
+        imagesavealpha($image, true);
+
+        $filename = "attendance/{$employee->id}/".now()->timestamp."-{$type}.webp";
+        Storage::disk('public')->makeDirectory("attendance/{$employee->id}");
+        imagewebp($image, Storage::disk('public')->path($filename), 85);
+        imagedestroy($image);
+
+        return $filename;
+    }
+
+    /**
+     * Verifikasi 1-ke-1: cocokkan foto ke face_embedding milik employee yang
+     * SEDANG LOGIN sendiri (beda dari FaceIdentificationStrategy yang dipakai
+     * Kiosk — itu 1-ke-banyak karena device belum tahu siapa yang absen).
+     */
+    private function verifyFace(Employee $employee, string $photoBase64): void
+    {
+        if (! $employee->face_embedding) {
+            throw new AttendanceValidationException('Wajah Anda belum terdaftar. Hubungi HR untuk mendaftarkan wajah terlebih dahulu.');
+        }
+
+        try {
+            $liveness = $this->faceRecognitionService->liveness($photoBase64);
+        } catch (FaceRecognitionException $e) {
+            throw new AttendanceValidationException($e->getMessage());
+        }
+
+        if (! $liveness['is_live']) {
+            throw new AttendanceValidationException('Verifikasi wajah gagal: terindikasi bukan wajah asli (kemungkinan foto/spoofing).');
+        }
+
+        try {
+            $recognition = $this->faceRecognitionService->recognize($photoBase64, [[
+                'employee_id' => $employee->id,
+                'embedding' => $employee->face_embedding,
+            ]]);
+        } catch (FaceRecognitionException $e) {
+            throw new AttendanceValidationException($e->getMessage());
+        }
+
+        if (! $recognition['is_match'] || (int) $recognition['employee_id'] !== $employee->id) {
+            throw new AttendanceValidationException('Wajah tidak cocok dengan data yang terdaftar.');
+        }
     }
 
     private function resolveEmployeeForUser(User $user): Employee

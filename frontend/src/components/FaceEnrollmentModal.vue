@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount } from 'vue'
+import { computed } from 'vue'
 import { Camera, Upload, X, Check, RotateCcw, Loader2, AlertTriangle, ChevronRight } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
+import { useFaceCapture } from '@/composables/useFaceCapture'
 
 const props = defineProps<{
   employeeId: number
@@ -13,87 +14,33 @@ const emit = defineEmits<{
   enrolled: []
 }>()
 
-type Stage = 'choose' | 'camera' | 'preview' | 'uploading' | 'success'
-
-const stage = ref<Stage>('choose')
-const errorMessage = ref('')
-const capturedImage = ref('')
-const videoRef = ref<HTMLVideoElement | null>(null)
-const canvasRef = ref<HTMLCanvasElement | null>(null)
-const fileInputRef = ref<HTMLInputElement | null>(null)
-let mediaStream: MediaStream | null = null
+ const {
+   stage,
+   errorMessage,
+   capturedImage,
+   base64Only,
+   videoRef,
+   canvasRef,
+   fileInputRef,
+   startCamera,
+   stopCamera,
+   capturePhoto,
+   retakePhoto,
+   triggerFileUpload,
+   handleFileChange,
+ } = useFaceCapture()
 
 // --- Step indicator ---
 const steps = ['Pilih Metode', 'Ambil Foto', 'Konfirmasi']
 const currentStepIndex = computed(() => {
   if (stage.value === 'choose') return 0
   if (stage.value === 'camera') return 1
-  return 2 // preview, uploading, success
+  return 2 // preview, processing, done
 })
-
-async function startCamera() {
-  errorMessage.value = ''
-  stage.value = 'camera'
-
-  try {
-    mediaStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-    })
-    if (videoRef.value) {
-      videoRef.value.srcObject = mediaStream
-      await videoRef.value.play()
-    }
-  } catch {
-    errorMessage.value = 'Tidak bisa mengakses kamera. Silakan upload foto sebagai alternatif.'
-    stage.value = 'choose'
-  }
-}
-
-function stopCamera() {
-  mediaStream?.getTracks().forEach((track) => track.stop())
-  mediaStream = null
-}
-
-function capturePhoto() {
-  if (!videoRef.value || !canvasRef.value) return
-
-  const video = videoRef.value
-  const canvas = canvasRef.value
-  canvas.width = video.videoWidth
-  canvas.height = video.videoHeight
-
-  const ctx = canvas.getContext('2d')
-  ctx?.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-  capturedImage.value = canvas.toDataURL('image/jpeg', 0.9)
-  stopCamera()
-  stage.value = 'preview'
-}
-
-function retakePhoto() {
-  capturedImage.value = ''
-  startCamera()
-}
-
-function triggerFileUpload() {
-  fileInputRef.value?.click()
-}
-
-function handleFileChange(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0]
-  if (!file) return
-
-  const reader = new FileReader()
-  reader.onload = () => {
-    capturedImage.value = reader.result as string
-    stage.value = 'preview'
-  }
-  reader.readAsDataURL(file)
-}
 
 async function confirmEnrollment() {
   errorMessage.value = ''
-  stage.value = 'uploading'
+  stage.value = 'processing'
 
   const base64Only = capturedImage.value.split(',')[1]
 
@@ -101,7 +48,7 @@ async function confirmEnrollment() {
     await apiClient.post(`/api/employees/${props.employeeId}/face/enroll`, {
       image_base64: base64Only,
     })
-    stage.value = 'success'
+    stage.value = 'done'
     emit('enrolled')
   } catch (err: any) {
     errorMessage.value = err.response?.data?.message || 'Gagal mendaftarkan wajah, silakan coba lagi.'
@@ -110,9 +57,7 @@ async function confirmEnrollment() {
 }
 
 function retryFromPreview() {
-  capturedImage.value = ''
-  errorMessage.value = ''
-  stage.value = 'choose'
+  reset()
 }
 
 function handleClose() {
@@ -120,9 +65,6 @@ function handleClose() {
   emit('close')
 }
 
-onBeforeUnmount(() => {
-  stopCamera()
-})
 </script>
 
 <template>

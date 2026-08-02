@@ -19,6 +19,7 @@ interface AttendanceSettingRow {
   company_id: number
   branch_id: number | null
   require_photo: boolean
+  require_face_verification: boolean
   require_location: boolean
   office_latitude: number | null
   office_longitude: number | null
@@ -44,6 +45,7 @@ const form = reactive({
   company_id: 0,
   branch_id: null as number | null,
   require_photo: false,
+  require_face_verification: false,
   require_location: false,
   office_latitude: null as number | null,
   office_longitude: null as number | null,
@@ -85,6 +87,7 @@ function resetForm() {
   form.company_id = companies.value[0]?.id ?? 0
   form.branch_id = null
   form.require_photo = false
+  form.require_face_verification = false
   form.require_location = false
   form.office_latitude = null
   form.office_longitude = null
@@ -106,6 +109,7 @@ function openEditModal(row: AttendanceSettingRow) {
   form.company_id = row.company_id
   form.branch_id = row.branch_id
   form.require_photo = row.require_photo
+  form.require_face_verification = row.require_face_verification
   form.require_location = row.require_location
   form.office_latitude = row.office_latitude
   form.office_longitude = row.office_longitude
@@ -149,6 +153,7 @@ async function handleSubmit() {
     company_id: form.company_id,
     branch_id: form.branch_id,
     require_photo: form.require_photo,
+    require_face_verification: form.require_face_verification,
     require_location: form.require_location,
     office_latitude: form.require_location ? form.office_latitude : null,
     office_longitude: form.require_location ? form.office_longitude : null,
@@ -247,6 +252,13 @@ onMounted(() => {
                 >
                   <Camera class="h-3 w-3" :stroke-width="2" />
                   Foto
+                </span>
+                <span
+                  class="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium"
+                  :class="row.require_face_verification ? 'bg-primary-soft text-primary-dark' : 'bg-slate-50 text-slate-400'"
+                >
+                  <ShieldCheck class="h-3 w-3" :stroke-width="2" />
+                  Face Recognition
                 </span>
                 <span
                   class="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium"
@@ -360,6 +372,18 @@ onMounted(() => {
                     </div>
                   </div>
                   <input v-model="form.require_photo" type="checkbox" class="peer sr-only" />
+                  <div class="relative h-6 w-11 shrink-0 rounded-full bg-slate-200 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:bg-primary peer-checked:after:translate-x-5"></div>
+                </label>
+
+                <label class="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 px-4 py-3">
+                  <div class="flex items-center gap-2.5">
+                    <ShieldCheck class="h-4 w-4 text-slate-400" :stroke-width="1.75" />
+                    <div>
+                      <p class="text-sm font-medium text-slate-700">Wajib Verifikasi Wajah</p>
+                      <p class="text-xs text-slate-400">Foto dicocokkan ke wajah karyawan yang sudah terdaftar (Face Recognition)</p>
+                    </div>
+                  </div>
+                  <input v-model="form.require_face_verification" type="checkbox" class="peer sr-only" />
                   <div class="relative h-6 w-11 shrink-0 rounded-full bg-slate-200 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:bg-primary peer-checked:after:translate-x-5"></div>
                 </label>
 

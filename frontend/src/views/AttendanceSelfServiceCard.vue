@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { LogIn, LogOut, MapPin } from 'lucide-vue-next'
+import { ref, onMounted, computed, nextTick } from 'vue'
+import { LogIn, LogOut, MapPin, Camera, X, RotateCcw, Check } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
 
 interface ShiftInfo {
@@ -13,6 +13,8 @@ interface ShiftInfo {
 interface TodayAttendance {
   attendance_date: string
   status: string | null
+  requires_photo: boolean
+  requires_face_verification: boolean
   clock_in: string | null
   clock_in_distance_meters: number | null
   late_minutes: number | null
@@ -55,7 +57,6 @@ function formatTime(value: string | null): string {
   return new Date(value.replace(' ', 'T')).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
 }
 
-// --- Working hours & ring progress (VISUAL APPROXIMATION di frontend, lihat catatan di chat) ---
 function toMinutes(t: string): number {
   const [h, m] = t.split(':').map(Number)
   return h * 60 + m
@@ -79,7 +80,7 @@ const workingHoursLabel = computed(() => {
 const shiftDurationMinutes = computed(() => {
   if (!today.value?.shift) return 0
   let dur = toMinutes(today.value.shift.end_time) - toMinutes(today.value.shift.start_time)
-  if (dur <= 0) dur += 24 * 60 // asumsi shift lintas hari, kasar karena gak ada flag is_overnight di sini
+  if (dur <= 0) dur += 24 * 60
   return dur
 })
 
@@ -101,10 +102,7 @@ function getCurrentPosition(): Promise<GeolocationPosition> {
       reject(new Error('Browser tidak mendukung GPS.'))
       return
     }
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      timeout: 10000,
-    })
+    navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 })
   })
 }
 
@@ -132,12 +130,99 @@ async function resolveCoords(): Promise<{ latitude?: number; longitude?: number 
   }
 }
 
+// ---------- Kamera capture ----------
+const showCamera = ref(false)
+const cameraMode = ref<'clock-in' | 'clock-out'>('clock-in')
+const capturedPhoto = ref('')
+const videoRef = ref<HTMLVideoElement | null>(null)
+const canvasRef = ref<HTMLCanvasElement | null>(null)
+const cameraError = ref('')
+let mediaStream: MediaStream | null = null
+
+async function openCamera(mode: 'clock-in' | 'clock-out') {
+  cameraMode.value = mode
+  capturedPhoto.value = ''
+  cameraError.value = ''
+  showCamera.value = true
+
+  await nextTick()
+
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+    })
+    if (videoRef.value) {
+      videoRef.value.srcObject = mediaStream
+      await videoRef.value.play()
+    }
+  } catch {
+    cameraError.value = 'Tidak bisa mengakses kamera. Pastikan izin kamera browser diaktifkan.'
+  }
+}
+
+function stopCamera() {
+  mediaStream?.getTracks().forEach((track) => track.stop())
+  mediaStream = null
+}
+
+function closeCamera() {
+  stopCamera()
+  showCamera.value = false
+  capturedPhoto.value = ''
+}
+
+function capturePhoto() {
+  if (!videoRef.value || !canvasRef.value) return
+  const video = videoRef.value
+  const canvas = canvasRef.value
+  canvas.width = video.videoWidth
+  canvas.height = video.videoHeight
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  ctx.translate(canvas.width, 0)
+  ctx.scale(-1, 1)
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+  capturedPhoto.value = canvas.toDataURL('image/jpeg', 0.85)
+  stopCamera()
+}
+
+function retakePhoto() {
+  capturedPhoto.value = ''
+  openCamera(cameraMode.value)
+}
+
+async function confirmPhotoAndSubmit() {
+  showCamera.value = false
+  if (cameraMode.value === 'clock-in') {
+    await performClockIn(capturedPhoto.value)
+  } else {
+    await performClockOut(capturedPhoto.value)
+  }
+}
+
+// ---------- Clock in/out ----------
 async function handleClockIn() {
+  if (today.value?.requires_photo || today.value?.requires_face_verification) {
+    openCamera('clock-in')
+    return
+  }
+  await performClockIn()
+}
+
+async function handleClockOut() {
+  if (today.value?.requires_photo || today.value?.requires_face_verification) {
+    openCamera('clock-out')
+    return
+  }
+  await performClockOut()
+}
+
+async function performClockIn(photoBase64?: string) {
   submitting.value = true
   errorMessage.value = ''
   try {
     const coords = await resolveCoords()
-    await apiClient.post('/api/attendance/clock-in', coords)
+    await apiClient.post('/api/attendance/clock-in', { ...coords, photo_base64: photoBase64 || undefined })
     await loadToday()
   } catch (err: any) {
     errorMessage.value = err.response?.data?.message || 'Gagal melakukan clock-in.'
@@ -146,12 +231,12 @@ async function handleClockIn() {
   }
 }
 
-async function handleClockOut() {
+async function performClockOut(photoBase64?: string) {
   submitting.value = true
   errorMessage.value = ''
   try {
     const coords = await resolveCoords()
-    await apiClient.post('/api/attendance/clock-out', coords)
+    await apiClient.post('/api/attendance/clock-out', { ...coords, photo_base64: photoBase64 || undefined })
     await loadToday()
   } catch (err: any) {
     errorMessage.value = err.response?.data?.message || 'Gagal melakukan clock-out.'
@@ -172,13 +257,12 @@ defineExpose({ loadToday })
     <div v-if="loading" class="text-sm text-slate-400">Memuat status attendance...</div>
 
     <template v-else-if="today">
-
       <div class="mb-4 flex items-center justify-between">
         <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Attendance Hari Ini</h3>
         <button type="button" class="text-xs font-medium text-primary-dark hover:underline">View detail ›</button>
       </div>
 
-       <div class="flex items-center gap-4">
+      <div class="flex items-center gap-4">
         <div class="flex-1">
           <p class="text-2xl font-bold tabular-nums tracking-tight text-slate-900">{{ formattedClock }}</p>
           <p class="mt-0.5 text-xs text-slate-400">
@@ -201,10 +285,8 @@ defineExpose({ loadToday })
             <template v-if="today.shift">
               <dt class="text-slate-400">Shift</dt>
               <dd class="text-right font-medium text-slate-700">
-  {{ today.shift.name }}
-  ({{ formatShiftTime(today.shift.start_time) }} -
-   {{ formatShiftTime(today.shift.end_time) }})
-</dd>
+                {{ today.shift.name }} ({{ formatShiftTime(today.shift.start_time) }} - {{ formatShiftTime(today.shift.end_time) }})
+              </dd>
             </template>
           </dl>
         </div>
@@ -226,7 +308,15 @@ defineExpose({ loadToday })
         </div>
       </div>
 
-      <p v-if="today.late_minutes !== null" class="mt-3 text-xs" :class="today.within_grace ? 'text-slate-400' : 'text-amber-600'">
+      <p v-if="today.requires_face_verification" class="mt-3 flex items-center gap-1 text-xs text-slate-400">
+        <Camera class="h-3 w-3" :stroke-width="1.75" />
+        Kantor mewajibkan verifikasi wajah saat absen
+      </p>
+      <p v-else-if="today.requires_photo" class="mt-3 flex items-center gap-1 text-xs text-slate-400">
+        <Camera class="h-3 w-3" :stroke-width="1.75" />
+        Kantor mewajibkan foto saat absen
+      </p>
+      <p v-if="today.late_minutes !== null" class="mt-1 text-xs" :class="today.within_grace ? 'text-slate-400' : 'text-amber-600'">
         Terlambat {{ today.late_minutes }} menit{{ today.within_grace ? ' (masih grace period)' : '' }}
       </p>
       <p v-if="today.detected_overtime_minutes" class="mt-1 text-xs text-blue-600">
@@ -267,5 +357,59 @@ defineExpose({ loadToday })
         </p>
       </div>
     </template>
+
+    <!-- Modal kamera -->
+    <Teleport to="body">
+      <div v-if="showCamera" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4">
+        <div class="w-full max-w-sm rounded-2xl bg-white shadow-xl">
+          <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+            <h3 class="text-sm font-semibold text-slate-900">
+              {{ cameraMode === 'clock-in' ? 'Foto Clock In' : 'Foto Clock Out' }}
+            </h3>
+            <button @click="closeCamera" class="rounded-lg p-1 text-slate-400 hover:bg-slate-50"><X class="h-4 w-4" /></button>
+          </div>
+
+          <div class="p-5">
+            <p v-if="cameraError" class="mb-3 text-xs text-red-600">{{ cameraError }}</p>
+
+            <div class="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-900">
+              <video v-show="!capturedPhoto" ref="videoRef" class="h-full w-full -scale-x-100 object-cover" muted playsinline></video>
+              <img v-if="capturedPhoto" :src="capturedPhoto" alt="" class="h-full w-full object-cover" />
+              <canvas ref="canvasRef" class="hidden"></canvas>
+            </div>
+
+            <div class="mt-4 flex gap-2">
+              <template v-if="!capturedPhoto">
+                <button
+                  @click="capturePhoto"
+                  :disabled="!!cameraError"
+                  class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-2.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-50"
+                >
+                  <Camera class="h-4 w-4" :stroke-width="1.75" />
+                  Ambil Foto
+                </button>
+              </template>
+              <template v-else>
+                <button
+                  @click="retakePhoto"
+                  class="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                >
+                  <RotateCcw class="h-4 w-4" :stroke-width="1.75" />
+                  Ambil Ulang
+                </button>
+                <button
+                  @click="confirmPhotoAndSubmit"
+                  :disabled="submitting"
+                  class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-2.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-50"
+                >
+                  <Check class="h-4 w-4" :stroke-width="1.75" />
+                  {{ submitting ? 'Mengirim...' : 'Gunakan Foto' }}
+                </button>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>

@@ -19,6 +19,7 @@ class UpdateAttendanceSettingRequest extends FormRequest
             'company_id' => ['required', 'exists:companies,id'],
             'branch_id' => ['nullable', 'exists:branches,id'],
             'require_photo' => ['boolean'],
+            'require_face_verification' => ['boolean'],
             'require_location' => ['boolean'],
             'office_latitude' => ['nullable', 'required_if:require_location,true', 'numeric', 'between:-90,90'],
             'office_longitude' => ['nullable', 'required_if:require_location,true', 'numeric', 'between:-180,180'],

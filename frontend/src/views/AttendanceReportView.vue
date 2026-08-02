@@ -50,6 +50,7 @@ interface DailyRow {
 interface EmployeeOption {
   id: number
   employee_number: string
+  photo_url: string | null
   first_name: string
   last_name: string | null
 }
@@ -489,20 +490,35 @@ onMounted(() => {
               <td class="px-5 py-3.5">
                 <div class="flex items-center gap-2.5">
                   <img
-                    v-if="row.employee.photo_url"
+                    v-if="row.employee?.photo_url"
                     :src="row.employee.photo_url"
-                    alt=""
+                    :alt="row.employee.name"
                     class="h-8 w-8 shrink-0 rounded-full object-cover"
                   />
-                  <div v-else class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark">
-                    {{ row.employee.name.slice(0, 2).toUpperCase() }}
+
+                  <div
+                    v-else
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark"
+                  >
+                    {{ row.employee?.name?.slice(0, 2).toUpperCase() ?? '--' }}
                   </div>
+
                   <div>
                     <div class="flex items-center gap-1.5">
-                      <p class="font-medium text-slate-800">{{ row.employee.name }}</p>
-                      <AlertTriangle v-if="needsAttention(row)" class="h-3.5 w-3.5 text-amber-500" :stroke-width="2" />
+                      <p class="font-medium text-slate-800">
+                        {{ row.employee?.name ?? '-' }}
+                      </p>
+
+                      <AlertTriangle
+                        v-if="needsAttention(row)"
+                        class="h-3.5 w-3.5 text-amber-500"
+                        :stroke-width="2"
+                      />
                     </div>
-                    <p class="text-xs text-slate-400">{{ row.employee.employee_number }}</p>
+
+                    <p class="text-xs text-slate-400">
+                      {{ row.employee?.employee_number ?? '-' }}
+                    </p>
                   </div>
                 </div>
               </td>

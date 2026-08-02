@@ -13,8 +13,10 @@ import apiClient from '@/lib/axios'
 
 interface Employee {
   id: number
+  employee_number: string
   first_name: string
   last_name: string | null
+  photo_url: string | null
   company_id: number
 }
 
@@ -817,10 +819,32 @@ onMounted(async () => {
 
               <td class="px-3 py-3.5">
                 <div class="flex items-center gap-2.5">
-                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark">
+                  <img
+                    v-if="group.employee?.photo_url"
+                    :src="group.employee.photo_url"
+                    alt=""
+                    class="h-8 w-8 shrink-0 rounded-full object-cover"
+                  />
+
+                  <div
+                    v-else
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark"
+                  >
                     {{ employeeInitials(group.employee) }}
                   </div>
-                  <span class="font-medium text-slate-800">{{ employeeName(group.employee) }}</span>
+
+                  <div>
+                    <p class="font-medium text-slate-800">
+                      {{ employeeName(group.employee) }}
+                    </p>
+
+                    <p
+                      v-if="group.employee?.employee_number"
+                      class="text-xs text-slate-400"
+                    >
+                      {{ group.employee.employee_number }}
+                    </p>
+                  </div>
                 </div>
               </td>
 

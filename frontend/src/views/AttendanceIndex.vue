@@ -5,6 +5,7 @@ import apiClient from '@/lib/axios'
 
 interface Employee {
   id: number
+  photo_url: string | null
   first_name: string
   last_name: string
 }
@@ -435,10 +436,29 @@ onMounted(() => {
             >
               <td class="px-5 py-3.5">
                 <div class="flex items-center gap-2.5">
-                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark">
+                  <img
+                    v-if="row.employee?.photo_url"
+                    :src="row.employee.photo_url"
+                    :alt="employeeName(row.employee)"
+                    class="h-8 w-8 shrink-0 rounded-full object-cover"
+                  />
+
+                  <div
+                    v-else
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark"
+                  >
                     {{ employeeInitials(row.employee) }}
                   </div>
-                  <p class="font-medium text-slate-800">{{ employeeName(row.employee) }}</p>
+
+                  <div>
+                    <p class="font-medium text-slate-800">
+                      {{ employeeName(row.employee) }}
+                    </p>
+
+                    <p class="text-xs text-slate-400">
+                      {{ row.employee?.employee_number }}
+                    </p>
+                  </div>
                 </div>
               </td>
               <td class="px-3 py-3.5 whitespace-nowrap text-slate-500">{{ formatDateLabel(row.attendance_date) }}</td>

@@ -4,7 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import {
   LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound,
   CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch, CheckCircle2, Layers, CalendarRange, BarChart3,
-  Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle
+  Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
@@ -52,7 +52,6 @@ const groups: MenuGroup[] = [
     icon: UserRound,
     items: [
       { name: 'employees', label: 'Employee', icon: UserRound, to: '/employees', permission: 'view employees' },
-      { name: 'employee-salaries', label: 'Employee Salary', icon: UserCircle, to: '/employee-salaries', permission: 'view employee salaries' },
     ],
   },
   {
@@ -88,6 +87,8 @@ const groups: MenuGroup[] = [
       { name: 'attendances', label: 'Attendances', icon: Fingerprint, to: '/attendances', permission: 'view attendances' },
       { name: 'attendance-devices', label: 'Attendance Device', icon: Fingerprint, to: '/attendance-devices', permission: 'view attendance devices' },
       { name: 'attendance-settings', label: 'Attendance Setting', icon: Fingerprint, to: '/attendance-settings', permission: 'view attendance settings' },
+      { name: 'attendance-face-recognition-test', label: 'Face Recognition Test', icon: ScanFace, to: '/attendance-settings/face-recognition-test', permission: 'view attendance settings', },
+      { name: 'attendance-face-checkin', label: 'Face Check In', icon: ScanFace, to: '/attendance/face-checkin', permission: null },
       { name: 'attendance-approvals', label: 'Approval Attendance', icon: CheckCircle2, to: '/attendance-approvals', permission: null },
       { name: 'attendance-report', label: 'Attendance Report', icon: BarChart3, to: '/attendance-report', permission: 'view attendances' },
     ],
@@ -99,6 +100,8 @@ const groups: MenuGroup[] = [
     items: [
       { name: 'salary-components', label: 'Salary Component', icon: Wallet, to: '/salary-components', permission: 'view salary components' },
       { name: 'salary-structures', label: 'Salary Structure', icon: Layers, to: '/salary-structures', permission: 'view salary structures' },
+      { name: 'employee-salaries', label: 'Employee Salary', icon: UserCircle, to: '/employee-salaries', permission: 'view employee salaries' },
+      { name: 'employee-allowances', label: 'Allowance', icon: Gift, to: '/employee-allowances', permission: 'view employee allowances' },
     ],
   },
   {

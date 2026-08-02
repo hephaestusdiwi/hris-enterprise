@@ -29,6 +29,9 @@ import SalaryComponentListView from '@/views/SalaryComponentListView.vue'
 import SalaryStructureListView from '@/views/SalaryStructureListView.vue'
 import { useAuthStore } from '@/stores/auth'
 import EmployeeSalaryListView from '@/views/EmployeeSalaryListView.vue'
+import EmployeeAllowanceListView from '@/views/EmployeeAllowanceListView.vue'
+import FaceRecognitionTestView from '@/views/FaceRecognitionTestView.vue'
+import FaceCheckInView from '@/views/FaceCheckInView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -149,6 +152,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/attendance-settings/face-recognition-test',
+      name: 'attendance-settings.face-recognition-test',
+      component: FaceRecognitionTestView,
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/working-schedule-assignments',
       name: 'working-schedule-assignments.list',
       component: WorkingScheduleAssignmentListView,
@@ -213,6 +222,18 @@ const router = createRouter({
       name: 'employee-salaries.list',
       component: EmployeeSalaryListView,
       meta: { requiresAuth:true },
+    },
+    {
+      path: '/employee-allowances',
+      name: 'employee-allowances.list',
+      component: EmployeeAllowanceListView,
+      meta: { requiresAuth:true },
+    },
+    {
+     path: '/attendance/face-checkin',
+     name: 'attendance.face-checkin',
+     component: FaceCheckInView,
+     meta: { requiresAuth: true },
     },
     {
       path: '/login',

@@ -12,7 +12,10 @@ interface UserRow {
   id: number
   name: string
   email: string
-  roles: Role[]
+
+  employee?: {
+    photo_url: string | null
+  } | null
 }
 
 const users = ref<UserRow[]>([])
@@ -178,12 +181,23 @@ onMounted(() => {
           >
             <td class="px-5 py-3.5">
               <div class="flex items-center gap-3">
+                <img
+                  v-if="user.employee?.photo_url"
+                  :src="user.employee.photo_url"
+                  :alt="user.name"
+                  class="h-8 w-8 rounded-full object-cover"
+                />
+
                 <div
+                  v-else
                   class="flex h-8 w-8 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark"
                 >
                   {{ initials(user.name) }}
                 </div>
-                <span class="font-medium text-slate-800">{{ user.name }}</span>
+
+                <span class="font-medium text-slate-800">
+                  {{ user.name }}
+                </span>
               </div>
             </td>
             <td class="px-5 py-3.5 text-slate-500">{{ user.email }}</td>

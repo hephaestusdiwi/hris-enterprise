@@ -17,6 +17,7 @@ class AttendanceSetting extends Model
         'company_id',
         'branch_id',
         'require_photo',
+        'require_face_verification',
         'require_location',
         'office_latitude',
         'office_longitude',
@@ -29,6 +30,7 @@ class AttendanceSetting extends Model
     {
         return [
             'require_photo' => 'boolean',
+            'require_face_verification' => 'boolean',
             'require_location' => 'boolean',
             'office_latitude' => 'decimal:7',
             'office_longtitude' => 'decimal:7',

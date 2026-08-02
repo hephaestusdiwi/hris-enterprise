@@ -6,9 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Modules\AttendanceSetting\Models\AttendanceSetting;
 use App\Modules\AttendanceSetting\Requests\StoreAttendanceSettingRequest;
 use App\Modules\AttendanceSetting\Requests\UpdateAttendanceSettingRequest;
+use App\Modules\AttendanceSetting\Requests\FaceRecognitionTestRequest; 
+use App\Modules\AttendanceSetting\Resources\FaceRecognitionTestResource;
+use App\Modules\AttendanceSetting\Services\FaceRecognitionTestService;
+use App\Modules\FaceRecognition\Exceptions\FaceRecognitionException;
 
 class AttendanceSettingController extends Controller
 {
+    public function __construct(
+    private FaceRecognitionTestService $faceRecognitionTestService,
+    ) {
+    }
+
     public function index()
     {
         $settings = AttendanceSetting::with(['company', 'branch'])->latest()->paginate(15);
@@ -66,6 +75,28 @@ class AttendanceSettingController extends Controller
             'success' => true,
             'message' => 'Attendance setting berhasil diperbarui',
             'data' => $attendanceSetting->load(['company', 'branch']),
+        ]);
+    }
+
+    public function faceRecognitionTest(FaceRecognitionTestRequest $request)
+    {
+        try {
+            $result = $this->faceRecognitionTestService->test(
+                (int) $request->validated('employee_id'),
+                $request->validated('image_base64'),
+            );
+        } catch (FaceRecognitionException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null,
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OK',
+            'data' => new FaceRecognitionTestResource($result),
         ]);
     }
 

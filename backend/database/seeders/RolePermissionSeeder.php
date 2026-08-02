@@ -91,6 +91,9 @@ class RolePermissionSeeder extends Seeder
             'view employee salaries',
             'create employee salaries',
             'delete employee salaries',
+            'view employee allowances',
+            'create employee allowances',
+            'delete employee allowances',
         ];
 
         foreach ($permissions as $permission) {
