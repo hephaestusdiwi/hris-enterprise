@@ -60,7 +60,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x]  47. Salary Structure
 - [x]  48. Employee Salary
 - [x]  49. Allowance
-- [ ] 50. Deduction
+- [x]  50. Deduction
 - [ ] 51. Loan
 - [ ] 52. BPJS
 - [ ] 53. PPh21
