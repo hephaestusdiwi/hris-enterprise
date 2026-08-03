@@ -434,7 +434,7 @@ class AttendanceService
         }
 
         $detail = WorkingScheduleDetail::where('working_schedule_id', $workingScheduleId)
-            ->where('day_of_week', Carbon::today()->dayOfWeek)
+            ->where('day_of_week', Carbon::today()->dayOfWeekIso)
             ->first();
 
         return $detail?->shift;

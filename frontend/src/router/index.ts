@@ -32,6 +32,7 @@ import EmployeeSalaryListView from '@/views/EmployeeSalaryListView.vue'
 import EmployeeAllowanceListView from '@/views/EmployeeAllowanceListView.vue'
 import FaceRecognitionTestView from '@/views/FaceRecognitionTestView.vue'
 import FaceCheckInView from '@/views/FaceCheckInView.vue'
+import EmployeeDeductionListView from '@/views/EmployeeDeductionListView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -234,6 +235,12 @@ const router = createRouter({
      name: 'attendance.face-checkin',
      component: FaceCheckInView,
      meta: { requiresAuth: true },
+    },
+    {
+      path: '/employee-deductions',
+      name: 'employee-deductions.list',
+      component: EmployeeDeductionListView,
+      meta: { requiresAuth: true },
     },
     {
       path: '/login',

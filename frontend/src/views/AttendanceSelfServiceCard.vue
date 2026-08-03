@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, nextTick } from 'vue'
-import { LogIn, LogOut, MapPin, Camera, X, RotateCcw, Check } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+import {
+  LogIn, LogOut, MapPin, Camera, X, RotateCcw, Check,
+  Clock, CircleDot, CalendarClock, ShieldCheck,
+} from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
 
 interface ShiftInfo {
@@ -26,6 +30,8 @@ interface TodayAttendance {
   can_clock_out: boolean
   shift: ShiftInfo | null
 }
+
+const router = useRouter()
 
 const today = ref<TodayAttendance | null>(null)
 const loading = ref(true)
@@ -202,7 +208,12 @@ async function confirmPhotoAndSubmit() {
 
 // ---------- Clock in/out ----------
 async function handleClockIn() {
-  if (today.value?.requires_photo || today.value?.requires_face_verification) {
+  if (today.value?.requires_face_verification) {
+    router.push({ name: 'attendance.face-checkin' })
+    return
+  }
+
+  if (today.value?.requires_photo) {
     openCamera('clock-in')
     return
   }
@@ -210,7 +221,12 @@ async function handleClockIn() {
 }
 
 async function handleClockOut() {
-  if (today.value?.requires_photo || today.value?.requires_face_verification) {
+  if (today.value?.requires_face_verification) {
+    router.push({ name: 'attendance.face-checkin' })
+    return
+  }
+
+  if (today.value?.requires_photo) {
     openCamera('clock-out')
     return
   }
@@ -259,41 +275,64 @@ defineExpose({ loadToday })
     <template v-else-if="today">
       <div class="mb-4 flex items-center justify-between">
         <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Attendance Hari Ini</h3>
-        <button type="button" class="text-xs font-medium text-primary-dark hover:underline">View detail ›</button>
+        <button type="button" class="text-xs font-medium text-primary-dark hover:underline">Lihat detail ›</button>
       </div>
 
       <div class="flex items-center gap-4">
         <div class="flex-1">
-          <p class="text-2xl font-bold tabular-nums tracking-tight text-slate-900">{{ formattedClock }}</p>
-          <p class="mt-0.5 text-xs text-slate-400">
-            {{ new Date(today.attendance_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }) }}
+          <p class="text-2xl font-bold tabular-nums tracking-tight text-slate-900 sm:text-3xl">{{ formattedClock }}</p>
+          <p class="mt-0.5 text-xs text-slate-400 sm:text-sm">
+            {{ new Date(today.attendance_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }}
           </p>
 
-          <dl class="mt-3 grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1.5 text-xs">
-            <dt class="text-slate-400">Clock In</dt>
-            <dd class="text-right font-medium text-slate-700">{{ formatTime(today.clock_in) }}</dd>
+          <dl class="mt-4 space-y-2.5 text-xs sm:text-sm">
+            <div class="flex items-center justify-between gap-4">
+              <dt class="flex items-center gap-2 text-slate-500">
+                <LogIn class="h-4 w-4 text-slate-300" :stroke-width="1.75" />
+                Clock In
+              </dt>
+              <dd class="font-medium text-slate-700">{{ formatTime(today.clock_in) }}</dd>
+            </div>
 
-            <dt class="text-slate-400">Clock Out</dt>
-            <dd class="text-right font-medium text-slate-700">{{ formatTime(today.clock_out) }}</dd>
+            <div class="flex items-center justify-between gap-4">
+              <dt class="flex items-center gap-2 text-slate-500">
+                <LogOut class="h-4 w-4 text-slate-300" :stroke-width="1.75" />
+                Clock Out
+              </dt>
+              <dd class="font-medium text-slate-700">{{ formatTime(today.clock_out) }}</dd>
+            </div>
 
-            <dt class="text-slate-400">Working Hours</dt>
-            <dd class="text-right font-medium text-slate-700">{{ workingHoursLabel }}</dd>
+            <div class="flex items-center justify-between gap-4">
+              <dt class="flex items-center gap-2 text-slate-500">
+                <Clock class="h-4 w-4 text-slate-300" :stroke-width="1.75" />
+                Working Hours
+              </dt>
+              <dd class="font-medium text-slate-700">{{ workingHoursLabel }}</dd>
+            </div>
 
-            <dt class="text-slate-400">Status</dt>
-            <dd class="text-right font-medium text-primary-dark">{{ today.status ? (statusLabels[today.status] ?? today.status) : '-' }}</dd>
+            <div class="flex items-center justify-between gap-4">
+              <dt class="flex items-center gap-2 text-slate-500">
+                <CircleDot class="h-4 w-4 text-slate-300" :stroke-width="1.75" />
+                Status
+              </dt>
+              <dd class="font-medium text-primary-dark">{{ today.status ? (statusLabels[today.status] ?? today.status) : '-' }}</dd>
+            </div>
 
-            <template v-if="today.shift">
-              <dt class="text-slate-400">Shift</dt>
+            <div v-if="today.shift" class="flex items-center justify-between gap-4">
+              <dt class="flex items-center gap-2 text-slate-500">
+                <CalendarClock class="h-4 w-4 text-slate-300" :stroke-width="1.75" />
+                Shift
+              </dt>
               <dd class="text-right font-medium text-slate-700">
                 {{ today.shift.name }} ({{ formatShiftTime(today.shift.start_time) }} - {{ formatShiftTime(today.shift.end_time) }})
               </dd>
-            </template>
+            </div>
           </dl>
         </div>
 
         <div v-if="today.shift" class="flex shrink-0 flex-col items-center">
-          <div class="relative flex h-24 w-24 items-center justify-center">
-            <svg viewBox="0 0 100 100" class="h-24 w-24 -rotate-90">
+          <div class="relative flex h-24 w-24 items-center justify-center sm:h-28 sm:w-28">
+            <svg viewBox="0 0 100 100" class="h-24 w-24 -rotate-90 sm:h-28 sm:w-28">
               <circle cx="50" cy="50" r="44" fill="none" stroke="#E2E8F0" stroke-width="9" />
               <circle
                 cx="50" cy="50" r="44" fill="none" stroke-width="9" stroke-linecap="round"
@@ -302,21 +341,26 @@ defineExpose({ loadToday })
                 :stroke-dashoffset="ringDashOffset"
               />
             </svg>
-            <span class="absolute text-base font-bold text-slate-900">{{ ringPercent }}%</span>
+            <span class="absolute text-base font-bold text-slate-900 sm:text-lg">{{ ringPercent }}%</span>
           </div>
-          <p class="mt-1.5 text-[11px] text-slate-400">Today's Working Time</p>
+          <p class="mt-1.5 text-center text-[11px] text-slate-400 sm:text-xs">Today's Working Time</p>
         </div>
       </div>
 
-      <p v-if="today.requires_face_verification" class="mt-3 flex items-center gap-1 text-xs text-slate-400">
-        <Camera class="h-3 w-3" :stroke-width="1.75" />
-        Kantor mewajibkan verifikasi wajah saat absen
-      </p>
-      <p v-else-if="today.requires_photo" class="mt-3 flex items-center gap-1 text-xs text-slate-400">
-        <Camera class="h-3 w-3" :stroke-width="1.75" />
-        Kantor mewajibkan foto saat absen
-      </p>
-      <p v-if="today.late_minutes !== null" class="mt-1 text-xs" :class="today.within_grace ? 'text-slate-400' : 'text-amber-600'">
+      <!-- Notice: photo / face verification requirement -->
+      <div
+        v-if="today.requires_face_verification || today.requires_photo"
+        class="mt-4 flex items-center gap-2.5 rounded-xl bg-slate-50 px-4 py-2.5"
+      >
+        <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-dark">
+          <ShieldCheck class="h-4 w-4" :stroke-width="1.75" />
+        </div>
+        <p class="text-xs text-slate-500 sm:text-sm">
+          {{ today.requires_face_verification ? 'Kantor mewajibkan verifikasi wajah saat absen' : 'Kantor mewajibkan foto saat absen' }}
+        </p>
+      </div>
+
+      <p v-if="today.late_minutes !== null" class="mt-2 text-xs" :class="today.within_grace ? 'text-slate-400' : 'text-amber-600'">
         Terlambat {{ today.late_minutes }} menit{{ today.within_grace ? ' (masih grace period)' : '' }}
       </p>
       <p v-if="today.detected_overtime_minutes" class="mt-1 text-xs text-blue-600">
@@ -330,28 +374,28 @@ defineExpose({ loadToday })
       <p v-if="locationNote" class="mt-2 text-xs text-amber-600">{{ locationNote }}</p>
       <p v-if="errorMessage" class="mt-2 text-xs text-red-600">{{ errorMessage }}</p>
 
-      <div class="mt-4 flex gap-2">
+      <div class="mt-4 flex gap-3">
         <button
           v-if="today.can_clock_in"
           @click="handleClockIn"
           :disabled="submitting"
-          class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-2.5 text-xs font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
+          class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-4 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-50 sm:text-base"
         >
-          <LogIn class="h-3.5 w-3.5" :stroke-width="2" />
+          <LogIn class="h-5 w-5" :stroke-width="2" />
           {{ submitting ? 'Memproses...' : 'Clock In' }}
         </button>
         <button
           v-if="today.can_clock_out"
           @click="handleClockOut"
           :disabled="submitting"
-          class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-slate-800 py-2.5 text-xs font-medium text-white transition-colors hover:bg-slate-900 disabled:opacity-50"
+          class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-800 py-4 text-sm font-semibold text-white transition-colors hover:bg-slate-900 disabled:opacity-50 sm:text-base"
         >
-          <LogOut class="h-3.5 w-3.5" :stroke-width="2" />
+          <LogOut class="h-5 w-5" :stroke-width="2" />
           {{ submitting ? 'Memproses...' : 'Clock Out' }}
         </button>
         <p
           v-if="!today.can_clock_in && !today.can_clock_out"
-          class="flex flex-1 items-center justify-center rounded-xl bg-slate-50 py-2.5 text-xs text-slate-400"
+          class="flex flex-1 items-center justify-center rounded-xl bg-slate-50 py-4 text-sm text-slate-400"
         >
           Attendance hari ini sudah selesai
         </p>

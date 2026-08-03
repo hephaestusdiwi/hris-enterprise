@@ -188,7 +188,7 @@ class LeaveRequestService
         }
 
         $detail = WorkingScheduleDetail::where('working_schedule_id', $workingScheduleId)
-            ->where('day_of_week', $date->dayOfWeek)
+            ->where('day_of_week', $date->dayOfWeekIso)
             ->with('shift')
             ->first();
 

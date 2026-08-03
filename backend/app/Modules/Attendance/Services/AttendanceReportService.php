@@ -168,7 +168,7 @@ class AttendanceReportService
         $result = [];
 
         foreach (CarbonPeriod::create($dateFrom, $dateTo) as $date) {
-            $detail = $detailsByDayOfWeek->get($date->dayOfWeek);
+            $detail = $detailsByDayOfWeek->get($date->dayOfWeekIso);
 
             if ($detail?->shift) {
                 $result[$date->toDateString()] = $detail->shift;
