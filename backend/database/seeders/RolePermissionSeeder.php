@@ -38,6 +38,10 @@ class RolePermissionSeeder extends Seeder
             'create employment statuses',
             'edit employment statuses',
             'delete employment statuses',
+            'view employment types',
+            'create employment types',
+            'edit employment types',
+            'delete employment types',
             'view employees',
             'create employees',
             'edit employees',
@@ -100,6 +104,11 @@ class RolePermissionSeeder extends Seeder
             'view employee deductions',
             'edit employee deductions',
             'create employee deductions',
+            'view loans',
+            'create loans',
+            'edit loans',
+            'disburse loans',
+            'cancel loans',
         ];
 
         foreach ($permissions as $permission) {

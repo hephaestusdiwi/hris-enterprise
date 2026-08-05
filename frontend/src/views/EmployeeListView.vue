@@ -7,6 +7,7 @@ import FaceEnrollmentModal from '@/components/FaceEnrollmentModal.vue'
 import EmployeeQrModal from '@/components/EmployeeQrModal.vue'
 import EmployeeCreateWizard from '@/components/employee/EmployeeCreateWizard.vue'
 import EmployeePhotoModal from '@/components/EmployeePhotoModal.vue'
+import SmartDateInput from '@/components/employee/SmartDateInput.vue'
 
 interface Ref {
   id: number
@@ -17,6 +18,12 @@ interface UserRef {
   id: number
   name: string
   email: string
+}
+
+interface EmploymentTypeRef {
+  id: number
+  name: string
+  code: string
 }
 
 interface EmployeeRow {
@@ -32,6 +39,10 @@ interface EmployeeRow {
   job_level: Ref | null
   working_schedule: Ref | null
   employment_status: Ref | null
+  employment_type: EmploymentTypeRef | null
+  contract_start_date: string | null
+  contract_end_date: string | null
+  probation_end_date: string | null
   user: UserRef | null
 }
 
@@ -47,6 +58,7 @@ const workingSchedules = ref<Ref[]>([])
 const employmentStatuses = ref<Ref[]>([])
 const managerOptions = ref<{ id: number; employee_number: string; first_name: string; last_name: string | null }[]>([])
 const availableUsers = ref<UserRef[]>([])
+const employmentTypes = ref<EmploymentTypeRef[]>([])
 
 const loading = ref(true)
 const errorMessage = ref('')
@@ -76,9 +88,13 @@ const form = reactive({
   job_level_id: null as number | null,
   working_schedule_id: null as number | null,
   employment_status_id: null as number | null,
+  employment_type_id: null as number | null,
   manager_employee_id: null as number | null,
   join_date: '',
   resign_date: '',
+  contract_start_date: '',
+  contract_end_date: '',
+  probation_end_date: '',
   first_name: '',
   last_name: '',
   gender: 'male',
@@ -119,6 +135,14 @@ const userOptions = computed(() => {
   return list
 })
 
+// Manager gak boleh milih dirinya sendiri
+const filteredManagerOptions = computed(() => {
+  if (!isEditing.value) return managerOptions.value
+  return managerOptions.value.filter((m) => m.id !== form.id)
+})
+
+const todayStr = new Date().toISOString().slice(0, 10)
+
 // --- Search & filter (client-side, dari data yang lagi ke-load) ---
 const searchQuery = ref('')
 const showFilters = ref(false)
@@ -149,6 +173,14 @@ const statusBreakdown = computed(() => {
     counts.set(label, (counts.get(label) ?? 0) + 1)
   }
   return Array.from(counts.entries()).map(([label, value]) => ({ label, value }))
+})
+
+const selectedEmploymentType = computed(() => {
+  return (
+    employmentTypes.value.find(
+      t => t.id === form.employment_type_id
+    ) ?? null
+  )
 })
 
 // --- Actions dropdown (teleport, biar gak ke-clip sama overflow tabel) ---
@@ -200,6 +232,7 @@ async function loadReferenceData() {
     statusRes,
     employeeRes,
     availableUsersRes,
+    typeRes,
   ] = await Promise.all([
     apiClient.get('/api/companies'),
     apiClient.get('/api/branches'),
@@ -210,6 +243,7 @@ async function loadReferenceData() {
     apiClient.get('/api/employment-statuses'),
     apiClient.get('/api/employees'),
     apiClient.get('/api/employees/available-users'),
+    apiClient.get('/api/employment-types'),
   ])
   companies.value = companyRes.data.data.data
   branches.value = branchRes.data.data.data
@@ -220,6 +254,7 @@ async function loadReferenceData() {
   employmentStatuses.value = statusRes.data.data.data
   managerOptions.value = employeeRes.data.data.data
   availableUsers.value = availableUsersRes.data.data
+  employmentTypes.value = typeRes.data.data.data
 }
 
 async function resetForm() {
@@ -233,9 +268,13 @@ async function resetForm() {
   form.job_level_id = null
   form.working_schedule_id = null
   form.employment_status_id = null
+  form.employment_type_id = null
   form.manager_employee_id = null
   form.join_date = new Date().toISOString().slice(0, 10)
   form.resign_date = ''
+  form.contract_start_date = ''
+  form.contract_end_date = ''
+  form.probation_end_date = ''
   form.first_name = ''
   form.last_name = ''
   form.gender = 'male'
@@ -271,9 +310,36 @@ function handleWizardCreated() {
   loadReferenceData()
 }
 
+// --- Tab nav buat modal edit (biar gak jadi satu form panjang yang bikin capek scroll) ---
+type TabId = 'employment' | 'account' | 'personal' | 'contact' | 'identity'
+
+const tabs: { id: TabId; label: string; icon: typeof Building2 }[] = [
+  { id: 'employment', label: 'Employment', icon: Building2 },
+  { id: 'account', label: 'Akun / Login', icon: KeyRound },
+  { id: 'personal', label: 'Personal', icon: UserRound },
+  { id: 'contact', label: 'Kontak', icon: Phone },
+  { id: 'identity', label: 'Identitas', icon: IdCard },
+]
+
+const activeTab = ref<TabId>('employment')
+
+// Penanda kecil di tab kalau ada field wajib yang masih kosong
+const tabIncomplete = computed<Record<TabId, boolean>>(() => ({
+  employment: !form.employee_number || !form.company_id || !form.join_date,
+  account: isEditing.value
+    ? !form.user_id
+    : form.account_mode === 'existing'
+      ? !form.user_id
+      : !form.new_user_email,
+  personal: !form.first_name || !form.gender,
+  contact: false,
+  identity: false,
+}))
+
 async function openEditModal(row: EmployeeRow) {
   isEditing.value = true
   formError.value = ''
+  activeTab.value = 'employment'
 
   const response = await apiClient.get(`/api/employees/${row.id}`)
   const e = response.data.data
@@ -287,9 +353,13 @@ async function openEditModal(row: EmployeeRow) {
   form.job_level_id = e.job_level?.id ?? null
   form.working_schedule_id = e.working_schedule?.id ?? null
   form.employment_status_id = e.employment_status?.id ?? null
+  form.employment_type_id = e.employment_type?.id ?? null
   form.manager_employee_id = e.manager?.id ?? null
   form.join_date = e.join_date?.slice(0, 10) ?? ''
   form.resign_date = e.resign_date?.slice(0, 10) ?? ''
+  form.contract_start_date = e.contract_start_date?.slice(0, 10) ?? ''
+  form.contract_end_date = e.contract_end_date?.slice(0, 10) ?? ''
+  form.probation_end_date = e.probation_end_date?.slice(0, 10) ?? ''
   form.first_name = e.first_name
   form.last_name = e.last_name ?? ''
   form.gender = e.gender
@@ -329,9 +399,13 @@ async function handleSubmit() {
     job_level_id: form.job_level_id,
     working_schedule_id: form.working_schedule_id,
     employment_status_id: form.employment_status_id,
+    employment_type_id : form.employment_type_id,
     manager_employee_id: form.manager_employee_id,
     join_date: form.join_date,
     resign_date: form.resign_date || null,
+    contract_start_date: form.contract_start_date || null,
+    contract_end_date: form.contract_end_date || null,
+    probation_end_date: form.probation_end_date || null,
     first_name: form.first_name,
     last_name: form.last_name || null,
     gender: form.gender,
@@ -668,39 +742,76 @@ onMounted(() => {
       </div>
     </Teleport>
 
+    <!-- Modal Edit/Tambah Employee -->
     <Teleport to="body">
       <div
         v-if="showModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 px-4 py-8"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-6 backdrop-blur-[2px]"
       >
-        <div class="flex max-h-full w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl">
+        <div class="flex max-h-full w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+          <!-- Header -->
           <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-            <h2 class="text-lg font-semibold text-slate-900">
-              {{ isEditing ? 'Edit Employee' : 'Tambah Employee' }}
-            </h2>
-            <button @click="closeModal" class="rounded-lg p-1 text-slate-400 hover:bg-slate-50">
+            <div>
+              <h2 class="text-lg font-semibold text-slate-900">
+                {{ isEditing ? 'Edit Employee' : 'Tambah Employee' }}
+              </h2>
+              <p v-if="isEditing" class="mt-0.5 text-xs text-slate-400">
+                {{ form.employee_number }} · {{ fullName(form) || '-' }}
+              </p>
+            </div>
+            <button @click="closeModal" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-600">
               <X class="h-5 w-5" />
             </button>
           </div>
 
-          <form @submit.prevent="handleSubmit" class="flex-1 space-y-7 overflow-y-auto px-6 py-5">
-            <!-- Employment Information -->
-            <div>
-              <div class="mb-3 flex items-center gap-2">
-                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary-dark">
-                  <Building2 class="h-4 w-4" :stroke-width="1.75" />
-                </div>
-                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Employment Information</h3>
-              </div>
-              <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-1 flex-col overflow-hidden sm:flex-row">
+            <!-- Tab nav (desktop, sidebar) -->
+            <div class="hidden w-48 shrink-0 space-y-1 border-r border-slate-100 bg-slate-50/50 p-3 sm:block">
+              <button
+                v-for="tab in tabs"
+                :key="tab.id"
+                type="button"
+                @click="activeTab = tab.id"
+                class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors"
+                :class="activeTab === tab.id ? 'bg-white text-primary-dark shadow-sm ring-1 ring-slate-100' : 'text-slate-500 hover:bg-white/70 hover:text-slate-700'"
+              >
+                <component :is="tab.icon" class="h-4 w-4 shrink-0" :stroke-width="1.75" />
+                <span class="flex-1 truncate">{{ tab.label }}</span>
+                <span v-if="tabIncomplete[tab.id]" class="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" title="Ada isian wajib yang belum lengkap" />
+              </button>
+            </div>
+
+            <!-- Tab nav (mobile, horizontal) -->
+            <div class="flex gap-1 overflow-x-auto border-b border-slate-100 px-3 py-2 sm:hidden">
+              <button
+                v-for="tab in tabs"
+                :key="tab.id"
+                type="button"
+                @click="activeTab = tab.id"
+                class="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium"
+                :class="activeTab === tab.id ? 'bg-primary-soft text-primary-dark' : 'text-slate-500'"
+              >
+                <component :is="tab.icon" class="h-3.5 w-3.5" :stroke-width="1.75" />
+                {{ tab.label }}
+                <span v-if="tabIncomplete[tab.id]" class="h-1.5 w-1.5 rounded-full bg-amber-400" />
+              </button>
+            </div>
+
+            <!-- Content -->
+            <form @submit.prevent="handleSubmit" class="flex-1 overflow-y-auto px-6 py-5">
+              <!-- Employment Information -->
+              <div v-show="activeTab === 'employment'" class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">No. Karyawan</label>
                   <input v-model="form.employee_number" type="text" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
                 </div>
-                <div>
-                  <label class="mb-1 block text-sm font-medium text-slate-700">Tanggal Bergabung</label>
-                  <input v-model="form.join_date" type="date" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
-                </div>
+                <SmartDateInput
+                  v-model="form.join_date"
+                  label="Tanggal Bergabung"
+                  required
+                  helper="tenure"
+                  :max="todayStr"
+                />
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">Company</label>
                   <select v-model.number="form.company_id" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
@@ -750,89 +861,109 @@ onMounted(() => {
                   </select>
                 </div>
                 <div>
+                  <label class="mb-1 block text-sm font-medium text-slate-700">Employment Type</label>
+                  <select v-model="form.employment_type_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                    <option :value="null">-</option>
+                    <option v-for="t in employmentTypes" :key="t.id" :value="t.id">{{ t.name }}</option>
+                  </select>
+                </div>
+
+                <SmartDateInput
+                  v-if="selectedEmploymentType?.code === 'CONTRACT'"
+                  v-model="form.contract_start_date"
+                  label="Contract Start Date"
+                  :max="form.contract_end_date || undefined"
+                />
+                <SmartDateInput
+                  v-if="selectedEmploymentType?.code === 'CONTRACT'"
+                  v-model="form.contract_end_date"
+                  label="Contract End Date"
+                  helper="countdown"
+                  :countdown-warn-days="90"
+                  :countdown-danger-days="30"
+                  :min="form.contract_start_date || undefined"
+                />
+                <SmartDateInput
+                  v-if="selectedEmploymentType?.code === 'PROBATION'"
+                  v-model="form.probation_end_date"
+                  label="Probation End Date"
+                  helper="countdown"
+                  :countdown-warn-days="30"
+                  :countdown-danger-days="14"
+                  :min="form.join_date || undefined"
+                />
+
+                <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">Manager</label>
                   <select v-model="form.manager_employee_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
                     <option :value="null">-</option>
-                    <option v-for="m in managerOptions" :key="m.id" :value="m.id">{{ fullName(m) }}</option>
+                    <option v-for="m in filteredManagerOptions" :key="m.id" :value="m.id">{{ fullName(m) }}</option>
                   </select>
                 </div>
-                <div>
-                  <label class="mb-1 block text-sm font-medium text-slate-700">Tanggal Resign</label>
-                  <input v-model="form.resign_date" type="date" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
+                <SmartDateInput
+                  v-model="form.resign_date"
+                  label="Tanggal Resign"
+                  :min="form.join_date || undefined"
+                  hint="Kosongkan kalau masih aktif bekerja"
+                />
+              </div>
+
+              <!-- Akun / Login -->
+              <div v-show="activeTab === 'account'">
+                <!-- Mode toggle, cuma pas create -->
+                <div v-if="!isEditing" class="mb-4 flex gap-2">
+                  <button
+                    type="button"
+                    @click="form.account_mode = 'new'"
+                    class="rounded-xl border px-3 py-1.5 text-sm font-medium transition-colors"
+                    :class="form.account_mode === 'new' ? 'border-primary/40 bg-primary-soft text-primary-dark' : 'border-slate-200 text-slate-500 hover:bg-slate-50'"
+                  >
+                    Buat akun baru
+                  </button>
+                  <button
+                    type="button"
+                    @click="form.account_mode = 'existing'"
+                    class="rounded-xl border px-3 py-1.5 text-sm font-medium transition-colors"
+                    :class="form.account_mode === 'existing' ? 'border-primary/40 bg-primary-soft text-primary-dark' : 'border-slate-200 text-slate-500 hover:bg-slate-50'"
+                  >
+                    Pakai akun existing
+                  </button>
+                </div>
+
+                <!-- Edit mode: user yang terhubung, wajib dan boleh diganti -->
+                <div v-if="isEditing">
+                  <label class="mb-1 block text-sm font-medium text-slate-700">User Terhubung</label>
+                  <select v-model="form.user_id" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                    <option :value="null" disabled>Pilih user</option>
+                    <option v-for="u in userOptions" :key="u.id" :value="u.id">{{ u.name }} ({{ u.email }})</option>
+                  </select>
+                </div>
+
+                <!-- Create mode: existing -->
+                <div v-else-if="form.account_mode === 'existing'">
+                  <label class="mb-1 block text-sm font-medium text-slate-700">Pilih Akun</label>
+                  <select v-model="form.user_id" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                    <option :value="null" disabled>Pilih user</option>
+                    <option v-for="u in userOptions" :key="u.id" :value="u.id">{{ u.name }} ({{ u.email }})</option>
+                  </select>
+                  <p v-if="userOptions.length === 0" class="mt-1 text-xs text-slate-400">Gak ada akun yang belum ke-link.</p>
+                </div>
+
+                <!-- Create mode: new -->
+                <div v-else class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="mb-1 block text-sm font-medium text-slate-700">Email Akun</label>
+                    <input v-model="form.new_user_email" type="email" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
+                  </div>
+                  <div>
+                    <label class="mb-1 block text-sm font-medium text-slate-700">Password (opsional)</label>
+                    <input v-model="form.new_user_password" type="text" placeholder="Kosongkan buat auto-generate" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Akun / Login -->
-            <div>
-              <div class="mb-3 flex items-center gap-2">
-                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary-dark">
-                  <KeyRound class="h-4 w-4" :stroke-width="1.75" />
-                </div>
-                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Akun / Login</h3>
-              </div>
-
-              <!-- Mode toggle, cuma pas create -->
-              <div v-if="!isEditing" class="mb-3 flex gap-2">
-                <button
-                  type="button"
-                  @click="form.account_mode = 'new'"
-                  class="rounded-xl border px-3 py-1.5 text-sm font-medium transition-colors"
-                  :class="form.account_mode === 'new' ? 'border-primary/40 bg-primary-soft text-primary-dark' : 'border-slate-200 text-slate-500 hover:bg-slate-50'"
-                >
-                  Buat akun baru
-                </button>
-                <button
-                  type="button"
-                  @click="form.account_mode = 'existing'"
-                  class="rounded-xl border px-3 py-1.5 text-sm font-medium transition-colors"
-                  :class="form.account_mode === 'existing' ? 'border-primary/40 bg-primary-soft text-primary-dark' : 'border-slate-200 text-slate-500 hover:bg-slate-50'"
-                >
-                  Pakai akun existing
-                </button>
-              </div>
-
-              <!-- Edit mode: user yang terhubung, wajib dan boleh diganti -->
-              <div v-if="isEditing">
-                <label class="mb-1 block text-sm font-medium text-slate-700">User Terhubung</label>
-                <select v-model="form.user_id" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
-                  <option :value="null" disabled>Pilih user</option>
-                  <option v-for="u in userOptions" :key="u.id" :value="u.id">{{ u.name }} ({{ u.email }})</option>
-                </select>
-              </div>
-
-              <!-- Create mode: existing -->
-              <div v-else-if="form.account_mode === 'existing'">
-                <label class="mb-1 block text-sm font-medium text-slate-700">Pilih Akun</label>
-                <select v-model="form.user_id" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
-                  <option :value="null" disabled>Pilih user</option>
-                  <option v-for="u in userOptions" :key="u.id" :value="u.id">{{ u.name }} ({{ u.email }})</option>
-                </select>
-                <p v-if="userOptions.length === 0" class="mt-1 text-xs text-slate-400">Gak ada akun yang belum ke-link.</p>
-              </div>
-
-              <!-- Create mode: new -->
-              <div v-else class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="mb-1 block text-sm font-medium text-slate-700">Email Akun</label>
-                  <input v-model="form.new_user_email" type="email" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
-                </div>
-                <div>
-                  <label class="mb-1 block text-sm font-medium text-slate-700">Password (opsional)</label>
-                  <input v-model="form.new_user_password" type="text" placeholder="Kosongkan buat auto-generate" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
-                </div>
-              </div>
-            </div>
-
-            <!-- Personal Information -->
-            <div>
-              <div class="mb-3 flex items-center gap-2">
-                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary-dark">
-                  <UserRound class="h-4 w-4" :stroke-width="1.75" />
-                </div>
-                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Personal Information</h3>
-              </div>
-              <div class="grid grid-cols-2 gap-3">
+              <!-- Personal Information -->
+              <div v-show="activeTab === 'personal'" class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">Nama Depan</label>
                   <input v-model="form.first_name" type="text" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
@@ -843,10 +974,24 @@ onMounted(() => {
                 </div>
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">Jenis Kelamin</label>
-                  <select v-model="form.gender" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
-                    <option value="male">Laki-laki</option>
-                    <option value="female">Perempuan</option>
-                  </select>
+                  <div class="flex gap-2">
+                    <button
+                      type="button"
+                      @click="form.gender = 'male'"
+                      class="flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition-colors"
+                      :class="form.gender === 'male' ? 'border-primary/40 bg-primary-soft text-primary-dark' : 'border-slate-200 text-slate-500 hover:bg-slate-50'"
+                    >
+                      Laki-laki
+                    </button>
+                    <button
+                      type="button"
+                      @click="form.gender = 'female'"
+                      class="flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition-colors"
+                      :class="form.gender === 'female' ? 'border-primary/40 bg-primary-soft text-primary-dark' : 'border-slate-200 text-slate-500 hover:bg-slate-50'"
+                    >
+                      Perempuan
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">Status Pernikahan</label>
@@ -862,22 +1007,16 @@ onMounted(() => {
                   <label class="mb-1 block text-sm font-medium text-slate-700">Tempat Lahir</label>
                   <input v-model="form.birth_place" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
                 </div>
-                <div>
-                  <label class="mb-1 block text-sm font-medium text-slate-700">Tanggal Lahir</label>
-                  <input v-model="form.birth_date" type="date" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
-                </div>
+                <SmartDateInput
+                  v-model="form.birth_date"
+                  label="Tanggal Lahir"
+                  helper="age"
+                  :max="todayStr"
+                />
               </div>
-            </div>
 
-            <!-- Contact Information -->
-            <div>
-              <div class="mb-3 flex items-center gap-2">
-                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary-dark">
-                  <Phone class="h-4 w-4" :stroke-width="1.75" />
-                </div>
-                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Contact Information</h3>
-              </div>
-              <div class="grid grid-cols-2 gap-3">
+              <!-- Contact Information -->
+              <div v-show="activeTab === 'contact'" class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">Telepon</label>
                   <input v-model="form.phone" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
@@ -899,20 +1038,12 @@ onMounted(() => {
                   <input v-model="form.emergency_contact_phone" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
                 </div>
               </div>
-            </div>
 
-            <!-- Identity Information -->
-            <div>
-              <div class="mb-3 flex items-center gap-2">
-                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary-dark">
-                  <IdCard class="h-4 w-4" :stroke-width="1.75" />
-                </div>
-                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Identity Information</h3>
-              </div>
-              <div class="grid grid-cols-2 gap-3">
+              <!-- Identity Information -->
+              <div v-show="activeTab === 'identity'" class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">NIK</label>
-                  <input v-model="form.national_id_number" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
+                  <input v-model="form.national_id_number" type="text" inputmode="numeric" maxlength="16" placeholder="16 digit" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
                 </div>
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">NPWP</label>
@@ -924,25 +1055,29 @@ onMounted(() => {
                 </div>
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">No. Rekening</label>
-                  <input v-model="form.bank_account_number" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
+                  <input v-model="form.bank_account_number" type="text" inputmode="numeric" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
                 </div>
                 <div class="col-span-2">
                   <label class="mb-1 block text-sm font-medium text-slate-700">Nama Pemilik Rekening</label>
                   <input v-model="form.bank_account_holder_name" type="text" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
                 </div>
               </div>
-            </div>
 
-            <p v-if="formError" class="text-sm text-red-600">{{ formError }}</p>
-          </form>
+              <p v-if="formError" class="mt-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">{{ formError }}</p>
+            </form>
+          </div>
 
-          <div class="border-t border-slate-100 px-6 py-4">
+          <!-- Footer -->
+          <div class="flex items-center justify-between border-t border-slate-100 px-6 py-4">
+            <button type="button" @click="closeModal" class="rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500 hover:bg-slate-50">
+              Batal
+            </button>
             <button
               @click="handleSubmit"
               :disabled="saving"
-              class="w-full rounded-xl bg-primary py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
+              class="rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
             >
-              {{ saving ? 'Menyimpan...' : 'Simpan' }}
+              {{ saving ? 'Menyimpan...' : 'Simpan Perubahan' }}
             </button>
           </div>
         </div>

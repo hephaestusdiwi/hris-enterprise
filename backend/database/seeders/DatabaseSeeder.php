@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use App\Modules\EmploymentStatus\Models\EmploymentStatus;
+use App\Modules\EmploymentType\Models\EmploymentType;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -21,15 +22,36 @@ class DatabaseSeeder extends Seeder
         );
         $admin->assignRole('admin');
 
-        $statuses = [
+        $types = [
             ['name' => 'Permanent', 'code' => 'PERMANENT'],
             ['name' => 'Contract', 'code' => 'CONTRACT'],
             ['name' => 'Probation', 'code' => 'PROBATION'],
             ['name' => 'Intern', 'code' => 'INTERN'],
+            ['name' => 'Freelance', 'code' => 'FREELANCE'],
+            ['name' => 'Outsource', 'code' => 'OUTSOURCE'],
+        ];
+
+        foreach ($types as $type) {
+            EmploymentType::firstOrCreate(
+                ['code' => $type['code']],
+                $type
+            );
+        }
+
+        $statuses = [
+            ['name' => 'Active', 'code' => 'ACTIVE'],
+            ['name' => 'Inactive', 'code' => 'INACTIVE'],
+            ['name' => 'Resigned', 'code' => 'RESIGNED'],
+            ['name' => 'Terminated', 'code' => 'TERMINATED'],
+            ['name' => 'Retired', 'code' => 'RETIRED'],
+            ['name' => 'Suspended', 'code' => 'SUSPENDED'],
         ];
 
         foreach ($statuses as $status) {
-            EmploymentStatus::firstOrCreate(['code' => $status['code']], $status);
+            EmploymentStatus::firstOrCreate(
+                ['code' => $status['code']],
+                $status
+            );
         }
     }
 }

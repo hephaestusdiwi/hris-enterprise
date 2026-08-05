@@ -7,6 +7,7 @@ use App\Modules\Branch\Models\Branch;
 use App\Modules\Company\Models\Company;
 use App\Modules\Department\Models\Department;
 use App\Modules\EmploymentStatus\Models\EmploymentStatus;
+use App\Modules\EmploymentType\Models\EmploymentType;
 use App\Modules\JobLevel\Models\JobLevel;
 use App\Modules\Position\Models\Position;
 use App\Modules\WorkingSchedule\Models\WorkingSchedule;
@@ -30,10 +31,14 @@ class Employee extends Model
         'job_level_id',
         'working_schedule_id',
         'employment_status_id',
+        'employment_type_id',
         'manager_employee_id',
         'user_id',
         'join_date',
         'resign_date',
+        'contract_start_date',
+        'contract_end_date',
+        'probation_end_date',
         'first_name',
         'last_name',
         'gender',
@@ -75,6 +80,9 @@ class Employee extends Model
         return [
             'join_date' => 'date',
             'resign_date' => 'date',
+            'contract_start_date' => 'date',
+            'contract_end_date' => 'date',
+            'probation_end_date' => 'date',
             'birth_date' => 'date',
             'face_embedding' => 'array',
             'face_registered_at' => 'datetime',
@@ -115,6 +123,11 @@ class Employee extends Model
     public function employmentStatus(): BelongsTo
     {
         return $this->belongsTo(EmploymentStatus::class);
+    }
+
+    public function employmentType(): BelongsTo
+    {
+        return $this->belongsTo(EmploymentType::class);
     }
 
     public function manager(): BelongsTo

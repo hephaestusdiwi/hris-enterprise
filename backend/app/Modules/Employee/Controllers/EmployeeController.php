@@ -11,7 +11,7 @@ use App\Models\User;
 
 class EmployeeController extends Controller
 {
-    protected array $relations = ['company', 'branch', 'department', 'position', 'jobLevel', 'workingSchedule', 'employmentStatus', 'manager', 'user'];
+    protected array $relations = ['company', 'branch', 'department', 'position', 'jobLevel', 'workingSchedule', 'employmentStatus', 'employmentType', 'manager', 'user'];
 
     public function __construct(private EmployeeService $employeeService)
     {

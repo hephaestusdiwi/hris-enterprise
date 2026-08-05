@@ -3,6 +3,7 @@
 namespace App\Modules\Employee\Requests;
 
 use App\Modules\Employee\Models\Employee;
+use App\Modules\EmploymentType\Models\EmploymentType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -25,6 +26,7 @@ class StoreEmployeeRequest extends FormRequest
             'job_level_id' => ['nullable', 'exists:job_levels,id'],
             'working_schedule_id' => ['nullable', 'exists:working_schedules,id'],
             'employment_status_id' => ['nullable', 'exists:employment_statuses,id'],
+            'employment_type_id' => ['nullable', 'exists:employment_types,id'],
             'manager_employee_id' => ['nullable', 'exists:employees,id'],
 
             // User Account — WAJIB salah satu (lihat withValidator() di bawah):
@@ -37,6 +39,9 @@ class StoreEmployeeRequest extends FormRequest
 
             'join_date' => ['required', 'date'],
             'resign_date' => ['nullable', 'date', 'after_or_equal:join_date'],
+            'contract_start_date' => ['nullable', 'date'],
+            'contract_end_date' => ['nullable', 'date', 'after_or_equal:contract_start_date'],
+            'probation_end_date' => ['nullable', 'date'],
 
             // Personal Information
             'first_name' => ['required', 'string', 'max:255'],
@@ -91,6 +96,37 @@ class StoreEmployeeRequest extends FormRequest
                     $validator->errors()->add('user_id', 'User ini sudah terhubung dengan Employee lain yang aktif.');
                 }
             }
+
+            $this->validateContractDatesAgainstEmploymentType($validator);
         });
+    }
+
+    private function validateContractDatesAgainstEmploymentType(Validator $validator): void
+    {
+        $employmentTypeId = $this->input('employment_type_id');
+
+        if (! $employmentTypeId) {
+            return;
+        }
+
+        $type = EmploymentType::find($employmentTypeId);
+
+        if (! $type || $type->code !== 'CONTRACT') {
+            return;
+        }
+
+        if (! $this->filled('contract_start_date')) {
+            $validator->errors()->add(
+                'contract_start_date',
+                'Contract Start Date wajib diisi untuk Employment Type Contract.'
+            );
+        }
+
+        if (! $this->filled('contract_end_date')) {
+            $validator->errors()->add(
+                'contract_end_date',
+                'Contract End Date wajib diisi untuk Employment Type Contract.'
+            );
+        }
     }
 }

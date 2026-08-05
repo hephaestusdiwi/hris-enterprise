@@ -36,7 +36,7 @@ class SchedulerController extends Controller
             ->when($request->query('department_id'), fn ($q, $v) => $q->where('department_id', $v))
             ->when($request->query('position_id'), fn ($q, $v) => $q->where('position_id', $v))
             ->when($request->query('job_level_id'), fn ($q, $v) => $q->where('job_level_id', $v))
-            ->when($request->query('employment_status_id'), fn ($q, $v) => $q->where('employment_status_id', $v))
+            ->when($request->query('employment_type_id'), fn ($q, $v) => $q->where('employment_type_id', $v))
             ->latest()
             ->paginate(20);
 

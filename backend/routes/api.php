@@ -30,6 +30,7 @@ Route::middleware('auth:sanctum')->group(function () {
     require __DIR__.'/../app/Modules/Department/Routes/api.php';
     require __DIR__.'/../app/Modules/Position/Routes/api.php';
     require __DIR__.'/../app/Modules/EmploymentStatus/Routes/api.php';
+    require __DIR__.'/../app/Modules/EmploymentType/Routes/api.php';
     require __DIR__.'/../app/Modules/Employee/Routes/api.php';
     require __DIR__.'/../app/Modules/Holiday/Routes/api.php';
     require __DIR__.'/../app/Modules/JobLevel/Routes/api.php';
@@ -46,6 +47,9 @@ Route::middleware('auth:sanctum')->group(function () {
     require __DIR__.'/../app/Modules/EmployeeSalary/Routes/api.php';
     require __DIR__.'/../app/Modules/EmployeeAllowance/Routes/api.php';
     require __DIR__.'/../app/Modules/EmployeeDeduction/Routes/api.php';
+    require __DIR__.'/../app/Modules/Loan/Routes/api.php';
+    require __DIR__.'/../app/Modules/HiringRequisition/Routes/api.php';
+    require __DIR__.'/../app/Modules/JobVacancy/Routes/api.php';
     Route::get('/attendance-approvals', [\App\Modules\Attendance\Controllers\AttendanceApprovalController::class, 'index']);
     Route::post('/attendance-approvals/{decision}/decide', [\App\Modules\Attendance\Controllers\AttendanceApprovalController::class, 'decide']);
 });

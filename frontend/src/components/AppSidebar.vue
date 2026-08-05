@@ -4,7 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import {
   LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound,
   CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch, CheckCircle2, Layers, CalendarRange, BarChart3,
-  Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle
+  Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle, HandCoins,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
@@ -103,6 +103,9 @@ const groups: MenuGroup[] = [
       { name: 'employee-salaries', label: 'Employee Salary', icon: UserCircle, to: '/employee-salaries', permission: 'view employee salaries' },
       { name: 'employee-allowances', label: 'Allowance', icon: Gift, to: '/employee-allowances', permission: 'view employee allowances' },
       { name: 'employee-deductions', label: 'Deduction', icon: MinusCircle, to: '/employee-deductions', permission: 'view employee deductions' },
+      { name: 'loans', label: 'Loan', icon: HandCoins, to: '/loans', permission: 'view loans' },
+      { name: 'my-loans', label: 'My Loans', icon: HandCoins, to: '/my-loans', permission: null },
+      { name: 'loan-approvals', label: 'Loan Approval', icon: ClipboardCheck, to: '/loan-approvals', permission: null },
     ],
   },
   {

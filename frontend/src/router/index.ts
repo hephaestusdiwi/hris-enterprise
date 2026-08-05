@@ -33,6 +33,9 @@ import EmployeeAllowanceListView from '@/views/EmployeeAllowanceListView.vue'
 import FaceRecognitionTestView from '@/views/FaceRecognitionTestView.vue'
 import FaceCheckInView from '@/views/FaceCheckInView.vue'
 import EmployeeDeductionListView from '@/views/EmployeeDeductionListView.vue'
+import LoanListView from '@/views/LoanListView.vue'
+import MyLoanView from '@/views/MyLoanView.vue'
+import LoanApprovalListView from '@/views/LoanApprovalListView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -240,6 +243,24 @@ const router = createRouter({
       path: '/employee-deductions',
       name: 'employee-deductions.list',
       component: EmployeeDeductionListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/loans',
+      name: 'loans.list',
+      component: LoanListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/my-loans',
+      name: 'my-loans.list',
+      component: MyLoanView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/loan-approvals',
+      name: 'loan-approvals.list',
+      component: LoanApprovalListView,
       meta: { requiresAuth: true },
     },
     {

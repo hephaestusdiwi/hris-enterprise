@@ -58,5 +58,8 @@ class AppServiceProvider extends ServiceProvider
         \App\Modules\Employee\Models\Employee::observe(
             $this->app->make(\App\Modules\LeaveBalance\Observers\EmployeeLeaveBalanceObserver::class)
         );
+        \App\Modules\Employee\Models\Employee::observe(
+            $this->app->make(\App\Modules\Employee\Observers\EmployeeEmploymentStatusObserver::class)
+        );
     }
 }

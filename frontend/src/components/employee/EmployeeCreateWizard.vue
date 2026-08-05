@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { X, ArrowLeft, ArrowRight, Check, Copy, UserRound, Building2, KeyRound, CheckCircle2 } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
 
@@ -19,6 +19,12 @@ interface AvailableUser {
   id: number
   name: string
   email: string
+}
+
+interface EmploymentTypeRef {
+  id: number
+  name: string
+  code: string
 }
 
 const emit = defineEmits<{
@@ -47,6 +53,7 @@ const workingSchedules = ref<Ref[]>([])
 const employmentStatuses = ref<Ref[]>([])
 const managerOptions = ref<ManagerOption[]>([])
 const availableUsers = ref<AvailableUser[]>([])
+const employmentTypes = ref<EmploymentTypeRef[]>([])
 
 const inviteLink = ref<string | null>(null)
 const linkCopied = ref(false)
@@ -79,9 +86,13 @@ const form = reactive({
   job_level_id: null as number | null,
   working_schedule_id: null as number | null,
   employment_status_id: null as number | null,
+  employment_type_id: null as number | null,
   manager_employee_id: null as number | null,
   join_date: new Date().toISOString().slice(0, 10),
   resign_date: '',
+  contract_start_date: '',
+  contract_end_date: '',
+  probation_end_date: '',
 
   // Step 3 — Account
   account_mode: 'new' as 'existing' | 'new',
@@ -112,6 +123,23 @@ const canGoNext = computed(() => {
   return false
 })
 
+const selectedEmploymentType = computed(() => {
+  return (
+    employmentTypes.value.find(
+      (t) => t.id === form.employment_type_id
+    ) ?? null
+  )
+})
+
+watch(
+  () => form.employment_type_id,
+  (val) => {
+    console.log('employment_type_id:', val)
+    console.log('employmentTypes:', employmentTypes.value)
+    console.log('selectedEmploymentType:', selectedEmploymentType.value)
+  }
+)
+
 function goNext() {
   if (currentStep.value < 3 && canGoNext.value) {
     currentStep.value++
@@ -127,7 +155,7 @@ function goBack() {
 async function loadReferenceData() {
   loadingRefs.value = true
   try {
-    const [companyRes, branchRes, departmentRes, positionRes, jobLevelRes, workingScheduleRes, statusRes, employeeRes, nextNumberRes, availableUsersRes] =
+    const [companyRes, branchRes, departmentRes, positionRes, jobLevelRes, workingScheduleRes, statusRes, employeeRes, nextNumberRes, availableUsersRes, typeRes,] =
       await Promise.all([
         apiClient.get('/api/companies'),
         apiClient.get('/api/branches'),
@@ -139,6 +167,7 @@ async function loadReferenceData() {
         apiClient.get('/api/employees'),
         apiClient.get('/api/employees/next-number'),
         apiClient.get('/api/employees/available-users'),
+        apiClient.get('/api/employment-types'),
       ])
 
     companies.value = companyRes.data.data.data
@@ -150,6 +179,7 @@ async function loadReferenceData() {
     employmentStatuses.value = statusRes.data.data.data
     managerOptions.value = employeeRes.data.data.data
     availableUsers.value = availableUsersRes.data.data
+    employmentTypes.value = typeRes.data.data.data
 
     form.employee_number = nextNumberRes.data.data.employee_number
     form.company_id = companies.value[0]?.id ?? 0
@@ -176,6 +206,9 @@ async function handleSubmit() {
     manager_employee_id: form.manager_employee_id,
     join_date: form.join_date,
     resign_date: form.resign_date || null,
+    contract_start_date: form.contract_start_date || null,
+    contract_end_date: form.contract_end_date || null,
+    probation_end_date: form.probation_end_date || null,
     first_name: form.first_name,
     last_name: form.last_name || null,
     gender: form.gender,
@@ -473,6 +506,57 @@ onMounted(loadReferenceData)
                   <option v-for="s in employmentStatuses" :key="s.id" :value="s.id">{{ s.name }}</option>
                 </select>
               </div>
+              <div>
+              <label class="mb-1 block text-sm font-medium text-slate-700">
+                Employment Type
+              </label>
+              <select
+                v-model.number="form.employment_type_id"
+                class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              >
+                <option :value="null">-</option>
+                <option
+                  v-for="t in employmentTypes"
+                  :key="t.id"
+                  :value="t.id"
+                >
+                  {{ t.name }}
+                </option>
+              </select>
+            </div>
+
+            <div v-if="selectedEmploymentType?.code === 'CONTRACT'">
+              <label class="mb-1 block text-sm font-medium text-slate-700">
+                Contract Start Date
+              </label>
+              <input
+                v-model="form.contract_start_date"
+                type="date"
+                class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+
+            <div v-if="selectedEmploymentType?.code === 'CONTRACT'">
+              <label class="mb-1 block text-sm font-medium text-slate-700">
+                Contract End Date
+              </label>
+              <input
+                v-model="form.contract_end_date"
+                type="date"
+                class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+
+            <div v-if="selectedEmploymentType?.code === 'PROBATION'">
+              <label class="mb-1 block text-sm font-medium text-slate-700">
+                Probation End Date
+              </label>
+              <input
+                v-model="form.probation_end_date"
+                type="date"
+                class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
               <div>
                 <label class="mb-1 block text-sm font-medium text-slate-700">Manager</label>
                 <select v-model="form.manager_employee_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
