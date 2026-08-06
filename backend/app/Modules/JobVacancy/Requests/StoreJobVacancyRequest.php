@@ -2,14 +2,13 @@
 
 namespace App\Modules\JobVacancy\Requests;
 
-use App\Modules\JobVacancy\Models\JobVacancy;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreJobVacancyRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('create', JobVacancy::class) ?? false;
+        return $this->user()?->can('create job vacancies') ?? false;
     }
 
     public function rules(): array

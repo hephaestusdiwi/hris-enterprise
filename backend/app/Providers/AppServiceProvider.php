@@ -41,6 +41,20 @@ class AppServiceProvider extends ServiceProvider
             \App\Modules\EmployeeSalary\Contracts\EmployeeSalaryResolverInterface::class,
             \App\Modules\EmployeeSalary\Services\EmployeeSalaryResolver::class,
         );
+        $this->app->bind(
+            \App\Modules\Employee\Contracts\EmployeeScopeInterface::class,
+            \App\Modules\Employee\Services\EmployeeScope::class,
+        );
+
+        $this->app->bind(
+            \App\Modules\EmployeeSalary\Contracts\EmployeeSalaryScopeInterface::class,
+            \App\Modules\EmployeeSalary\Services\EmployeeSalaryScope::class,
+        );
+
+        $this->app->bind(
+            \App\Modules\HiringRequisition\Contracts\HiringRequisitionScopeInterface::class,
+            \App\Modules\HiringRequisition\Services\HiringRequisitionScope::class,
+        );
     }
 
     /**
@@ -60,6 +74,20 @@ class AppServiceProvider extends ServiceProvider
         );
         \App\Modules\Employee\Models\Employee::observe(
             $this->app->make(\App\Modules\Employee\Observers\EmployeeEmploymentStatusObserver::class)
+        );
+        \Illuminate\Support\Facades\Gate::policy(
+            \App\Modules\Employee\Models\Employee::class,
+            \App\Modules\Employee\Policies\EmployeePolicy::class,
+        );
+
+        \Illuminate\Support\Facades\Gate::policy(
+            \App\Modules\EmployeeSalary\Models\EmployeeSalary::class,
+            \App\Modules\EmployeeSalary\Policies\EmployeeSalaryPolicy::class,
+        );
+
+        \Illuminate\Support\Facades\Gate::policy(
+            \App\Modules\HiringRequisition\Models\HiringRequisition::class,
+            \App\Modules\HiringRequisition\Policies\HiringRequisitionPolicy::class,
         );
     }
 }

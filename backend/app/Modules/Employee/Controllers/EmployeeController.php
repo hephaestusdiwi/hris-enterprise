@@ -3,7 +3,9 @@
 namespace App\Modules\Employee\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Employee\Contracts\EmployeeScopeInterface;
 use App\Modules\Employee\Models\Employee;
+use Illuminate\Http\Request;
 use App\Modules\Employee\Requests\StoreEmployeeRequest;
 use App\Modules\Employee\Requests\UpdateEmployeeRequest;
 use App\Modules\Employee\Services\EmployeeService;
@@ -13,13 +15,20 @@ class EmployeeController extends Controller
 {
     protected array $relations = ['company', 'branch', 'department', 'position', 'jobLevel', 'workingSchedule', 'employmentStatus', 'employmentType', 'manager', 'user'];
 
-    public function __construct(private EmployeeService $employeeService)
-    {
+    public function __construct(
+        private EmployeeService $employeeService,
+        private EmployeeScopeInterface $employeeScope,
+    ){
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $employees = Employee::with($this->relations)->latest()->paginate(15);
+        $employees = $this->employeeScope
+            ->apply(
+                Employee::with($this->relations)->latest(),
+                $request->user(),
+            )
+            ->paginate(15);
 
         return response()->json([
             'success' => true,
@@ -80,6 +89,8 @@ class EmployeeController extends Controller
 
     public function show(Employee $employee)
     {
+        $this->authorize('view', $employee);
+
         return response()->json([
             'success' => true,
             'message' => 'OK',
@@ -89,6 +100,8 @@ class EmployeeController extends Controller
 
     public function update(UpdateEmployeeRequest $request, Employee $employee)
     {
+        $this->authorize('update', $employee);
+
         $employee->update($request->validated());
 
         return response()->json([
@@ -100,6 +113,8 @@ class EmployeeController extends Controller
 
     public function destroy(Employee $employee)
     {
+        $this->authorize('delete', $employee);
+        
         $employee->delete();
 
         return response()->json([

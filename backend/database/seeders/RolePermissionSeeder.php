@@ -109,6 +109,11 @@ class RolePermissionSeeder extends Seeder
             'edit loans',
             'disburse loans',
             'cancel loans',
+            'view hiring requisitions',
+            'create hiring requisitions',
+            'edit hiring requisitions',
+            'cancel hiring requisitions',
+            'create job vacancies',
         ];
 
         foreach ($permissions as $permission) {
@@ -123,9 +128,20 @@ class RolePermissionSeeder extends Seeder
         $admin->syncPermissions($permissions);
 
         $hr = Role::firstOrCreate(['name' => 'hr', 'guard_name' => 'web']);
-        $hr->syncPermissions(['view dashboard', 'view users']);
+        $hr->syncPermissions([
+            'view dashboard',
+            'view users',
+            'view hiring requisitions',
+            'create hiring requisitions',
+            'edit hiring requisitions',
+            'cancel hiring requisitions',
+            'create job vacancies',
+        ]);
 
         $employee = Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'web']);
-        $employee->syncPermissions(['view dashboard']);
+        $employee->syncPermissions([
+            'view dashboard',
+            'create hiring requisitions',
+        ]);
     }
 }

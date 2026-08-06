@@ -4,6 +4,7 @@ namespace App\Modules\EmployeeSalary\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\EmployeeSalary\Contracts\EmployeeSalaryResolverInterface;
+use App\Modules\EmployeeSalary\Contracts\EmployeeSalaryScopeInterface;
 use App\Modules\EmployeeSalary\Models\EmployeeSalary;
 use App\Modules\EmployeeSalary\Requests\StoreEmployeeSalaryRequest;
 use App\Modules\EmployeeSalary\Requests\PreviewEmployeeSalaryRequest;
@@ -15,15 +16,20 @@ use Illuminate\Support\Facades\DB;
 
 class EmployeeSalaryController extends Controller
 {
-    public function __construct(private EmployeeSalaryResolverInterface $resolver)
-    {
-    }
+    public function __construct(
+        private EmployeeSalaryResolverInterface $resolver,
+        private EmployeeSalaryScopeInterface $employeeSalaryScope,
+    )
 
     public function index(Request $request)
     {
-        $salaries = EmployeeSalary::with(['employee', 'overrides.salaryComponent'])
-            ->when($request->query('employee_id'), fn ($q, $v) => $q->where('employee_id', $v))
-            ->orderByDesc('effective_date')
+        $salaries = $this->employeeSalaryScope
+            ->apply(
+                EmployeeSalary::with(['employee', 'overrides.salaryComponent'])
+                    ->when($request->query('employee_id'), fn ($q, $v) => $q->where('employee_id', $v))
+                    ->orderByDesc('effective_date'),
+                $request->user(),
+            )
             ->paginate(15);
 
         return response()->json(['success' => true, 'message' => 'OK', 'data' => $salaries]);
@@ -57,6 +63,8 @@ class EmployeeSalaryController extends Controller
 
     public function show(EmployeeSalary $employeeSalary)
     {
+        $this->authorize('view', $employeeSalary);
+
         return response()->json([
             'success' => true,
             'message' => 'OK',
@@ -122,6 +130,7 @@ class EmployeeSalaryController extends Controller
 
     public function destroy(EmployeeSalary $employeeSalary)
     {
+        $this->authorize('delete', $employeeSalary);
         // TODO (STEP 54 - Payroll Generator): tolak kalau assignment ini pernah dipakai
         // menghasilkan payroll manapun.
         $employeeSalary->delete();
