@@ -62,7 +62,7 @@ Project dikerjakan satu STEP per sesi. Setelah satu STEP selesai dan lolos testi
 - [x]  49. Allowance
 - [x]  50. Deduction
 - [x]  51. Loan
-- [ ] 52. BPJS
+- [x]  52. BPJS
 - [ ] 53. PPh21
 - [ ] 54. Payroll Generator
 - [ ] 55. Payslip
