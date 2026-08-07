@@ -20,6 +20,8 @@ class JobVacancyController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', JobVacancy::class);
+
         $vacancies = JobVacancy::query()
             ->when($request->integer('company_id'), fn ($q, $v) => $q->where('company_id', $v))
             ->when($request->integer('department_id'), fn ($q, $v) => $q->where('department_id', $v))
@@ -37,6 +39,8 @@ class JobVacancyController extends Controller
 
     public function store(StoreJobVacancyRequest $request): JsonResponse
     {
+        $this->authorize('create', JobVacancy::class);
+
         $requisition = HiringRequisition::findOrFail($request->validated('hiring_requisition_id'));
         $hiringManager = Employee::findOrFail($request->validated('hiring_manager_employee_id'));
         $recruiter = Employee::findOrFail($request->validated('recruiter_employee_id'));
@@ -50,37 +54,49 @@ class JobVacancyController extends Controller
         ], 201);
     }
 
-    public function show(JobVacancy $jobVacancy): JsonResponse
+    public function show(JobVacany $jobVacancy): JsonResponse
     {
+        $this->authorize('view', $jobVacancy)
+
         return response()->json([
             'success' => true,
-            'message' => 'Detail Job Vacancy berhasil diambil.',
+            'message' => 'Detail Job Vacancy berhasil diambil',
             'data' => $jobVacancy->load(['hiringRequisition', 'position', 'department', 'hiringManager', 'recruiter', 'employmentType']),
         ]);
     }
 
     public function publish(JobVacancy $jobVacancy): JsonResponse
     {
+        $this->authorize('publish', $jobVacancy);
+
         return $this->respondAfterTransition($this->service->publish($jobVacancy), 'dipublish');
     }
 
     public function pause(JobVacancy $jobVacancy): JsonResponse
     {
+        $this->authorize('pause', $jobVacancy);
+
         return $this->respondAfterTransition($this->service->pause($jobVacancy), 'di-pause');
     }
 
     public function close(JobVacancy $jobVacancy): JsonResponse
     {
+        $this->authorize('close', $jobVacancy);
+
         return $this->respondAfterTransition($this->service->close($jobVacancy), 'ditutup');
     }
 
     public function cancel(JobVacancy $jobVacancy): JsonResponse
     {
+        $this->authorize('cancel', $jobVacancy);
+
         return $this->respondAfterTransition($this->service->cancel($jobVacancy), 'dibatalkan');
     }
 
     public function archive(JobVacancy $jobVacancy): JsonResponse
     {
+        $this->authorize('archive', $jobVacancy);
+
         return $this->respondAfterTransition($this->service->archive($jobVacancy), 'diarsipkan');
     }
 

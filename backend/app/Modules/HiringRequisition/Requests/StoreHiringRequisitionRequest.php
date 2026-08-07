@@ -9,7 +9,7 @@ class StoreHiringRequisitionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('create', HiringRequisition::class) ?? false;
+        return true;
     }
 
     public function rules(): array

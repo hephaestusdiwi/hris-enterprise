@@ -21,18 +21,11 @@ class HiringRequisitionController extends Controller
 
     public function index(): JsonResponse
     {
-        $requisitions = $this->hiringRequisitionScope
-            ->apply(
-                HiringRequisition::query()
-                    ->with([
-                        'position',
-                        'department',
-                        'requestedBy',
-                        'approvalRequest',
-                    ])
-                    ->latest('requested_at'),
-                $request->user(),
-            )
+        $this->authorize('viewAny', HiringRequisition::class);
+
+        $requisitions = HiringRequisition::query()
+            ->with(['position', 'department', 'requestedBy', 'approvalRequest'])
+            ->latest('requested_at')
             ->paginate();
 
         return response()->json([
@@ -44,6 +37,8 @@ class HiringRequisitionController extends Controller
 
     public function store(StoreHiringRequisitionRequest $request): JsonResponse
     {
+        $this->authorize('create', HiringRequisition::class);
+
         $position = Position::findOrFail($request->validated('position_id'));
 
         $hiringRequisition = $this->service->submit(

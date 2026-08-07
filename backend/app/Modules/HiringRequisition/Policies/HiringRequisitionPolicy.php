@@ -30,6 +30,11 @@ class HiringRequisitionPolicy
             || $user->can('cancel hiring requisitions');
     }
 
+    public function viewAny(User $user): bool
+    {
+        return $user->can('view hiring requisitions');
+    }
+
     private function isOwner(User $user, HiringRequisition $hiringRequisition): bool
     {
         return (bool) $user->employee

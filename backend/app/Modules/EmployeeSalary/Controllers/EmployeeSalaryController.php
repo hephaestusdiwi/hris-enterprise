@@ -19,7 +19,8 @@ class EmployeeSalaryController extends Controller
     public function __construct(
         private EmployeeSalaryResolverInterface $resolver,
         private EmployeeSalaryScopeInterface $employeeSalaryScope,
-    )
+    ){
+    }
 
     public function index(Request $request)
     {

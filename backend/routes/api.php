@@ -48,6 +48,7 @@ Route::middleware('auth:sanctum')->group(function () {
     require __DIR__.'/../app/Modules/EmployeeAllowance/Routes/api.php';
     require __DIR__.'/../app/Modules/EmployeeDeduction/Routes/api.php';
     require __DIR__.'/../app/Modules/Loan/Routes/api.php';
+    require __DIR__.'/../app/Modules/Bpjs/Routes/api.php';
     require __DIR__.'/../app/Modules/HiringRequisition/Routes/api.php';
     require __DIR__.'/../app/Modules/JobVacancy/Routes/api.php';
     Route::get('/attendance-approvals', [\App\Modules\Attendance\Controllers\AttendanceApprovalController::class, 'index']);
