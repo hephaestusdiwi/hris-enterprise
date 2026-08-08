@@ -38,6 +38,8 @@ import MyLoanView from '@/views/MyLoanView.vue'
 import LoanApprovalListView from '@/views/LoanApprovalListView.vue'
 import BpjsSettingView from '@/views/BpjsSettingView.vue'
 import EmployeeBpjsListView from '@/views/EmployeeBpjsListView.vue'
+import TaxSettingsView from '@/views/TaxSettingsView.vue'
+import EmployeeTaxListView from '@/views/EmployeeTaxListView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -275,6 +277,18 @@ const router = createRouter({
       path: '/bpjs/employee-participations',
       name: 'bpjs-employee-participations',
       component: EmployeeBpjsListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/tax-settings',
+      name: 'tax-settings',
+      component: TaxSettingsView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/employee-tax',
+      name: 'employee-tax',
+      component: EmployeeTaxListView,
       meta: { requiresAuth: true },
     },
     {

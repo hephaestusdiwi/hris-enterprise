@@ -22,6 +22,17 @@ use App\Modules\Bpjs\Services\BpjsRateResolver;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
+use App\Modules\Pph21\Contracts\EmployeePtkpStatusResolverInterface;
+use App\Modules\Pph21\Contracts\PtkpResolverInterface;
+use App\Modules\Pph21\Contracts\TaxBracketResolverInterface;
+use App\Modules\Pph21\Contracts\TaxCalculationEngineInterface;
+use App\Modules\Pph21\Contracts\TerRateResolverInterface;
+use App\Modules\Pph21\Services\EmployeePtkpStatusResolver;
+use App\Modules\Pph21\Services\PtkpResolver;
+use App\Modules\Pph21\Services\TaxBracketResolver;
+use App\Modules\Pph21\Services\TaxCalculationEngine;
+use App\Modules\Pph21\Services\TerRateResolver;
+
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -69,6 +80,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(BpjsJkkRiskClassResolverInterface::class, BpjsJkkRiskClassResolver::class);
         $this->app->bind(BpjsCompanyRegistrationResolverInterface::class, BpjsCompanyRegistrationResolver::class);
         $this->app->bind(BpjsCalculationEngineInterface::class, BpjsCalculationEngine::class);
+        $this->app->bind(PtkpResolverInterface::class, PtkpResolver::class);
+        $this->app->bind(TerRateResolverInterface::class, TerRateResolver::class);
+        $this->app->bind(TaxBracketResolverInterface::class, TaxBracketResolver::class);
+        $this->app->bind(EmployeePtkpStatusResolverInterface::class, EmployeePtkpStatusResolver::class);
+        $this->app->bind(TaxCalculationEngineInterface::class, TaxCalculationEngine::class);
     }
 
     /**

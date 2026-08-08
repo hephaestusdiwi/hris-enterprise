@@ -109,6 +109,8 @@ const groups: MenuGroup[] = [
       { name: 'loan-approvals', label: 'Loan Approval', icon: ClipboardCheck, to: '/loan-approvals', permission: null },
       { name: 'bpjs-settings', label: 'BPJS Settings', icon: ShieldCheck, to: '/bpjs/settings', permission: 'view bpjs settings' },
       { name: 'bpjs-employee-participations', label: 'Employee BPJS', icon: ShieldCheck , to: '/bpjs/employee-participations', permission: 'view bpjs settings' },
+      { name: 'tax-settings', label: 'Tax Settings', icon: ShieldCheck, to: '/tax-settings', permission: 'view tax settings' },
+      { name: 'employee-tax', label: 'Employee Tax', icon: ShieldCheck, to: '/employee-tax', permission: 'view tax settings' },
     ],
   },
   {
