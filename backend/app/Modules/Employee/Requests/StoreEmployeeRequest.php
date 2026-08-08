@@ -5,6 +5,7 @@ namespace App\Modules\Employee\Requests;
 use App\Modules\Employee\Models\Employee;
 use App\Modules\EmploymentType\Models\EmploymentType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class StoreEmployeeRequest extends FormRequest
@@ -18,7 +19,10 @@ class StoreEmployeeRequest extends FormRequest
     {
         return [
             // Employment Information
-            'employee_number' => ['required', 'string', 'max:50', 'unique:employees,employee_number'],
+            'employee_number' => [
+                'required', 'string', 'max:50',
+                Rule::unique('employees', 'employee_number')->whereNull('deleted_at'),
+            ],
             'company_id' => ['required', 'exists:companies,id'],
             'branch_id' => ['nullable', 'exists:branches,id'],
             'department_id' => ['nullable', 'exists:departments,id'],
@@ -59,7 +63,10 @@ class StoreEmployeeRequest extends FormRequest
             'emergency_contact_phone' => ['nullable', 'string', 'max:30'],
 
             // Identity Information
-            'national_id_number' => ['nullable', 'string', 'max:50', 'unique:employees,national_id_number'],
+            'national_id_number' => [
+                'nullable', 'string', 'max:50',
+                Rule::unique('employees', 'national_id_number')->whereNull('deleted_at'),
+            ],
             'tax_number' => ['nullable', 'string', 'max:50'],
             'bank_name' => ['nullable', 'string', 'max:100'],
             'bank_account_number' => ['nullable', 'string', 'max:50'],

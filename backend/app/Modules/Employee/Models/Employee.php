@@ -11,6 +11,7 @@ use App\Modules\EmploymentType\Models\EmploymentType;
 use App\Modules\JobLevel\Models\JobLevel;
 use App\Modules\Position\Models\Position;
 use App\Modules\WorkingSchedule\Models\WorkingSchedule;
+use Database\Factories\EmployeeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,11 @@ use Illuminate\Support\Facades\Storage;
 class Employee extends Model
 {
     use HasFactory, SoftDeletes;
+
+    protected static function newFactory(): EmployeeFactory
+    {
+        return EmployeeFactory::new();
+    }
 
     protected $fillable = [
         'employee_number',

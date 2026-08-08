@@ -3,6 +3,7 @@
 namespace App\Modules\Employee\Requests;
 
 use App\Modules\Employee\Models\Employee;
+use App\Modules\EmploymentType\Models\EmploymentType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -17,7 +18,14 @@ class UpdateEmployeeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'employee_number' => ['required', 'string', 'max:50', Rule::unique('employees', 'employee_number')->ignore($this->route('employee'))],
+            'employee_number' => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('employees', 'employee_number')
+                    ->ignore($this->route('employee'))
+                    ->whereNull('deleted_at'),
+            ],
             'company_id' => ['required', 'exists:companies,id'],
             'branch_id' => ['nullable', 'exists:branches,id'],
             'department_id' => ['nullable', 'exists:departments,id'],
@@ -55,11 +63,38 @@ class UpdateEmployeeRequest extends FormRequest
             'emergency_contact_name' => ['nullable', 'string', 'max:255'],
             'emergency_contact_phone' => ['nullable', 'string', 'max:30'],
 
-            'national_id_number' => ['nullable', 'string', 'max:50', Rule::unique('employees', 'national_id_number')->ignore($this->route('employee'))],
+            'national_id_number' => [
+                'nullable',
+                'string',
+                'max:50',
+                Rule::unique('employees', 'national_id_number')
+                    ->ignore($this->route('employee'))
+                    ->whereNull('deleted_at'),
+            ],
             'tax_number' => ['nullable', 'string', 'max:50'],
             'bank_name' => ['nullable', 'string', 'max:100'],
             'bank_account_number' => ['nullable', 'string', 'max:50'],
             'bank_account_holder_name' => ['nullable', 'string', 'max:255'],
+            'employment_type_id' => [
+                'nullable',
+                'exists:employment_types,id',
+            ],
+
+            'contract_start_date' => [
+                'nullable',
+                'date',
+            ],
+
+            'contract_end_date' => [
+                'nullable',
+                'date',
+                'after_or_equal:contract_start_date',
+            ],
+
+            'probation_end_date' => [
+                'nullable',
+                'date',
+            ],
         ];
     }
 
@@ -68,18 +103,51 @@ class UpdateEmployeeRequest extends FormRequest
         $validator->after(function (Validator $validator) {
             $userId = $this->input('user_id');
 
-            if (! $userId) {
-                return;
+            if ($userId) {
+                $alreadyLinked = Employee::where('user_id', $userId)
+                    ->where('id', '!=', $this->route('employee')->id)
+                    ->whereNull('deleted_at')
+                    ->exists();
+
+                if ($alreadyLinked) {
+                    $validator->errors()->add(
+                        'user_id',
+                        'User ini sudah terhubung dengan Employee lain yang aktif.'
+                    );
+                }
             }
 
-            $alreadyLinked = Employee::where('user_id', $userId)
-                ->where('id', '!=', $this->route('employee')->id)
-                ->whereNull('deleted_at')
-                ->exists();
-
-            if ($alreadyLinked) {
-                $validator->errors()->add('user_id', 'User ini sudah terhubung dengan Employee lain yang aktif.');
-            }
+            $this->validateContractDatesAgainstEmploymentType($validator);
         });
+    }
+
+    private function validateContractDatesAgainstEmploymentType(
+    Validator $validator
+    ): void {
+        $employmentTypeId = $this->input('employment_type_id');
+
+        if (! $employmentTypeId) {
+            return;
+        }
+
+        $type = EmploymentType::find($employmentTypeId);
+
+        if (! $type || $type->code !== 'CONTRACT') {
+            return;
+        }
+
+        if (! $this->filled('contract_start_date')) {
+            $validator->errors()->add(
+                'contract_start_date',
+                'Contract Start Date wajib diisi untuk Employment Type Contract.'
+            );
+        }
+
+        if (! $this->filled('contract_end_date')) {
+            $validator->errors()->add(
+                'contract_end_date',
+                'Contract End Date wajib diisi untuk Employment Type Contract.'
+            );
+        }
     }
 }

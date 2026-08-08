@@ -25,7 +25,6 @@ class DatabaseSeeder extends Seeder
         $types = [
             ['name' => 'Permanent', 'code' => 'PERMANENT'],
             ['name' => 'Contract', 'code' => 'CONTRACT'],
-            ['name' => 'Probation', 'code' => 'PROBATION'],
             ['name' => 'Intern', 'code' => 'INTERN'],
             ['name' => 'Freelance', 'code' => 'FREELANCE'],
             ['name' => 'Outsource', 'code' => 'OUTSOURCE'],

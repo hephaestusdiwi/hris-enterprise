@@ -139,6 +139,13 @@ class RolePermissionSeeder extends Seeder
         $hr->syncPermissions([
             'view dashboard',
             'view users',
+            // Employee core: HR bisa kelola data karyawan sehari-hari.
+            // 'delete employees' SENGAJA tidak dikasih dulu — hapus employee
+            // itu aksi destruktif yang seharusnya lewat flow Offboarding
+            // (Phase 2 Employee Lifecycle), bukan hard delete langsung.
+            'view employees',
+            'create employees',
+            'edit employees',
             'view hiring requisitions',
             'create hiring requisitions',
             'edit hiring requisitions',

@@ -2,7 +2,7 @@
 
 namespace App\Modules\Employee\Policies;
 
-use App\Modules\User;
+use App\Models\User;
 use App\Modules\Employee\Models\Employee;
 
 /**

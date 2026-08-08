@@ -25,6 +25,7 @@ interface EmploymentTypeRef {
   id: number
   name: string
   code: string
+  is_active: boolean
 }
 
 const emit = defineEmits<{
@@ -54,6 +55,9 @@ const employmentStatuses = ref<Ref[]>([])
 const managerOptions = ref<ManagerOption[]>([])
 const availableUsers = ref<AvailableUser[]>([])
 const employmentTypes = ref<EmploymentTypeRef[]>([])
+const activeEmploymentTypes = computed(() =>
+  employmentTypes.value.filter((t) => t.is_active)
+)
 
 const inviteLink = ref<string | null>(null)
 const linkCopied = ref(false)
@@ -516,7 +520,7 @@ onMounted(loadReferenceData)
               >
                 <option :value="null">-</option>
                 <option
-                  v-for="t in employmentTypes"
+                  v-for="t in activeEmploymentTypes"
                   :key="t.id"
                   :value="t.id"
                 >
@@ -547,7 +551,7 @@ onMounted(loadReferenceData)
               />
             </div>
 
-            <div v-if="selectedEmploymentType?.code === 'PROBATION'">
+            <div>
               <label class="mb-1 block text-sm font-medium text-slate-700">
                 Probation End Date
               </label>

@@ -24,6 +24,7 @@ interface EmploymentTypeRef {
   id: number
   name: string
   code: string
+  is_active: boolean
 }
 
 interface EmployeeRow {
@@ -59,6 +60,9 @@ const employmentStatuses = ref<Ref[]>([])
 const managerOptions = ref<{ id: number; employee_number: string; first_name: string; last_name: string | null }[]>([])
 const availableUsers = ref<UserRef[]>([])
 const employmentTypes = ref<EmploymentTypeRef[]>([])
+const activeEmploymentTypes = computed(() =>
+  employmentTypes.value.filter((t) => t.is_active)
+)
 
 const loading = ref(true)
 const errorMessage = ref('')
@@ -864,7 +868,13 @@ onMounted(() => {
                   <label class="mb-1 block text-sm font-medium text-slate-700">Employment Type</label>
                   <select v-model="form.employment_type_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
                     <option :value="null">-</option>
-                    <option v-for="t in employmentTypes" :key="t.id" :value="t.id">{{ t.name }}</option>
+                    <option
+                      v-for="t in activeEmploymentTypes"
+                      :key="t.id"
+                      :value="t.id"
+                    >
+                      {{ t.name }}
+                    </option>
                   </select>
                 </div>
 
@@ -884,13 +894,9 @@ onMounted(() => {
                   :min="form.contract_start_date || undefined"
                 />
                 <SmartDateInput
-                  v-if="selectedEmploymentType?.code === 'PROBATION'"
                   v-model="form.probation_end_date"
                   label="Probation End Date"
                   helper="countdown"
-                  :countdown-warn-days="30"
-                  :countdown-danger-days="14"
-                  :min="form.join_date || undefined"
                 />
 
                 <div>
