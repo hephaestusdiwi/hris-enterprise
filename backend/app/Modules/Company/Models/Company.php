@@ -8,6 +8,16 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Company extends Model 
 {
+    /**
+     * Model ini ada di namespace non-standar (App\Modules\...\Models),
+     * jadi convention-based factory discovery Laravel (Database\Factories\Modules\...)
+     * tidak nemu factory-nya. Override eksplisit ke lokasi factory yang sebenarnya.
+     */
+    protected static function newFactory()
+    {
+        return \Database\Factories\CompanyFactory::new();
+    }
+
     use HasFactory, SoftDeletes;
 
     protected $fillable = [

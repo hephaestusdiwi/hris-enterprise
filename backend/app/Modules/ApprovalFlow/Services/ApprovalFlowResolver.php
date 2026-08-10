@@ -2,6 +2,7 @@
 
 namespace App\Modules\ApprovalFlow\Services;
 
+use App\Modules\ApprovalFlow\DataTransferObjects\ApprovalScope;
 use App\Modules\ApprovalFlow\Models\ApprovalFlow;
 use App\Modules\ApprovalFlow\Models\ApprovalFlowAssignment;
 use App\Modules\Employee\Models\Employee;
@@ -9,50 +10,66 @@ use App\Modules\Employee\Models\Employee;
 class ApprovalFlowResolver
 {
     /**
-     * Resolusi ApprovalFlow yang berlaku untuk seorang Employee, mengikuti
-     * cascading order ala Mekari Talenta — dari paling spesifik ke paling umum:
-     *
-     *   1. Employee   — assignment manual langsung ke orang ini (STEP 30, tidak berubah)
-     *   2. Job Level  — flow default untuk semua employee di job level ini
-     *   3. Department — flow default untuk semua employee di department ini
-     *   4. Branch     — flow default untuk semua employee di branch ini
-     *   5. Company    — flow default company-wide (branch/department/job_level semua NULL)
-     *
-     * Berhenti di tier pertama yang match. Return null kalau tidak ada satupun
-     * yang cocok (artinya: tidak butuh approval, caller yang menentukan artinya apa).
+     * Resolusi ApprovalFlow untuk seorang Employee — TIDAK BERUBAH secara
+     * behavior dari versi sebelumnya. Sekarang cuma wrapper tipis di atas
+     * resolveForScope(): bangun ApprovalScope dari atribut employee, lalu
+     * delegasikan. Semua caller existing (Leave/Attendance/Loan/Hiring
+     * Requisition) hasil-nya identik seperti sebelumnya.
      */
     public function resolveFor(Employee $employee): ?ApprovalFlow
     {
-        $assignment = ApprovalFlowAssignment::where('employee_id', $employee->id)
-            ->where('is_active', true)
-            ->first();
+        return $this->resolveForScope(ApprovalScope::fromEmployee($employee));
+    }
 
-        if ($assignment) {
-            return $assignment->approvalFlow;
+    /**
+     * Core resolver, generik untuk subject apa pun — Employee (lewat
+     * resolveFor() di atas) maupun business-process non-employee seperti
+     * Payroll Run. Cascading order ala Mekari Talenta, dari paling spesifik
+     * ke paling umum:
+     *
+     *   1. Employee   — assignment manual langsung (cuma applicable kalau scope->employeeId terisi)
+     *   2. Job Level
+     *   3. Department
+     *   4. Branch
+     *   5. Company    — flow default company-wide (semua kolom scope NULL)
+     *
+     * Berhenti di tier pertama yang match. Tier yang datanya NULL di scope
+     * (mis. Payroll Run yang ga punya job_level/department) otomatis dilewati.
+     */
+    public function resolveForScope(ApprovalScope $scope): ?ApprovalFlow
+    {
+        if ($scope->employeeId) {
+            $assignment = ApprovalFlowAssignment::where('employee_id', $scope->employeeId)
+                ->where('is_active', true)
+                ->first();
+
+            if ($assignment) {
+                return $assignment->approvalFlow;
+            }
         }
 
-        if ($employee->job_level_id) {
-            $flow = $this->activeFlow($employee->company_id, ['job_level_id' => $employee->job_level_id]);
+        if ($scope->jobLevelId) {
+            $flow = $this->activeFlow($scope->companyId, ['job_level_id' => $scope->jobLevelId]);
             if ($flow) {
                 return $flow;
             }
         }
 
-        if ($employee->department_id) {
-            $flow = $this->activeFlow($employee->company_id, ['department_id' => $employee->department_id]);
+        if ($scope->departmentId) {
+            $flow = $this->activeFlow($scope->companyId, ['department_id' => $scope->departmentId]);
             if ($flow) {
                 return $flow;
             }
         }
 
-        if ($employee->branch_id) {
-            $flow = $this->activeFlow($employee->company_id, ['branch_id' => $employee->branch_id]);
+        if ($scope->branchId) {
+            $flow = $this->activeFlow($scope->companyId, ['branch_id' => $scope->branchId]);
             if ($flow) {
                 return $flow;
             }
         }
 
-        return $this->activeFlow($employee->company_id, []);
+        return $this->activeFlow($scope->companyId, []);
     }
 
     /**

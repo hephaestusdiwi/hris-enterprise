@@ -32,6 +32,8 @@ use App\Modules\Pph21\Services\PtkpResolver;
 use App\Modules\Pph21\Services\TaxBracketResolver;
 use App\Modules\Pph21\Services\TaxCalculationEngine;
 use App\Modules\Pph21\Services\TerRateResolver;
+use App\Modules\Payroll\Contracts\PayrollCalculationEngineInterface;
+use App\Modules\Payroll\Services\PayrollCalculationEngine;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -75,6 +77,10 @@ class AppServiceProvider extends ServiceProvider
             \App\Modules\HiringRequisition\Contracts\HiringRequisitionScopeInterface::class,
             \App\Modules\HiringRequisition\Services\HiringRequisitionScope::class,
         );
+        $this->app->bind(
+            \App\Modules\EmployeeMovement\Contracts\EmployeeMovementScopeInterface::class,
+            \App\Modules\EmployeeMovement\Services\EmployeeMovementScope::class,
+        );
 
         $this->app->bind(BpjsRateResolverInterface::class, BpjsRateResolver::class);
         $this->app->bind(BpjsJkkRiskClassResolverInterface::class, BpjsJkkRiskClassResolver::class);
@@ -85,6 +91,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(TaxBracketResolverInterface::class, TaxBracketResolver::class);
         $this->app->bind(EmployeePtkpStatusResolverInterface::class, EmployeePtkpStatusResolver::class);
         $this->app->bind(TaxCalculationEngineInterface::class, TaxCalculationEngine::class);
+        $this->app->bind(PayrollCalculationEngineInterface::class, PayrollCalculationEngine::class);
     }
 
     /**

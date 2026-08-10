@@ -11,6 +11,11 @@ Artisan::command('inspire', function () {
 Schedule::command('working-schedule:apply-scheduled-changes')
     ->dailyAt('00:05');
 
+// Effective-dated Employee Movement (Phase 2) — apply movement yang approved
+// tapi effective_date-nya baru tiba hari ini.
+Schedule::command('employee-movements:apply-due')
+    ->dailyAt('00:15');
+
 // Batch tahunan — generate balance seluruh employee + proses carry over di awal periode baru
 Schedule::command('leave-balance:sync')->yearlyOn(1, 1, '00:10');
 

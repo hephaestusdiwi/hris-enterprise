@@ -11,7 +11,6 @@ use App\Modules\EmploymentType\Models\EmploymentType;
 use App\Modules\JobLevel\Models\JobLevel;
 use App\Modules\Position\Models\Position;
 use App\Modules\WorkingSchedule\Models\WorkingSchedule;
-use Database\Factories\EmployeeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,12 +20,17 @@ use Illuminate\Support\Facades\Storage;
 
 class Employee extends Model
 {
-    use HasFactory, SoftDeletes;
-
-    protected static function newFactory(): EmployeeFactory
+    /**
+     * Model ini ada di namespace non-standar (App\Modules\...\Models),
+     * jadi convention-based factory discovery Laravel (Database\Factories\Modules\...)
+     * tidak nemu factory-nya. Override eksplisit ke lokasi factory yang sebenarnya.
+     */
+    protected static function newFactory()
     {
-        return EmployeeFactory::new();
+        return \Database\Factories\EmployeeFactory::new();
     }
+
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'employee_number',

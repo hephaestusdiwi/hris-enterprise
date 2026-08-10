@@ -2,19 +2,23 @@
 
 namespace App\Modules\EmploymentType\Models;
 
-use Database\Factories\EmploymentTypeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class EmploymentType extends Model
 {
-    use HasFactory, SoftDeletes;
-
-    protected static function newFactory(): EmploymentTypeFactory
+    /**
+     * Model ini ada di namespace non-standar (App\Modules\...\Models),
+     * jadi convention-based factory discovery Laravel (Database\Factories\Modules\...)
+     * tidak nemu factory-nya. Override eksplisit ke lokasi factory yang sebenarnya.
+     */
+    protected static function newFactory()
     {
-        return EmploymentTypeFactory::new();
+        return \Database\Factories\EmploymentTypeFactory::new();
     }
+
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'name',

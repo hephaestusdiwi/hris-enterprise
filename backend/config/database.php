@@ -99,6 +99,37 @@ return [
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
 
+        /*
+        |----------------------------------------------------------------
+        | Koneksi khusus testing (PHPUnit/RefreshDatabase)
+        |----------------------------------------------------------------
+        | SENGAJA nama database-nya HARDCODE 'hris_testing', BUKAN
+        | env('DB_DATABASE', ...) — supaya tidak bergantung sama sekali
+        | pada override env var yang terbukti tidak reliable di setup
+        | Docker ini (DB_DATABASE sudah di-set sebagai environment: asli
+        | di docker-compose.yml untuk service php, jadi Immutable Dotenv
+        | Laravel tidak akan pernah menimpanya lewat .env/.env.testing/
+        | phpunit.xml <env>). Host/port/user/password TETAP dari env
+        | karena itu memang sama antara hris dan hris_testing, cuma nama
+        | database yang harus dijamin beda apapun yang terjadi.
+        |
+        | phpunit.xml men-set DB_CONNECTION=pgsql_testing (bukan DB_DATABASE)
+        | supaya Laravel pindah pakai koneksi ini sepenuhnya saat testing.
+        */
+        'pgsql_testing' => [
+            'driver' => 'pgsql',
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => 'hris_testing',
+            'username' => env('DB_USERNAME', 'root'),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
+        ],
+
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),
