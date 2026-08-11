@@ -29,4 +29,9 @@ class CandidatePolicy
                 $vacancy->recruiter_employee_id,
             ], true);
     }
+
+    public function reconsider(User $user): bool
+    {
+        return $user->can('reconsider candidates');
+    }
 }

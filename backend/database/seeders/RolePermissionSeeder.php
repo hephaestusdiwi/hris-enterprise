@@ -80,6 +80,8 @@ class RolePermissionSeeder extends Seeder
             'create attendance devices',
             'edit attendance devices',
             'delete attendance devices',
+            'view attendance requests',
+            'create attendance requests',
             'view leave types',
             'create leave types',
             'edit leave types',
@@ -135,6 +137,9 @@ class RolePermissionSeeder extends Seeder
             'view screenings',
             'create screenings',
             'decide screenings',
+            'view interviews',
+            'schedule interviews',
+            'conduct interviews',
         ];
 
         foreach ($permissions as $permission) {
@@ -166,6 +171,8 @@ class RolePermissionSeeder extends Seeder
             'edit hiring requisitions',
             'cancel hiring requisitions',
             'create job vacancies',
+            'view attendance requests',
+            'create attendance requests',
         ]);
 
         $employee = Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'web']);
@@ -173,6 +180,7 @@ class RolePermissionSeeder extends Seeder
             'view dashboard',
             'create hiring requisitions',
             'create employee movements',
+            'create attendance requests',
         ]);
     }
 }

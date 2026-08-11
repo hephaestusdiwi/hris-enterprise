@@ -8,6 +8,7 @@ use App\Modules\Candidate\Models\Candidate;
 use App\Modules\Candidate\Models\CandidateStageHistory;
 use App\Modules\JobVacancy\Enums\ApplicationMethod;
 use App\Modules\JobVacancy\Enums\JobVacancyStatus;
+use App\Models\User;
 use App\Modules\JobVacancy\Models\JobVacancy;
 
 class CandidateService
@@ -41,6 +42,37 @@ class CandidateService
         $this->recordStageChange($candidate, null, CandidateStatus::Applied, null, 'Kandidat melamar.');
 
         return $candidate->fresh();
+    }
+
+    public function reconsider(Candidate $original, JobVacancy $targetVacancy, User $actor, ?string $notes = null): Candidate
+    {
+        if ($original->status !== CandidateStatus::Hold) {
+            throw new CandidateValidationException('Hanya Candidate berstatus Hold yang bisa direconsider.');
+        }
+
+        if ($targetVacancy->status !== JobVacancyStatus::Published) {
+            throw new CandidateValidationException('Job Vacancy tujuan sedang tidak membuka lamaran.');
+        }
+
+        if ($targetVacancy->application_method !== ApplicationMethod::Internal) {
+            throw new CandidateValidationException('Job Vacancy tujuan menerima lamaran lewat platform eksternal.');
+        }
+
+        $newCandidate = Candidate::create([
+            'job_vacancy_id' => $targetVacancy->id,
+            'full_name' => $original->full_name,
+            'email' => $original->email,
+            'phone' => $original->phone,
+            'source' => CandidateSource::TalentPool->value,
+            'cv_path' => $original->cv_path,
+            'status' => CandidateStatus::Applied->value,
+            'reconsidered_from_candidate_id' => $original->id,
+            'applied_at' => now(),
+        ]);
+
+        $this->recordStageChange($newCandidate, null, CandidateStatus::Applied, $actor->id, $notes ?? 'Direconsider dari talent pool.');
+
+        return $newCandidate->fresh();
     }
 
     private function assertNoDuplicateActiveApplication(JobVacancy $vacancy, string $email): void

@@ -9,6 +9,11 @@ use Illuminate\Http\Request;
 
 class CandidateController extends Controller
 {
+    public function __construct(
+        private CandidateService $service,
+    ){
+    }
+    
     public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', Candidate::class);
@@ -16,15 +21,28 @@ class CandidateController extends Controller
         $candidates = Candidate::query()
             ->when($request->integer('job_vacancy_id'), fn ($q, $v) => $q->where('job_vacancy_id', $v))
             ->when($request->string('status')->toString(), fn ($q, $v) => $q->where('status', $v))
+            ->when($request->string('search')->toString(), fn ($q, $v) => $q->where(
+                fn ($query) => $query->where('full_name', 'like', "%{$v}%")->orWhere('email', 'like', "%{$v}%")
+            ))
             ->with('jobVacancy')
             ->latest('applied_at')
             ->paginate();
 
+        return response()->json(['success' => true, 'message' => 'Daftar Candidate berhasil diambil.', 'data' => $candidates]);
+    }
+
+    public function reconsider(Candidate $candidate, ReconsiderCandidateRequest $request): JsonResponse
+    {
+        $this->authorize('reconsider', $candidate);
+
+        $targetVacancy = JobVacancy::findOrFail($request->validated('job_vacancy_id'));
+        $newCandidate = $this->service->reconsider($candidate, $targetVacancy, $request->user(), $request->validated('notes'));
+
         return response()->json([
             'success' => true,
-            'message' => 'Daftar Candidate berhasil diambil.',
-            'data' => $candidates,
-        ]);
+            'message' => 'Candidate berhasil di reconsider',
+            'data' => $newCandidate,
+        ], 201);
     }
 
     public function show(Candidate $candidate): JsonResponse

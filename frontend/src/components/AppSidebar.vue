@@ -6,6 +6,7 @@ import {
   CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch, CheckCircle2, Layers, CalendarRange, BarChart3,
   Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle, HandCoins,
   ShieldCheck,
+  WalletCards,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
@@ -95,9 +96,9 @@ const groups: MenuGroup[] = [
     ],
   },
   {
-    name: 'payroll',
-    label: 'Payroll',
-    icon: Wallet,
+    name: 'finance',
+    label: 'Finance',
+    icon: WalletCards,
     items: [
       { name: 'salary-components', label: 'Salary Component', icon: Wallet, to: '/salary-components', permission: 'view salary components' },
       { name: 'salary-structures', label: 'Salary Structure', icon: Layers, to: '/salary-structures', permission: 'view salary structures' },
@@ -107,6 +108,13 @@ const groups: MenuGroup[] = [
       { name: 'loans', label: 'Loan', icon: HandCoins, to: '/loans', permission: 'view loans' },
       { name: 'my-loans', label: 'My Loans', icon: HandCoins, to: '/my-loans', permission: null },
       { name: 'loan-approvals', label: 'Loan Approval', icon: ClipboardCheck, to: '/loan-approvals', permission: null },
+    ],
+  },
+  {
+    name: 'payroll',
+    label: 'Payroll',
+    icon: Wallet,
+    items: [
       { name: 'bpjs-settings', label: 'BPJS Settings', icon: ShieldCheck, to: '/bpjs/settings', permission: 'view bpjs settings' },
       { name: 'bpjs-employee-participations', label: 'Employee BPJS', icon: ShieldCheck , to: '/bpjs/employee-participations', permission: 'view bpjs settings' },
       { name: 'tax-settings', label: 'Tax Settings', icon: ShieldCheck, to: '/tax-settings', permission: 'view tax settings' },

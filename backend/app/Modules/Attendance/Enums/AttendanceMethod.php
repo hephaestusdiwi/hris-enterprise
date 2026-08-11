@@ -9,6 +9,7 @@ enum AttendanceMethod: string
     case DeviceEmployeeCode = 'device_employee_code';
     case DeviceFace = 'device_face';
     case DeviceQrCard = 'device_qr_card';
+    case AttendanceRequest = 'attendance_request';
 
     public function label(): string
     {
@@ -18,6 +19,7 @@ enum AttendanceMethod: string
             self::DeviceEmployeeCode => 'Device - Employee Code',
             self::DeviceFace => 'Device - Face Recognition',
             self::DeviceQrCard => 'Device - Employee QR Card',
+            self::AttendanceRequest => 'Attendance Request (Approved)',
         };
     }
 }

@@ -3,12 +3,12 @@
 namespace App\Modules\Payroll\Services;
 
 use App\Models\User;
-use App\Modules\Employee\Models\Employee;
 use App\Modules\EmployeeAllowance\Models\EmployeeAllowance;
 use App\Modules\EmployeeDeduction\Models\EmployeeDeduction;
 use App\Modules\Loan\Enums\LoanInstallmentStatus;
 use App\Modules\Loan\Models\LoanInstallment;
 use App\Modules\Loan\Services\LoanService;
+use App\Modules\Payroll\Contracts\PayrollCalculationEngineInterface;
 use App\Modules\Payroll\Enums\PayrollRunStatus;
 use App\Modules\Payroll\Exceptions\PayrollValidationException;
 use App\Modules\Payroll\Models\Payslip;
@@ -21,7 +21,7 @@ class PayrollRunService
 {
     public function __construct(
         private PayrollApprovalService $approvalService,
-        private \App\Modules\Payroll\Contracts\PayrollCalculationEngineInterface $calculationEngine,
+        private PayrollCalculationEngineInterface $calculationEngine,
         private LoanService $loanService,
     ) {
     }
@@ -66,47 +66,32 @@ class PayrollRunService
         return $run->fresh();
     }
 
-    public function submit(PayrollRun $run, ?Employee $submitterEmployee): PayrollRun
+    /**
+     * Kalkulasi payslip — dipakai baik buat generate pertama kali (dari Draft)
+     * MAUPUN recalculate (dari Processed/PendingApproval/Approved). TIDAK
+     * digating status approval sama sekali — HR bebas hitung ulang kapan pun
+     * sebelum Lock, sesuai behavior Overview/Detail Talenta.
+     *
+     * Kalau dipanggil saat status PendingApproval/Approved, approval yang
+     * berjalan untuk revisi lama otomatis di-invalidate (karena angkanya
+     * berubah) — status turun balik ke Processed, HR harus request approval
+     * lagi buat revisi baru sebelum bisa Lock.
+     */
+    public function proceedPayslip(PayrollRun $run, ?User $actor, ?string $note = null): PayrollRun
     {
-        if ($run->status !== PayrollRunStatus::Draft) {
-            throw new PayrollValidationException('Hanya payroll run berstatus Draft yang bisa disubmit.');
+        if (in_array($run->status, [PayrollRunStatus::Locked, PayrollRunStatus::Cancelled], true)) {
+            throw new PayrollValidationException('Payroll run yang sudah Locked/Cancelled tidak bisa dihitung ulang.');
         }
 
         if ($run->participants()->count() === 0) {
-            throw new PayrollValidationException('Pilih minimal 1 employee sebelum submit.');
-        }
-
-        $run->update(['status' => PayrollRunStatus::PendingApproval->value, 'requested_at' => now()]);
-        $this->approvalService->initiate($run, $submitterEmployee);
-
-        return $run->fresh();
-    }
-
-    /**
-     * "Recalculate" = reset ke Draft, invalidate approval yang ada. HR harus
-     * submit->approve->proceed lagi dari awal — proceedPayslip() berikutnya
-     * otomatis bikin revision baru. Ini yang memenuhi syarat "approval harus
-     * diulang kalau dihitung ulang setelah approval".
-     */
-    public function resetToDraft(PayrollRun $run, string $reason): PayrollRun
-    {
-        if (! in_array($run->status, [PayrollRunStatus::Approved, PayrollRunStatus::Processed], true)) {
-            throw new PayrollValidationException('Cuma bisa reset dari status Approved atau Processed.');
-        }
-
-        $this->approvalService->cancelApprovalIfAny($run);
-        $run->update(['status' => PayrollRunStatus::Draft->value, 'decided_at' => null]);
-
-        return $run->fresh();
-    }
-
-    public function proceedPayslip(PayrollRun $run, ?User $actor, ?string $note = null): PayrollRun
-    {
-        if ($run->status !== PayrollRunStatus::Approved) {
-            throw new PayrollValidationException('Hanya payroll run berstatus Approved yang bisa di-proceed.');
+            throw new PayrollValidationException('Pilih minimal 1 employee sebelum menghitung payroll.');
         }
 
         return DB::transaction(function () use ($run, $actor, $note) {
+            if (in_array($run->status, [PayrollRunStatus::PendingApproval, PayrollRunStatus::Approved], true)) {
+                $this->approvalService->cancelApprovalIfAny($run);
+            }
+
             $drafts = $this->calculationEngine->calculateDraftsForRun($run);
 
             $revisionNumber = $run->current_revision + 1;
@@ -157,14 +142,31 @@ class PayrollRunService
     }
 
     /**
-     * Finalisasi. Baru DI SINI EmployeeAllowance/Deduction/LoanInstallment
-     * yang kepakai revision aktif ditandai consumed — bukan pas calculate,
+     * Gerbang akses sebelum Lock — mirror "apply for access to lock payroll"
+     * Talenta. Bukan approval terhadap kalkulasi (itu sudah selesai di
+     * proceedPayslip), tapi approval terhadap AKSI Lock itu sendiri.
+     */
+    public function requestApproval(PayrollRun $run): PayrollRun
+    {
+        if ($run->status !== PayrollRunStatus::Processed) {
+            throw new PayrollValidationException('Payroll run harus berstatus Processed (sudah ada payslip) sebelum minta approval Lock.');
+        }
+
+        $run->update(['status' => PayrollRunStatus::PendingApproval->value, 'requested_at' => now()]);
+        $this->approvalService->initiate($run);
+
+        return $run->fresh();
+    }
+
+    /**
+     * Finalisasi. EmployeeAllowance/Deduction/LoanInstallment yang kepakai
+     * revision aktif baru ditandai consumed DI SINI — bukan pas calculate,
      * supaya recalculate sebelum Lock tidak pernah nyentuh data sumbernya.
      */
     public function lock(PayrollRun $run, User $actor): PayrollRun
     {
-        if ($run->status !== PayrollRunStatus::Processed) {
-            throw new PayrollValidationException('Hanya payroll run berstatus Processed yang bisa di-Lock.');
+        if ($run->status !== PayrollRunStatus::Approved) {
+            throw new PayrollValidationException('Hanya payroll run berstatus Approved yang bisa di-Lock.');
         }
 
         return DB::transaction(function () use ($run, $actor) {

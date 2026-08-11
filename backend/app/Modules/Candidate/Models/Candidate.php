@@ -30,6 +30,7 @@ class Candidate extends Model
         'held_at',
         'hired_at',
         'rejected_at',
+        'reconsidered_from_candidate_id',
     ];
 
     protected function casts(): array
@@ -58,6 +59,16 @@ class Candidate extends Model
     public function stageHistories(): HasMany
     {
         return $this->hasMany(CandidateStageHistory::class)->orderBy('changed_at');
+    }
+
+    public function reconsideredFrom(): BelongsTo
+    {
+        return $this->belongsTo(Candidate::class, 'reconsidered_from_candidate_id');
+    }
+
+    public function reconsiderations(): HasMany
+    {
+        return $this->hasMany(Candidate::class, 'reconsidered_from_candidate_id');
     }
 
     // Phase 4+ tinggal nambah relasi di sini tanpa ubah tabel ini:

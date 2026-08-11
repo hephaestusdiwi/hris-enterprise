@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->prefix('candidates')->group(function () {
     Route::get('/', [CandidateController::class, 'index']);
     Route::get('/{candidate}', [CandidateController::class, 'show']);
+    Route::post('/{candidate}/reconsider', [CandidateController::class, 'reconsider']);
 });
 
 // Career site — publik, gabung throttle group yang sama dengan JobVacancy

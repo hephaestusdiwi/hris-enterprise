@@ -39,6 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
     require __DIR__.'/../app/Modules/AttendanceSetting/Routes/api.php';
     require __DIR__.'/../app/Modules/ApprovalFlow/Routes/api.php';
     require __DIR__.'/../app/Modules/Attendance/Routes/api.php';
+    require __DIR__.'/../app/Modules/AttendanceRequest/Routes/api.php';
     require __DIR__.'/../app/Modules/LeaveType/Routes/api.php';
     require __DIR__.'/../app/Modules/LeaveBalance/Routes/api.php';
     require __DIR__.'/../app/Modules/LeaveRequest/Routes/api.php';
@@ -56,6 +57,8 @@ Route::middleware('auth:sanctum')->group(function () {
     require __DIR__.'/../app/Modules/EmployeeMovement/Routes/api.php';
     require __DIR__.'/../app/Modules/Candidate/Routes/api.php';
     require __DIR__.'/../app/Modules/Screening/Routes/api.php';
+    require __DIR__.'/../app/Modules/Interview/Routes/api.php';
+
     Route::get('/attendance-approvals', [\App\Modules\Attendance\Controllers\AttendanceApprovalController::class, 'index']);
     Route::post('/attendance-approvals/{decision}/decide', [\App\Modules\Attendance\Controllers\AttendanceApprovalController::class, 'decide']);
 });

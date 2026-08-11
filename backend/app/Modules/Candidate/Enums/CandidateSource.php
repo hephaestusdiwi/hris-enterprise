@@ -8,5 +8,6 @@ enum CandidateSource: string
     case JobStreet = 'jobstreet';
     case Referral = 'referral';
     case Import = 'import';
+    case TalentPool = 'talent_pool';
     case Other = 'other';
 }

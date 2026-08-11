@@ -3,240 +3,181 @@
 namespace App\Modules\Payroll\Services;
 
 use App\Models\User;
-use App\Modules\EmployeeAllowance\Models\EmployeeAllowance;
-use App\Modules\EmployeeDeduction\Models\EmployeeDeduction;
-use App\Modules\Loan\Enums\LoanInstallmentStatus;
-use App\Modules\Loan\Models\LoanInstallment;
-use App\Modules\Loan\Services\LoanService;
-use App\Modules\Payroll\Contracts\PayrollCalculationEngineInterface;
+use App\Modules\ApprovalFlow\DataTransferObjects\ApprovalScope;
+use App\Modules\ApprovalFlow\Services\ApprovalFlowResolver;
+use App\Modules\Attendance\Services\ApprovalStepApproverResolver;
+use App\Modules\Payroll\Enums\PayrollApprovalRequestStatus;
+use App\Modules\Payroll\Enums\PayrollApprovalStepDecisionStatus;
 use App\Modules\Payroll\Enums\PayrollRunStatus;
-use App\Modules\Payroll\Exceptions\PayrollValidationException;
-use App\Modules\Payroll\Models\Payslip;
-use App\Modules\Payroll\Models\PayslipLine;
+use App\Modules\Payroll\Exceptions\PayrollApprovalException;
+use App\Modules\Payroll\Models\PayrollApprovalRequest;
+use App\Modules\Payroll\Models\PayrollApprovalStepDecision;
 use App\Modules\Payroll\Models\PayrollRun;
-use App\Modules\Payroll\Models\PayrollRunRevision;
-use Illuminate\Support\Facades\DB;
 
-class PayrollRunService
+class PayrollApprovalService
 {
     public function __construct(
-        private PayrollApprovalService $approvalService,
-        private PayrollCalculationEngineInterface $calculationEngine,
-        private LoanService $loanService,
+        private ApprovalStepApproverResolver $resolver,
+        private ApprovalFlowResolver $approvalFlowResolver,
     ) {
     }
 
     /**
-     * @param  array<int, int>  $employeeIds
+     * PayrollRun bukan employee — scope-nya diambil langsung dari company_id
+     * run itu sendiri, BUKAN dari employee yang submit. Konsekuensinya: tier
+     * Assignment & JobLevel/Department di ApprovalFlowResolver otomatis skip
+     * (scope tidak punya employeeId/jobLevelId/departmentId), langsung ke
+     * Branch (kalau PayrollRun someday punya branch_id) atau Company-wide.
      */
-    public function createDraft(
-        int $companyId,
-        int $periodYear,
-        int $periodMonth,
-        array $employeeIds,
-        ?string $cutoffDate,
-        ?string $paymentDate,
-        ?User $actor,
-    ): PayrollRun {
-        return DB::transaction(function () use ($companyId, $periodYear, $periodMonth, $employeeIds, $cutoffDate, $paymentDate, $actor) {
-            $run = PayrollRun::create([
-                'company_id' => $companyId,
-                'period_year' => $periodYear,
-                'period_month' => $periodMonth,
-                'cutoff_date' => $cutoffDate,
-                'payment_date' => $paymentDate,
-                'status' => PayrollRunStatus::Draft->value,
-                'created_by_user_id' => $actor?->id,
-            ]);
-
-            $run->participants()->sync($employeeIds);
-
-            return $run->fresh();
-        });
-    }
-
-    public function syncParticipants(PayrollRun $run, array $employeeIds): PayrollRun
+    public function initiate(PayrollRun $payrollRun): void
     {
-        if (! $run->isEditableParticipants()) {
-            throw new PayrollValidationException('Peserta cuma bisa diubah selama status Draft.');
+        $scope = new ApprovalScope(companyId: $payrollRun->company_id);
+        $approvalFlow = $this->approvalFlowResolver->resolveForScope($scope);
+
+        if (! $approvalFlow) {
+            $this->autoApprove($payrollRun);
+
+            return;
         }
 
-        $run->participants()->sync($employeeIds);
+        $steps = $approvalFlow->steps()->where('is_active', true)->orderBy('sequence')->get();
 
-        return $run->fresh();
+        if ($steps->isEmpty()) {
+            $this->autoApprove($payrollRun);
+
+            return;
+        }
+
+        $request = PayrollApprovalRequest::create([
+            'payroll_run_id' => $payrollRun->id,
+            'approval_flow_id' => $approvalFlow->id,
+            'status' => PayrollApprovalRequestStatus::Pending->value,
+            'current_step_sequence' => $steps->first()->sequence,
+            'requested_at' => now(),
+        ]);
+
+        foreach ($steps as $step) {
+            PayrollApprovalStepDecision::create([
+                'payroll_approval_request_id' => $request->id,
+                'approval_step_id' => $step->id,
+                'sequence' => $step->sequence,
+                'status' => PayrollApprovalStepDecisionStatus::Pending->value,
+            ]);
+        }
+    }
+
+    public function autoApprove(PayrollRun $payrollRun): void
+    {
+        $this->applyApproval($payrollRun);
+    }
+
+    public function cancelApprovalIfAny(PayrollRun $payrollRun): void
+    {
+        $request = $payrollRun->approvalRequest;
+
+        if ($request && $request->status === PayrollApprovalRequestStatus::Pending) {
+            $request->update(['decided_at' => now()]);
+        }
     }
 
     /**
-     * Kalkulasi payslip — dipakai baik buat generate pertama kali (dari Draft)
-     * MAUPUN recalculate (dari Processed/PendingApproval/Approved). TIDAK
-     * digating status approval sama sekali — HR bebas hitung ulang kapan pun
-     * sebelum Lock, sesuai behavior Overview/Detail Talenta.
-     *
-     * Kalau dipanggil saat status PendingApproval/Approved, approval yang
-     * berjalan untuk revisi lama otomatis di-invalidate (karena angkanya
-     * berubah) — status turun balik ke Processed, HR harus request approval
-     * lagi buat revisi baru sebelum bisa Lock.
+     * Tidak ada subject Employee sama sekali di sini — kalau step-nya
+     * ternyata approver_type=DirectManager (konfigurasi yang salah untuk
+     * flow Payroll), resolver bakal balikin array kosong dan approval ini
+     * ga akan pernah bisa diputuskan siapa pun. Itu perilaku yang disengaja
+     * (lihat proposal arsitektur) — bukan bug, tapi sinyal HR salah
+     * konfigurasi approval flow untuk Payroll.
      */
-    public function proceedPayslip(PayrollRun $run, ?User $actor, ?string $note = null): PayrollRun
-    {
-        if (in_array($run->status, [PayrollRunStatus::Locked, PayrollRunStatus::Cancelled], true)) {
-            throw new PayrollValidationException('Payroll run yang sudah Locked/Cancelled tidak bisa dihitung ulang.');
+    public function decide(
+        PayrollApprovalStepDecision $decision,
+        User $actor,
+        string $action,
+        ?string $notes,
+    ): PayrollApprovalRequest {
+        $request = $decision->request;
+
+        if ($request->payrollRun->status !== PayrollRunStatus::PendingApproval) {
+            throw new PayrollApprovalException('Payroll run ini sudah tidak pending.');
         }
 
-        if ($run->participants()->count() === 0) {
-            throw new PayrollValidationException('Pilih minimal 1 employee sebelum menghitung payroll.');
+        if ($request->status !== PayrollApprovalRequestStatus::Pending) {
+            throw new PayrollApprovalException('Request ini sudah tidak pending.');
         }
 
-        return DB::transaction(function () use ($run, $actor, $note) {
-            if (in_array($run->status, [PayrollRunStatus::PendingApproval, PayrollRunStatus::Approved], true)) {
-                $this->approvalService->cancelApprovalIfAny($run);
-            }
+        if ($decision->sequence !== $request->current_step_sequence) {
+            throw new PayrollApprovalException('Bukan giliran step ini untuk diputuskan.');
+        }
 
-            $drafts = $this->calculationEngine->calculateDraftsForRun($run);
+        if ($decision->status !== PayrollApprovalStepDecisionStatus::Pending) {
+            throw new PayrollApprovalException('Step ini sudah diputuskan sebelumnya.');
+        }
 
-            $revisionNumber = $run->current_revision + 1;
+        $eligibleUserIds = $this->resolver->resolveApproverUserIds($decision->approvalStep, null);
 
-            $revision = PayrollRunRevision::create([
-                'payroll_run_id' => $run->id,
-                'revision_number' => $revisionNumber,
-                'calculated_at' => now(),
-                'calculated_by_user_id' => $actor?->id,
-                'note' => $note,
+        if (! in_array($actor->id, $eligibleUserIds, true)) {
+            throw new PayrollApprovalException('Anda tidak berwenang memutuskan approval ini.');
+        }
+
+        if ($action === 'reject') {
+            $decision->update([
+                'status' => PayrollApprovalStepDecisionStatus::Rejected->value,
+                'decided_by_user_id' => $actor->id,
+                'notes' => $notes,
+                'decided_at' => now(),
             ]);
 
-            foreach ($drafts as $employeeId => $draft) {
-                $payslip = Payslip::create([
-                    'payroll_run_id' => $run->id,
-                    'payroll_run_revision_id' => $revision->id,
-                    'employee_id' => $employeeId,
-                    'gross_earning' => $draft->grossEarning,
-                    'structural_deduction' => $draft->structuralDeduction,
-                    'manual_deduction_total' => $draft->manualDeductionTotal,
-                    'bpjs_employee_total' => $draft->bpjsEmployeeTotal,
-                    'bpjs_employer_total' => $draft->bpjsEmployerTotal,
-                    'tax_amount' => $draft->taxAmount,
-                    'loan_deduction_total' => $draft->loanDeductionTotal,
-                    'net_pay' => $draft->netPay,
-                ]);
+            $request->update(['status' => PayrollApprovalRequestStatus::Rejected->value, 'decided_at' => now()]);
+            // Balik ke Processed (bukan Draft) — payslip yang sudah dihitung tetap ada,
+            // HR tinggal recalculate/perbaiki lalu request approval lagi.
+            $request->payrollRun->update(['status' => PayrollRunStatus::Processed->value]);
 
-                foreach ($draft->lines as $line) {
-                    PayslipLine::create([
-                        'payslip_id' => $payslip->id,
-                        'type' => $line->type->value,
-                        'source' => $line->source->value,
-                        'label' => $line->label,
-                        'amount' => $line->amount,
-                        'reference_id' => $line->referenceId,
-                    ]);
-                }
-            }
+            return $request->fresh();
+        }
 
-            $run->update([
-                'current_revision' => $revisionNumber,
-                'status' => PayrollRunStatus::Processed->value,
-                'processed_at' => now(),
-            ]);
+        $decision->update([
+            'status' => PayrollApprovalStepDecisionStatus::Approved->value,
+            'decided_by_user_id' => $actor->id,
+            'notes' => $notes,
+            'decided_at' => now(),
+        ]);
 
-            return $run->fresh();
-        });
+        $nextStep = PayrollApprovalStepDecision::where('payroll_approval_request_id', $request->id)
+            ->where('sequence', '>', $decision->sequence)
+            ->orderBy('sequence')
+            ->first();
+
+        if (! $nextStep) {
+            $request->update(['status' => PayrollApprovalRequestStatus::Approved->value, 'decided_at' => now()]);
+            $this->applyApproval($request->payrollRun);
+        } else {
+            $request->update(['current_step_sequence' => $nextStep->sequence]);
+        }
+
+        return $request->fresh();
     }
 
     /**
-     * Gerbang akses sebelum Lock — mirror "apply for access to lock payroll"
-     * Talenta. Bukan approval terhadap kalkulasi (itu sudah selesai di
-     * proceedPayslip), tapi approval terhadap AKSI Lock itu sendiri.
+     * @return array<int, PayrollApprovalStepDecision>
      */
-    public function requestApproval(PayrollRun $run): PayrollRun
+    public function pendingDecisionsForUser(User $user): array
     {
-        if ($run->status !== PayrollRunStatus::Processed) {
-            throw new PayrollValidationException('Payroll run harus berstatus Processed (sudah ada payslip) sebelum minta approval Lock.');
-        }
+        $decisions = PayrollApprovalStepDecision::query()
+            ->where('status', PayrollApprovalStepDecisionStatus::Pending->value)
+            ->whereHas('request', fn ($query) => $query->where('status', PayrollApprovalRequestStatus::Pending->value))
+            ->with(['approvalStep', 'request.payrollRun'])
+            ->get()
+            ->filter(fn (PayrollApprovalStepDecision $decision) => $decision->sequence === $decision->request->current_step_sequence)
+            ->filter(fn (PayrollApprovalStepDecision $decision) => in_array(
+                $user->id,
+                $this->resolver->resolveApproverUserIds($decision->approvalStep, null),
+                true,
+            ));
 
-        $run->update(['status' => PayrollRunStatus::PendingApproval->value, 'requested_at' => now()]);
-        $this->approvalService->initiate($run);
-
-        return $run->fresh();
+        return $decisions->values()->all();
     }
 
-    /**
-     * Finalisasi. EmployeeAllowance/Deduction/LoanInstallment yang kepakai
-     * revision aktif baru ditandai consumed DI SINI — bukan pas calculate,
-     * supaya recalculate sebelum Lock tidak pernah nyentuh data sumbernya.
-     */
-    public function lock(PayrollRun $run, User $actor): PayrollRun
+    private function applyApproval(PayrollRun $payrollRun): void
     {
-        if ($run->status !== PayrollRunStatus::Approved) {
-            throw new PayrollValidationException('Hanya payroll run berstatus Approved yang bisa di-Lock.');
-        }
-
-        return DB::transaction(function () use ($run, $actor) {
-            $employeeIds = $run->participants()->pluck('employees.id');
-
-            EmployeeAllowance::whereIn('employee_id', $employeeIds)
-                ->where('status', 'ready')
-                ->where('payroll_period_year', $run->period_year)
-                ->where('payroll_period_month', $run->period_month)
-                ->update(['status' => 'processed', 'processed_at' => now()]);
-
-            EmployeeDeduction::whereIn('employee_id', $employeeIds)
-                ->where('status', 'ready')
-                ->where('payroll_period_year', $run->period_year)
-                ->where('payroll_period_month', $run->period_month)
-                ->update(['status' => 'processed', 'processed_at' => now()]);
-
-            $dueInstallments = LoanInstallment::whereHas('loan', fn ($q) => $q->whereIn('employee_id', $employeeIds))
-                ->where('status', LoanInstallmentStatus::Scheduled->value)
-                ->where('payroll_period_year', $run->period_year)
-                ->where('payroll_period_month', $run->period_month)
-                ->get();
-
-            foreach ($dueInstallments as $installment) {
-                $this->loanService->markInstallmentPaid($installment);
-            }
-
-            $run->update([
-                'status' => PayrollRunStatus::Locked->value,
-                'locked_at' => now(),
-                'locked_by_user_id' => $actor->id,
-            ]);
-
-            return $run->fresh();
-        });
-    }
-
-    public function publish(PayrollRun $run, User $actor): PayrollRun
-    {
-        if ($run->status !== PayrollRunStatus::Locked) {
-            throw new PayrollValidationException('Hanya payroll run berstatus Locked yang bisa di-Publish.');
-        }
-
-        DB::transaction(function () use ($run, $actor) {
-            $run->currentRevision?->payslips()->update(['is_published' => true]);
-            $run->update(['published_at' => now(), 'published_by_user_id' => $actor->id]);
-        });
-
-        return $run->fresh();
-    }
-
-    public function unpublish(PayrollRun $run): PayrollRun
-    {
-        DB::transaction(function () use ($run) {
-            $run->currentRevision?->payslips()->update(['is_published' => false]);
-            $run->update(['published_at' => null, 'published_by_user_id' => null]);
-        });
-
-        return $run->fresh();
-    }
-
-    public function cancel(PayrollRun $run, string $reason): PayrollRun
-    {
-        if ($run->status === PayrollRunStatus::Locked) {
-            throw new PayrollValidationException('Payroll run yang sudah Locked tidak bisa dibatalkan.');
-        }
-
-        $this->approvalService->cancelApprovalIfAny($run);
-        $run->update(['status' => PayrollRunStatus::Cancelled->value, 'cancelled_at' => now(), 'cancel_reason' => $reason]);
-
-        return $run->fresh();
+        $payrollRun->update(['status' => PayrollRunStatus::Approved->value, 'decided_at' => now()]);
     }
 }
