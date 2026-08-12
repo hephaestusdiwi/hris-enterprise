@@ -18,6 +18,8 @@ import AttendanceIndex from '@/views/AttendanceIndex.vue'
 import AttendanceDeviceListView from '@/views/AttendanceDeviceListView.vue'
 import AttendanceDeviceOfficeQrDisplayView from '@/views/AttendanceDeviceOfficeQrDisplayView.vue'
 import AttendanceApprovalListView from '@/views/AttendanceApprovalListView.vue'
+import MyAttendanceRequestView from '@/views/MyAttendanceRequestView.vue'
+import AttendanceRequestApprovalListView from '@/views/AttendanceRequestApprovalListView.vue'
 import WorkingScheduleAssignmentListView from '@/views/WorkingScheduleAssignmentListView.vue'
 import SchedulerView from '@/views/SchedulerView.vue'
 import AttendanceReportView from '@/views/AttendanceReportView.vue'
@@ -223,6 +225,18 @@ const router = createRouter({
       meta: { requiresAuth:true },
     },
     {
+      path: '/my-attendance-requests',
+      name: 'my-attendance-requests.list',
+      component: MyAttendanceRequestView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/attendance-request-approvals',
+      name: 'attendance-request-approvals.list',
+      component: AttendanceRequestApprovalListView,
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/salary-components',
       name: 'salary-components.list',
       component: SalaryComponentListView,
@@ -293,6 +307,12 @@ const router = createRouter({
       name: 'tax-settings',
       component: TaxSettingsView,
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/employee-tax',
+      name: 'employee-tax',
+      component: EmployeeTaxListView,
+      meta: { requiresAuth:true },
     },
     {
       path: '/payroll',

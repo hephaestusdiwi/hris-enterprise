@@ -92,6 +92,8 @@ const groups: MenuGroup[] = [
       { name: 'attendance-face-recognition-test', label: 'Face Recognition Test', icon: ScanFace, to: '/attendance-settings/face-recognition-test', permission: 'view attendance settings', },
       { name: 'attendance-face-checkin', label: 'Face Check In', icon: ScanFace, to: '/attendance/face-checkin', permission: null },
       { name: 'attendance-approvals', label: 'Approval Attendance', icon: CheckCircle2, to: '/attendance-approvals', permission: null },
+      { name: 'my-attendance-requests', label: 'Attendance Request', icon: Send, to: '/my-attendance-requests', permission: 'create attendance requests' },
+      { name: 'attendance-request-approvals', label: 'Approval Attendance Request', icon: ClipboardCheck, to: '/attendance-request-approvals', permission: null },
       { name: 'attendance-report', label: 'Attendance Report', icon: BarChart3, to: '/attendance-report', permission: 'view attendances' },
     ],
   },

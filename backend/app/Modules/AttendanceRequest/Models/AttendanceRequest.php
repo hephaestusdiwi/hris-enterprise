@@ -1,7 +1,7 @@
 <?php
- 
+
 namespace App\Modules\AttendanceRequest\Models;
- 
+
 use App\Modules\Attendance\Models\Attendance;
 use App\Modules\AttendanceRequest\Enums\AttendanceRequestStatus;
 use App\Modules\Employee\Models\Employee;
@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class AttendanceRequest extends Model
 {
     use SoftDeletes;
- 
+
     protected $fillable = [
         'employee_id',
         'attendance_id',
@@ -28,7 +28,7 @@ class AttendanceRequest extends Model
         'submitted_at',
         'decided_at',
     ];
- 
+
     protected function casts(): array
     {
         return [
@@ -40,27 +40,27 @@ class AttendanceRequest extends Model
             'decided_at' => 'datetime',
         ];
     }
- 
+
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
     }
- 
+
     public function attendance(): BelongsTo
     {
         return $this->belongsTo(Attendance::class);
     }
- 
+
     public function shift(): BelongsTo
     {
         return $this->belongsTo(Shift::class);
     }
- 
+
     public function attachments(): HasMany
     {
         return $this->hasMany(AttendanceRequestAttachment::class);
     }
- 
+
     public function approvalRequest(): HasOne
     {
         return $this->hasOne(AttendanceRequestApprovalRequest::class);
