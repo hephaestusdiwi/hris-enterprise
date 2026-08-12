@@ -3,6 +3,7 @@
 namespace App\Modules\Employee\Policies;
 
 use App\Models\User;
+use App\Modules\Employee\Contracts\EmployeeHierarchyServiceInterface;
 use App\Modules\Employee\Models\Employee;
 
 /**
@@ -12,13 +13,22 @@ use App\Modules\Employee\Models\Employee;
  * mempersempit RECORD MANA yang boleh diakses setelah RBAC lolos, bukan
  * menggantikan RBAC.
  *
- * Cakupan saat ini: self-view + direct manager melihat subordinate langsung.
- * Belum ada: department scope, company scope, recursive subordinate
- * (manager-nya-manager). Kalau nanti dibutuhkan, tinggal tambah branch baru
- * di method masing-masing — tidak perlu ubah Controller atau route.
+ * Cakupan view(): self + SELURUH subordinate tree (via
+ * EmployeeHierarchyService), konsisten dengan EmployeeScope supaya list
+ * endpoint dan single-record endpoint tidak saling bertentangan (kalau
+ * satu bilang "boleh lihat" harusnya yang lain juga bilang begitu).
+ *
+ * update()/delete() SENGAJA tetap HR/admin-only, tidak ikut meluas ke
+ * hierarchy — edit/hapus data master employee bukan wewenang manager
+ * setinggi apapun posisinya di tree, itu keputusan sadar dari awal
+ * (bukan lupa), tetap dipertahankan di sini.
  */
 class EmployeePolicy
 {
+    public function __construct(private EmployeeHierarchyServiceInterface $hierarchy)
+    {
+    }
+
     public function view(User $user, Employee $employee): bool
     {
         if (! $user->can('view employees')) {
@@ -36,7 +46,7 @@ class EmployeePolicy
         }
 
         return $actingEmployee->id === $employee->id
-            || $actingEmployee->id === $employee->manager_employee_id;
+            || $this->hierarchy->isInSubordinateTree($actingEmployee, $employee);
     }
 
     public function update(User $user, Employee $employee): bool

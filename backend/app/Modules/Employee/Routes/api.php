@@ -12,6 +12,7 @@ Route::middleware('permission:view employees')->group(function () {
     Route::get('/employees/available-users', [EmployeeController::class, 'availableUsers']);
     Route::get('/employees', [EmployeeController::class, 'index']);
     Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
+    Route::get('/employees/{employee}/hierarchy', [EmployeeController::class, 'hierarchy']);
 });
 
 Route::middleware('permission:create employees')->post('/employees', [EmployeeController::class, 'store']);

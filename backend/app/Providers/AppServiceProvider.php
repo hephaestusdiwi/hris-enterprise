@@ -92,6 +92,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(EmployeePtkpStatusResolverInterface::class, EmployeePtkpStatusResolver::class);
         $this->app->bind(TaxCalculationEngineInterface::class, TaxCalculationEngine::class);
         $this->app->bind(PayrollCalculationEngineInterface::class, PayrollCalculationEngine::class);
+        $this->app->bind(
+            \App\Modules\Employee\Contracts\EmployeeHierarchyServiceInterface::class,
+            \App\Modules\Employee\Services\EmployeeHierarchyService::class,
+        );
     }
 
     /**

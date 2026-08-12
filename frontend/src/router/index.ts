@@ -6,6 +6,7 @@ import BranchListView from '../views/BranchListView.vue'
 import DepartmentListView from '../views/DepartmentListView.vue'
 import PositionListView from '../views/PositionListView.vue'
 import EmployeeListView from '@/views/EmployeeListView.vue'
+import EmployeeDetailView from '@/views/EmployeeDetailView.vue'
 import HolidayListView from '@/views/HolidayListView.vue'
 import JobLevelListView from '@/views/JobLevelListView.vue'
 import ShiftListView from '@/views/ShiftListView.vue'
@@ -40,6 +41,8 @@ import BpjsSettingView from '@/views/BpjsSettingView.vue'
 import EmployeeBpjsListView from '@/views/EmployeeBpjsListView.vue'
 import TaxSettingsView from '@/views/TaxSettingsView.vue'
 import EmployeeTaxListView from '@/views/EmployeeTaxListView.vue'
+import PayrollRunListView from '@/views/PayrollRunListView.vue'
+import PayrollRunDetailView from '@/views/PayrollRunDetailView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -90,6 +93,12 @@ const router = createRouter({
       path: '/employees',
       name: 'employees',
       component: EmployeeListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/employees/:id',
+      name: 'employee-detail',
+      component: EmployeeDetailView,
       meta: { requiresAuth: true },
     },
     {
@@ -286,9 +295,15 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: '/employee-tax',
-      name: 'employee-tax',
-      component: EmployeeTaxListView,
+      path: '/payroll',
+      name: 'payroll',
+      component: PayrollRunListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/payroll-runs/:id',
+      name: 'payroll-run-detail',
+      component: PayrollRunDetailView,
       meta: { requiresAuth: true },
     },
     {

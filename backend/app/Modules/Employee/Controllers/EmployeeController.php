@@ -3,6 +3,7 @@
 namespace App\Modules\Employee\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Employee\Contracts\EmployeeHierarchyServiceInterface;
 use App\Modules\Employee\Contracts\EmployeeScopeInterface;
 use App\Modules\Employee\Models\Employee;
 use Illuminate\Http\Request;
@@ -18,6 +19,7 @@ class EmployeeController extends Controller
     public function __construct(
         private EmployeeService $employeeService,
         private EmployeeScopeInterface $employeeScope,
+        private EmployeeHierarchyServiceInterface $hierarchy,
     ){
     }
 
@@ -143,16 +145,110 @@ class EmployeeController extends Controller
     }
 
     // cuma buat foto
-    public function orgChart()
+    public function orgChart(Request $request)
     {
-        $employees = Employee::with(['position:id,name'])
+        $user = $request->user();
+
+        // Admin/hr: full company org chart (behavior lama, tidak berubah).
+        // Selain itu: SCOPED ke diri sendiri + subordinate tree-nya sendiri
+        // (bug lama: endpoint ini dulu selalu return seluruh company tanpa
+        // scoping sama sekali — ditemukan saat integrasi frontend hierarchy).
+        if ($user->hasRole(['admin', 'hr'])) {
+            $employees = Employee::with(['position:id,name'])
             ->whereNull('resign_date')
-            ->get(['id', 'first_name', 'last_name', 'manager_employee_id', 'position_id']);
+            ->get([
+                'id',
+                'first_name',
+                'last_name',
+                'manager_employee_id',
+                'position_id',
+                'photo_path',
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'OK',
+                'data' => $this->buildOrgTree($employees, null),
+            ]);
+        }
+
+        $actingEmployee = $user->employee;
+
+        if (! $actingEmployee) {
+            return response()->json(['success' => true, 'message' => 'OK', 'data' => []]);
+        }
+
+        $visibleIds = $this->hierarchy->visibleEmployeeIds($actingEmployee);
+
+        $employees = Employee::with(['position:id,name'])
+        ->whereNull('resign_date')
+        ->whereIn('id', $visibleIds)
+        ->get([
+            'id',
+            'first_name',
+            'last_name',
+            'manager_employee_id',
+            'position_id',
+            'photo_path',
+        ]);
+
+        // Root pohonnya diri sendiri (bukan manager_employee_id => null, karena
+        // manager si actor sendiri ada di LUAR scope-nya dan memang tidak boleh
+        // ikut muncul).
+        $self = $employees->firstWhere('id', $actingEmployee->id);
+
+        if (! $self) {
+            return response()->json(['success' => true, 'message' => 'OK', 'data' => []]);
+        }
+
+        $tree = [
+            'id' => $self->id,
+            'name' => trim("{$self->first_name} {$self->last_name}"),
+            'position' => $self->position?->name,
+            'photo_url' => $self->photo_url,
+            'children' => $this->buildOrgTree($employees, $self->id),
+        ];
+
+        return response()->json(['success' => true, 'message' => 'OK', 'data' => [$tree]]);
+    }
+
+    /**
+     * Manager + Direct Reports employee tertentu, buat kebutuhan Employee
+     * Detail. Object-level authorization numpang EmployeePolicy::view() yang
+     * sudah ada (sama seperti show()) — tidak ada Policy baru.
+     */
+    public function hierarchy(Employee $employee)
+    {
+        $this->authorize('view', $employee);
+
+        $manager = $employee->manager()
+            ->with(['position:id,name'])
+            ->first();
+
+        $directReports = $this->hierarchy
+            ->directReports($employee)
+            ->load('position:id,name');
 
         return response()->json([
             'success' => true,
             'message' => 'OK',
-            'data' => $this->buildOrgTree($employees),
+            'data' => [
+                'manager' => $manager ? [
+                    'id' => $manager->id,
+                    'name' => trim("{$manager->first_name} {$manager->last_name}"),
+                    'position' => $manager->position?->name,
+                    'photo_url' => $manager->photo_url,
+                ] : null,
+
+                'direct_reports' => $directReports
+                    ->map(fn (Employee $e) => [
+                        'id' => $e->id,
+                        'name' => trim("{$e->first_name} {$e->last_name}"),
+                        'position' => $e->position?->name,
+                        'photo_url' => $e->photo_url,
+                    ])
+                    ->values(),
+            ],
         ]);
     }
 
@@ -164,6 +260,7 @@ class EmployeeController extends Controller
                 'id' => $employee->id,
                 'name' => trim("{$employee->first_name} {$employee->last_name}"),
                 'position' => $employee->position?->name,
+                'photo_url' => $employee->photo_url,
                 'children' => $this->buildOrgTree($employees, $employee->id),
             ])
             ->values()

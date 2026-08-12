@@ -203,7 +203,7 @@ onMounted(loadRun)
 
 <template>
   <div class="space-y-6">
-    <button @click="router.push('/payroll-runs')" class="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700">
+    <button @click="router.push('/payroll')" class="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700">
       <ArrowLeft class="h-4 w-4" :stroke-width="1.75" /> Kembali ke Payroll History
     </button>
 

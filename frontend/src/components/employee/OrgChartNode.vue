@@ -1,18 +1,22 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { ChevronDown, ChevronRight, Users } from 'lucide-vue-next'
 
 interface OrgNode {
   id: number
   name: string
   position: string | null
+  photo_url: string | null
   children: OrgNode[]
 }
 
-const props = defineProps<{ node: OrgNode; depth?: number }>()
+const props = defineProps<{ node: OrgNode; depth?: number; expandedIds: Set<number> }>()
+const emit = defineEmits<{ toggle: [id: number] }>()
 
+const router = useRouter()
 const depth = props.depth ?? 0
-const expanded = ref(depth < 2) // 2 level pertama auto-expand, sisanya collapsed
+const expanded = computed(() => props.expandedIds.has(props.node.id))
 
 const initials = computed(() =>
   props.node.name
@@ -23,18 +27,26 @@ const initials = computed(() =>
     .join('')
 )
 
-function toggle() {
-  if (props.node.children.length) expanded.value = !expanded.value
+function openDetail() {
+  router.push({ name: 'employee-detail', params: { id: props.node.id } })
+}
+
+function toggleExpand() {
+  if (props.node.children.length) emit('toggle', props.node.id)
 }
 </script>
 
 <template>
   <div class="flex flex-col items-center">
-    <!-- Card -->
-    <button
-      type="button"
-      @click="toggle"
-      class="group relative z-10 flex min-w-[190px] flex-col items-center rounded-2xl border border-slate-100 bg-white px-4 py-4 shadow-[0_1px_3px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(15,23,42,0.08)]"
+    <!-- Card: klik = buka Employee Detail. Pakai div (bukan button) karena
+         di dalamnya ada elemen interaktif lain (badge expand/collapse) —
+         button di dalam button itu HTML tidak valid. -->
+    <div
+      role="button"
+      tabindex="0"
+      @click="openDetail"
+      @keydown.enter="openDetail"
+      class="group relative z-10 flex min-w-[190px] cursor-pointer flex-col items-center rounded-2xl border border-slate-100 bg-white px-4 py-4 shadow-[0_1px_3px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(15,23,42,0.08)]"
       :class="depth === 0 ? 'ring-2 ring-primary/30' : ''"
     >
       <span
@@ -42,23 +54,38 @@ function toggle() {
         class="absolute -top-px left-1/2 h-1 w-12 -translate-x-1/2 rounded-full bg-primary"
       />
 
-      <div class="flex h-11 w-11 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary-dark">
-        {{ initials }}
+      <div
+        class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-soft text-sm font-semibold text-primary-dark"
+      >
+        <img
+          v-if="node.photo_url"
+          :src="node.photo_url"
+          :alt="node.name"
+          class="h-full w-full object-cover"
+        />
+        <span v-else>
+          {{ initials }}
+        </span>
       </div>
 
       <p class="mt-2.5 text-sm font-semibold text-slate-800">{{ node.name }}</p>
       <p v-if="node.position" class="mt-0.5 text-xs text-slate-500">{{ node.position }}</p>
 
-      <div
+      <!-- Badge: klik = expand/collapse, TIDAK ikut navigasi -->
+      <span
         v-if="node.children.length"
-        class="mt-2.5 flex items-center gap-1 rounded-full bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-400 transition-colors group-hover:bg-primary-soft group-hover:text-primary-dark"
+        role="button"
+        tabindex="0"
+        @click.stop="toggleExpand"
+        @keydown.enter.stop="toggleExpand"
+        class="mt-2.5 flex items-center gap-1 rounded-full bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-400 transition-colors hover:bg-primary-soft hover:text-primary-dark"
       >
         <Users class="h-3 w-3" :stroke-width="2" />
         {{ node.children.length }}
         <ChevronDown v-if="expanded" class="h-3 w-3" :stroke-width="2" />
         <ChevronRight v-else class="h-3 w-3" :stroke-width="2" />
-      </div>
-    </button>
+      </span>
+    </div>
 
     <!-- Children -->
     <Transition
@@ -88,7 +115,7 @@ function toggle() {
               }"
             />
             <div class="h-8 w-0.5 rounded-full bg-slate-200"></div>
-            <OrgChartNode :node="child" :depth="depth + 1" />
+            <OrgChartNode :node="child" :depth="depth + 1" :expanded-ids="expandedIds" @toggle="emit('toggle', $event)" />
           </div>
         </div>
       </div>

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, reactive, computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { Plus, Pencil, Trash2, X, ScanFace, QrCode, Search, ChevronDown, Building2, UserRound, Phone, IdCard, CheckCircle2, KeyRound } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
+import { useAuthStore } from '@/stores/auth'
 import OrgChart from '@/components/employee/OrgChart.vue'
 import FaceEnrollmentModal from '@/components/FaceEnrollmentModal.vue'
 import EmployeeQrModal from '@/components/EmployeeQrModal.vue'
@@ -48,6 +50,13 @@ interface EmployeeRow {
 }
 
 const view = ref<'directory' | 'orgchart'>('directory')
+const authStore = useAuthStore()
+// Cuma buat LABEL kontekstual (bukan security filtering — itu tanggung
+// jawab backend lewat EmployeeScope). admin/hr lihat semua company, selain
+// itu daftar ini otomatis sudah ter-scope ke diri sendiri + subordinate tree.
+const isScopedToOwnTeam = computed(
+  () => !authStore.roles.includes('admin') && !authStore.roles.includes('hr'),
+)
 
 const employees = ref<EmployeeRow[]>([])
 const companies = ref<Ref[]>([])
@@ -60,9 +69,12 @@ const employmentStatuses = ref<Ref[]>([])
 const managerOptions = ref<{ id: number; employee_number: string; first_name: string; last_name: string | null }[]>([])
 const availableUsers = ref<UserRef[]>([])
 const employmentTypes = ref<EmploymentTypeRef[]>([])
-const activeEmploymentTypes = computed(() =>
-  employmentTypes.value.filter((t) => t.is_active)
-)
+// Dropdown pemilihan employment type di form Employee cuma boleh nunjukin
+// type yang masih aktif (mis. 'Probation' sudah di-retire, is_active=false) —
+// tapi tidak menyaring endpoint /api/employment-types itu sendiri, karena
+// endpoint itu juga dipakai halaman admin Employment Type yang memang perlu
+// lihat entry yang sudah di-retire.
+const activeEmploymentTypes = computed(() => employmentTypes.value.filter((t) => t.is_active))
 
 const loading = ref(true)
 const errorMessage = ref('')
@@ -615,6 +627,10 @@ onMounted(() => {
         </div>
       </div>
 
+      <div v-if="isScopedToOwnTeam" class="rounded-xl bg-primary-soft/50 px-4 py-2.5 text-xs font-medium text-primary-dark">
+        Menampilkan kamu + seluruh subordinate tree kamu. Employee di luar tim kamu tidak ditampilkan.
+      </div>
+
       <div v-if="loading" class="text-sm text-slate-400">Memuat data...</div>
       <div v-else-if="errorMessage" class="rounded-xl bg-red-50 p-4 text-sm text-red-600">
         {{ errorMessage }}
@@ -658,7 +674,12 @@ onMounted(() => {
                       {{ initials(row) }}
                     </div>
                     <div>
-                      <p class="font-medium text-slate-800">{{ fullName(row) }}</p>
+                      <RouterLink
+                        :to="{ name: 'employee-detail', params: { id: row.id } }"
+                        class="font-medium text-slate-800 hover:text-primary hover:underline"
+                      >
+                        {{ fullName(row) }}
+                      </RouterLink>
                       <p class="text-xs text-slate-400">{{ row.employee_number }}</p>
                     </div>
                   </div>
@@ -816,36 +837,40 @@ onMounted(() => {
                   helper="tenure"
                   :max="todayStr"
                 />
+                <div v-if="isEditing" class="col-span-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  Company/Branch/Department/Position/Job Level/Manager/Employment Type/Employment Status/Tanggal Resign
+                  sekarang cuma bisa diubah lewat <strong>Employee Movement</strong>, supaya history &amp; approval-nya tercatat.
+                </div>
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">Company</label>
-                  <select v-model.number="form.company_id" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                  <select v-model.number="form.company_id" :disabled="isEditing" :class="isEditing ? 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500' : 'w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none'" required>
                     <option v-for="c in companies" :key="c.id" :value="c.id">{{ c.name }}</option>
                   </select>
                 </div>
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">Branch</label>
-                  <select v-model="form.branch_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                  <select v-model="form.branch_id" :disabled="isEditing" :class="isEditing ? 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500' : 'w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none'">
                     <option :value="null">-</option>
                     <option v-for="b in branches" :key="b.id" :value="b.id">{{ b.name }}</option>
                   </select>
                 </div>
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">Department</label>
-                  <select v-model="form.department_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                  <select v-model="form.department_id" :disabled="isEditing" :class="isEditing ? 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500' : 'w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none'">
                     <option :value="null">-</option>
                     <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
                   </select>
                 </div>
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">Position</label>
-                  <select v-model="form.position_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                  <select v-model="form.position_id" :disabled="isEditing" :class="isEditing ? 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500' : 'w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none'">
                     <option :value="null">-</option>
                     <option v-for="p in positions" :key="p.id" :value="p.id">{{ p.name }}</option>
                   </select>
                 </div>
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">Job Level</label>
-                  <select v-model="form.job_level_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                  <select v-model="form.job_level_id" :disabled="isEditing" :class="isEditing ? 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500' : 'w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none'">
                     <option :value="null">-</option>
                     <option v-for="jl in jobLevels" :key="jl.id" :value="jl.id">{{ jl.name }}</option>
                   </select>
@@ -859,22 +884,16 @@ onMounted(() => {
                 </div>
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">Employment Status</label>
-                  <select v-model="form.employment_status_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                  <select v-model="form.employment_status_id" :disabled="isEditing" :class="isEditing ? 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500' : 'w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none'">
                     <option :value="null">-</option>
                     <option v-for="s in employmentStatuses" :key="s.id" :value="s.id">{{ s.name }}</option>
                   </select>
                 </div>
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">Employment Type</label>
-                  <select v-model="form.employment_type_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                  <select v-model="form.employment_type_id" :disabled="isEditing" :class="isEditing ? 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500' : 'w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none'">
                     <option :value="null">-</option>
-                    <option
-                      v-for="t in activeEmploymentTypes"
-                      :key="t.id"
-                      :value="t.id"
-                    >
-                      {{ t.name }}
-                    </option>
+                    <option v-for="t in activeEmploymentTypes" :key="t.id" :value="t.id">{{ t.name }}</option>
                   </select>
                 </div>
 
@@ -893,15 +912,21 @@ onMounted(() => {
                   :countdown-danger-days="30"
                   :min="form.contract_start_date || undefined"
                 />
+                <!-- Probation adalah fase employment berbasis probation_end_date,
+                     independen dari Employment Type — jadi selalu ditampilkan,
+                     bukan cuma waktu type-nya 'PROBATION' (sudah di-retire). -->
                 <SmartDateInput
                   v-model="form.probation_end_date"
                   label="Probation End Date"
                   helper="countdown"
+                  :countdown-warn-days="30"
+                  :countdown-danger-days="14"
+                  :min="form.join_date || undefined"
                 />
 
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">Manager</label>
-                  <select v-model="form.manager_employee_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                  <select v-model="form.manager_employee_id" :disabled="isEditing" :class="isEditing ? 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500' : 'w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none'">
                     <option :value="null">-</option>
                     <option v-for="m in filteredManagerOptions" :key="m.id" :value="m.id">{{ fullName(m) }}</option>
                   </select>
@@ -910,7 +935,8 @@ onMounted(() => {
                   v-model="form.resign_date"
                   label="Tanggal Resign"
                   :min="form.join_date || undefined"
-                  hint="Kosongkan kalau masih aktif bekerja"
+                  :disabled="isEditing"
+                  :hint="isEditing ? 'Ubah lewat Employee Movement (Resignation), bukan di sini' : 'Kosongkan kalau masih aktif bekerja'"
                 />
               </div>
 

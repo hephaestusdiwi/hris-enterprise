@@ -3,15 +3,21 @@
 namespace App\Modules\EmployeeMovement\Services;
 
 use App\Models\User;
+use App\Modules\Employee\Contracts\EmployeeHierarchyServiceInterface;
 use App\Modules\EmployeeMovement\Contracts\EmployeeMovementScopeInterface;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Pola identik EmployeeScope (Phase 1): admin/hr full, selain itu cuma
- * lihat movement milik diri sendiri + subordinate langsung.
+ * Visibility movement history mengikuti visibility Employee-nya sendiri:
+ * admin/hr full, selain itu diri sendiri + seluruh subordinate tree
+ * (konsisten dengan EmployeeScope, lewat EmployeeHierarchyService yang sama).
  */
 class EmployeeMovementScope implements EmployeeMovementScopeInterface
 {
+    public function __construct(private EmployeeHierarchyServiceInterface $hierarchy)
+    {
+    }
+
     public function apply(Builder $query, User $user): Builder
     {
         if ($user->hasRole(['admin', 'hr'])) {
@@ -24,8 +30,6 @@ class EmployeeMovementScope implements EmployeeMovementScopeInterface
             return $query->whereRaw('1 = 0');
         }
 
-        return $query->whereHas('employee', function (Builder $q) use ($employee) {
-            $q->where('id', $employee->id)->orWhere('manager_employee_id', $employee->id);
-        });
+        return $query->whereIn('employee_id', $this->hierarchy->visibleEmployeeIds($employee));
     }
 }
