@@ -21,6 +21,7 @@ class LoanInstallment extends Model
         'status',
         'paid_at',
         'employee_deduction_id',
+        'loan_settlement_id',
         'note',
     ];
 
@@ -44,5 +45,10 @@ class LoanInstallment extends Model
     public function employeeDeduction(): BelongsTo
     {
         return $this->belongsTo(EmployeeDeduction::class);
+    }
+
+    public function settlement(): BelongsTo
+    {
+        return $this->belongsTo(LoanSettlement::class, 'loan_settlement_id');
     }
 }

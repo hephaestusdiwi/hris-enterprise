@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { Plus, X, Loader2, AlertTriangle, Calculator, Ban, Send, Wallet, Pencil } from 'lucide-vue-next'
+import { Plus, X, Loader2, AlertTriangle, Calculator, Ban, Send, Wallet, Pencil, UserX } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
 
-interface Employee { id: number; first_name: string; last_name: string | null; department?: { id: number; name: string } | null }
+interface Employee { id: number; first_name: string; last_name: string | null; department?: { id: number; name: string } | null; resign_date?: string | null }
 
-type LoanStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'active' | 'completed' | 'cancelled'
+type LoanStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'active' | 'completed' | 'settled' | 'cancelled'
+type LoanInterestType = 'none' | 'flat' | 'declining'
 type InstallmentStatus = 'scheduled' | 'paid' | 'skipped' | 'cancelled'
 
 interface LoanInstallmentRow {
@@ -27,12 +28,21 @@ interface StepDecision {
   approval_step: { id: number; name: string | null; sequence: number }
 }
 
+interface LoanSettlementInfo {
+  id: number
+  final_payroll_period_year: number
+  final_payroll_period_month: number
+  outstanding_principal_settled: string
+  superseded_installment_count: number
+}
+
 interface LoanRow {
   id: number
   employee_id: number
   employee: Employee
   principal: string
   interest_rate: string | null
+  interest_type: LoanInterestType
   tenor: number
   installment_amount: string
   total_repayment: string
@@ -43,13 +53,14 @@ interface LoanRow {
   cancel_reason: string | null
   installments?: LoanInstallmentRow[]
   approval_request?: { status: string; step_decisions: StepDecision[] } | null
+  settlement?: LoanSettlementInfo | null
 }
 
 const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 
 const statusLabels: Record<LoanStatus, string> = {
   draft: 'Draft', pending: 'Menunggu Approval', approved: 'Approved', rejected: 'Ditolak',
-  active: 'Active', completed: 'Lunas', cancelled: 'Dibatalkan',
+  active: 'Active', completed: 'Lunas', settled: 'Lunas (Final Settlement)', cancelled: 'Dibatalkan',
 }
 const statusBadgeClass: Record<LoanStatus, string> = {
   draft: 'bg-slate-100 text-slate-500',
@@ -58,7 +69,13 @@ const statusBadgeClass: Record<LoanStatus, string> = {
   rejected: 'bg-red-50 text-red-600',
   active: 'bg-primary-soft text-primary-dark',
   completed: 'bg-emerald-50 text-emerald-600',
+  settled: 'bg-emerald-50 text-emerald-600',
   cancelled: 'bg-slate-100 text-slate-500',
+}
+const interestTypeLabels: Record<LoanInterestType, string> = {
+  none: 'Tanpa Bunga',
+  flat: 'Flat',
+  declining: 'Menurun (Declining)',
 }
 const installmentStatusLabels: Record<InstallmentStatus, string> = {
   scheduled: 'Terjadwal', paid: 'Terbayar', skipped: 'Dilewati', cancelled: 'Dibatalkan',
@@ -141,6 +158,7 @@ const form = reactive({
   employee_id: null as number | null,
   principal: null as number | null,
   interest_rate: null as number | null,
+  interest_type: 'flat' as LoanInterestType,
   tenor: 12,
   first_deduction_date: '',
   purpose: '',
@@ -158,6 +176,7 @@ async function runPreview() {
     const response = await apiClient.post('/api/loans/preview', {
       principal: form.principal,
       interest_rate: form.interest_rate,
+      interest_type: form.interest_type,
       tenor: form.tenor,
     })
     previewResult.value = response.data.data
@@ -176,6 +195,7 @@ function openCreateModal() {
   form.employee_id = employees.value[0]?.id ?? null
   form.principal = null
   form.interest_rate = null
+  form.interest_type = 'flat'
   form.tenor = 12
   form.first_deduction_date = new Date().toISOString().slice(0, 10)
   form.purpose = ''
@@ -190,6 +210,7 @@ function openEditForm(loan: LoanRow) {
   form.employee_id = loan.employee_id
   form.principal = Number(loan.principal)
   form.interest_rate = loan.interest_rate ? Number(loan.interest_rate) : null
+  form.interest_type = loan.interest_type ?? 'flat'
   form.tenor = loan.tenor
   form.first_deduction_date = `${loan.first_deduction_period_year}-${String(loan.first_deduction_period_month).padStart(2, '0')}-01`
   form.purpose = loan.purpose ?? ''
@@ -282,6 +303,20 @@ async function submitCancel(loan: LoanRow) {
     await Promise.all([loadLoans(), openDrawer(loan)])
   } catch (err: any) {
     actionError.value = err.response?.data?.message || 'Gagal membatalkan loan.'
+  } finally {
+    actionProcessing.value = false
+  }
+}
+
+async function settleResignation(loan: LoanRow) {
+  if (!confirm('Buat final settlement resignation untuk loan ini? Sisa cicilan akan digantikan satu potongan lump-sum di periode payroll final, dan tidak bisa dibatalkan.')) return
+  actionProcessing.value = true
+  actionError.value = ''
+  try {
+    await apiClient.post(`/api/loans/${loan.id}/settle-resignation`)
+    await Promise.all([loadLoans(), openDrawer(loan)])
+  } catch (err: any) {
+    actionError.value = err.response?.data?.message || 'Gagal membuat final settlement.'
   } finally {
     actionProcessing.value = false
   }
@@ -401,13 +436,22 @@ onMounted(() => {
 
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="mb-1 block text-sm font-medium text-slate-700">Bunga % (opsional)</label>
-                <input v-model.number="form.interest_rate" type="number" min="0" max="100" step="0.01" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
+                <label class="mb-1 block text-sm font-medium text-slate-700">Tipe Bunga</label>
+                <select v-model="form.interest_type" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                  <option value="flat">Flat</option>
+                  <option value="declining">Menurun (Declining)</option>
+                  <option value="none">Tanpa Bunga</option>
+                </select>
               </div>
               <div>
-                <label class="mb-1 block text-sm font-medium text-slate-700">Mulai Potong</label>
-                <input v-model="form.first_deduction_date" type="date" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
+                <label class="mb-1 block text-sm font-medium text-slate-700">Bunga % (opsional)</label>
+                <input v-model.number="form.interest_rate" type="number" min="0" max="100" step="0.01" :disabled="form.interest_type === 'none'" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none disabled:bg-slate-50" />
               </div>
+            </div>
+
+            <div>
+              <label class="mb-1 block text-sm font-medium text-slate-700">Mulai Potong</label>
+              <input v-model="form.first_deduction_date" type="date" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
             </div>
 
             <div>
@@ -432,7 +476,10 @@ onMounted(() => {
                 <span class="text-slate-500">Total dikembalikan</span>
                 <span class="font-medium text-slate-700">{{ formatCurrency(previewResult.total_repayment) }}</span>
               </div>
-              <p class="text-xs text-slate-400">Cicilan terakhir bisa beda tipis karena pembulatan.</p>
+              <p class="text-xs text-slate-400">
+                <span v-if="form.interest_type === 'declining'">Nominal cicilan menurun tiap periode karena bunga dihitung dari sisa outstanding.</span>
+                <span v-else>Cicilan terakhir bisa beda tipis karena pembulatan.</span>
+              </p>
             </div>
 
             <p v-if="formError" class="text-sm text-red-600">{{ formError }}</p>
@@ -477,7 +524,7 @@ onMounted(() => {
               <p class="text-xs text-primary-dark">Principal</p>
               <p class="text-xl font-semibold text-primary-dark">{{ formatCurrency(drawerTarget.principal) }}</p>
               <p class="mt-1 text-xs text-slate-500">
-                {{ drawerTarget.tenor }}x cicilan · {{ formatCurrency(drawerTarget.installment_amount) }}/bulan
+                {{ drawerTarget.tenor }}x cicilan · {{ formatCurrency(drawerTarget.installment_amount) }}/bulan · {{ interestTypeLabels[drawerTarget.interest_type] }}
                 <span v-if="drawerTarget.interest_rate">· bunga {{ drawerTarget.interest_rate }}%</span>
               </p>
             </div>
@@ -512,6 +559,16 @@ onMounted(() => {
               </div>
             </div>
 
+            <!-- Final Settlement info (kalau ada) -->
+            <div v-if="drawerTarget.settlement" class="rounded-xl bg-amber-50 p-3 text-xs text-amber-700">
+              <p class="font-medium">Final Settlement (Resignation)</p>
+              <p class="mt-1">
+                Outstanding di-settle: {{ formatCurrency(drawerTarget.settlement.outstanding_principal_settled) }}
+                pada periode {{ monthNames[drawerTarget.settlement.final_payroll_period_month - 1] }} {{ drawerTarget.settlement.final_payroll_period_year }}
+                ({{ drawerTarget.settlement.superseded_installment_count }} cicilan lama digantikan).
+              </p>
+            </div>
+
             <p v-if="drawerTarget.status === 'cancelled' && drawerTarget.cancel_reason" class="rounded-xl bg-slate-50 p-3 text-xs text-slate-500">
               Alasan dibatalkan: {{ drawerTarget.cancel_reason }}
             </p>
@@ -529,6 +586,15 @@ onMounted(() => {
 
               <button v-if="drawerTarget.status === 'approved'" @click="disburseLoan(drawerTarget)" :disabled="actionProcessing" class="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
                 <Wallet class="h-4 w-4" :stroke-width="1.75" /> Cairkan (Disburse)
+              </button>
+
+              <button
+                v-if="drawerTarget.status === 'active' && !drawerTarget.settlement && drawerTarget.employee.resign_date"
+                @click="settleResignation(drawerTarget)"
+                :disabled="actionProcessing"
+                class="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 py-2.5 text-sm font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+              >
+                <UserX class="h-4 w-4" :stroke-width="1.75" /> Settle for Resignation
               </button>
 
               <div v-if="['draft', 'pending', 'approved'].includes(drawerTarget.status)">

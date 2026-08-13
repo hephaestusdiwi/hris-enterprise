@@ -109,6 +109,7 @@ class RolePermissionSeeder extends Seeder
             'edit loans',
             'disburse loans',
             'cancel loans',
+            'settle loans',
             'view bpjs settings',
             'create bpjs settings',
             'edit bpjs settings',
@@ -173,6 +174,15 @@ class RolePermissionSeeder extends Seeder
             'create job vacancies',
             'view attendance requests',
             'create attendance requests',
+            // Loan: HR yang mengelola siklus loan karyawan sehari-hari,
+            // termasuk final settlement saat resignation (bagian dari
+            // Employment Lifecycle yang sudah HR pegang).
+            'view loans',
+            'create_loans',
+            'edit loans',
+            'disburse loans',
+            'cancel loans',
+            'settle loans',
         ]);
 
         $employee = Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'web']);

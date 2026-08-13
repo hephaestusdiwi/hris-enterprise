@@ -25,6 +25,7 @@ Route::middleware('permission:edit loans')->group(function () {
 
 Route::middleware('permission:disburse loans')->post('/loans/{loan}/disburse', [LoanController::class, 'disburse']);
 Route::middleware('permission:cancel loans')->post('/loans/{loan}/cancel', [LoanController::class, 'cancel']);
+Route::middleware('permission:settle loans')->post('/loans/{loan}/settle-resignation', [LoanController::class, 'settleResignation']);
 
 Route::get('/loan-approvals', [LoanApprovalController::class, 'index']);
 Route::post('/loan-approvals/{decision}/decide', [LoanApprovalController::class, 'decide']);

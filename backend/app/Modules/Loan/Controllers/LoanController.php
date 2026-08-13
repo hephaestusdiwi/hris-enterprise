@@ -35,7 +35,7 @@ class LoanController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'OK',
-            'data' => $loan->load(['employee', 'installments', 'approvalRequest.stepDecisions.approvalStep']),
+            'data' => $loan->load(['employee', 'installments', 'approvalRequest.stepDecisions.approvalStep', 'settlement']),
         ]);
     }
 
@@ -72,6 +72,7 @@ class LoanController extends Controller
             (string) $request->validated('principal'),
             $request->validated('interest_rate') !== null ? (string) $request->validated('interest_rate') : null,
             (int) $request->validated('tenor'),
+            $request->validated('interest_type'),
         );
 
         return response()->json(['success' => true, 'message' => 'OK', 'data' => $plan]);
@@ -137,6 +138,25 @@ class LoanController extends Controller
             $loan = $this->loanService->cancel($loan, $request->validated('reason'));
 
             return response()->json(['success' => true, 'message' => 'Loan berhasil dibatalkan', 'data' => $loan]);
+        } catch (LoanValidationException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage(), 'data' => null], 422);
+        }
+    }
+
+    /**
+     * Business action eksplisit — Finance/HR yang trigger setelah employee
+     * resign & masih ada outstanding loan. Lihat LoanService::settleForResignation().
+     */
+    public function settleResignation(Request $request, Loan $loan)
+    {
+        try {
+            $loan = $this->loanService->settleForResignation($loan, $request->user());
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Final settlement berhasil dibuat, outstanding akan dipotong di payroll final period.',
+                'data' => $loan->load(['installments', 'settlement']),
+            ]);
         } catch (LoanValidationException $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage(), 'data' => null], 422);
         }

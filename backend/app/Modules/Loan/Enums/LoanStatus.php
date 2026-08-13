@@ -10,6 +10,7 @@ enum LoanStatus: string
     case Rejected = 'rejected';
     case Active = 'active';
     case Completed = 'completed';
+    case Settled = 'settled';
     case Cancelled = 'cancelled';
 
     public function label(): string
@@ -21,6 +22,7 @@ enum LoanStatus: string
             self::Rejected => 'Ditolak',
             self::Active => 'Active',
             self::Completed => 'Lunas',
+            self::Settled => 'Lunas (Final Settlement)',
             self::Cancelled => 'Dibatalkan',
         };
     }
