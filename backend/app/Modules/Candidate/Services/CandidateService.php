@@ -1,7 +1,8 @@
-<?php 
+<?php
 
 namespace App\Modules\Candidate\Services;
 
+use App\Modules\Candidate\Enums\CandidateSource;
 use App\Modules\Candidate\Enums\CandidateStatus;
 use App\Modules\Candidate\Exceptions\CandidateValidationException;
 use App\Modules\Candidate\Models\Candidate;
@@ -10,52 +11,82 @@ use App\Modules\JobVacancy\Enums\ApplicationMethod;
 use App\Modules\JobVacancy\Enums\JobVacancyStatus;
 use App\Models\User;
 use App\Modules\JobVacancy\Models\JobVacancy;
+use App\Modules\Offering\Enums\OfferingStatus;
+use Illuminate\Support\Facades\DB;
 
 class CandidateService
 {
     /**
-     * @param array{full_name: string, email: string, phone: string, source: string, cv_path?: ?string} $data
+     * @param array{
+     *     full_name: string,
+     *     email: string,
+     *     phone: string,
+     *     source: string,
+     *     cv_path?: ?string
+     * } $data
      */
     public function apply(JobVacancy $vacancy, array $data): Candidate
     {
         if ($vacancy->status !== JobVacancyStatus::Published) {
-            throw new CandidateValidationException('Job Vacancy ini sedang tidak membuka lamaran.');
+            throw new CandidateValidationException(
+                'Job Vacancy ini sedang tidak membuka lamaran.'
+            );
         }
 
         if ($vacancy->application_method !== ApplicationMethod::Internal) {
-            throw new CandidateValidationException('Job Vacancy ini menerima lamaran lewat platform eksternal, bukan lewat sistem ini.');
+            throw new CandidateValidationException(
+                'Job Vacancy ini menerima lamaran lewat platform eksternal, bukan lewat sistem ini.'
+            );
         }
 
         $this->assertNoDuplicateActiveApplication($vacancy, $data['email']);
 
-        $candidate = Candidate::create([
-            'job_vacancy_id' => $vacancy->id,
-            'full_name' => $data['full_name'],
-            'email' => $data['email'],
-            'phone' => $data['phone'],
-            'source' => $data['source'],
-            'cv_path' => $data['cv_path'] ?? null,
-            'status' => CandidateStatus::Applied->value,
-            'applied_at' => now(),
-        ]);
+        return DB::transaction(function () use ($vacancy, $data) {
+            $candidate = Candidate::create([
+                'job_vacancy_id' => $vacancy->id,
+                'full_name' => $data['full_name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'],
+                'source' => $data['source'],
+                'cv_path' => $data['cv_path'] ?? null,
+                'status' => CandidateStatus::Applied->value,
+                'applied_at' => now(),
+            ]);
 
-        $this->recordStageChange($candidate, null, CandidateStatus::Applied, null, 'Kandidat melamar.');
+            $this->recordStageChange(
+                $candidate,
+                null,
+                CandidateStatus::Applied,
+                null,
+                'Kandidat melamar.'
+            );
 
-        return $candidate->fresh();
+            return $candidate->fresh();
+        });
     }
 
-    public function reconsider(Candidate $original, JobVacancy $targetVacancy, User $actor, ?string $notes = null): Candidate
-    {
+    public function reconsider(
+        Candidate $original,
+        JobVacancy $targetVacancy,
+        User $actor,
+        ?string $notes = null
+    ): Candidate {
         if ($original->status !== CandidateStatus::Hold) {
-            throw new CandidateValidationException('Hanya Candidate berstatus Hold yang bisa direconsider.');
+            throw new CandidateValidationException(
+                'Hanya Candidate berstatus Hold yang bisa direconsider.'
+            );
         }
 
         if ($targetVacancy->status !== JobVacancyStatus::Published) {
-            throw new CandidateValidationException('Job Vacancy tujuan sedang tidak membuka lamaran.');
+            throw new CandidateValidationException(
+                'Job Vacancy tujuan sedang tidak membuka lamaran.'
+            );
         }
 
         if ($targetVacancy->application_method !== ApplicationMethod::Internal) {
-            throw new CandidateValidationException('Job Vacancy tujuan menerima lamaran lewat platform eksternal.');
+            throw new CandidateValidationException(
+                'Job Vacancy tujuan menerima lamaran lewat platform eksternal.'
+            );
         }
 
         $newCandidate = Candidate::create([
@@ -70,20 +101,33 @@ class CandidateService
             'applied_at' => now(),
         ]);
 
-        $this->recordStageChange($newCandidate, null, CandidateStatus::Applied, $actor->id, $notes ?? 'Direconsider dari talent pool.');
+        $this->recordStageChange(
+            $newCandidate,
+            null,
+            CandidateStatus::Applied,
+            $actor->id,
+            $notes ?? 'Direconsider dari talent pool.'
+        );
 
         return $newCandidate->fresh();
     }
 
-    private function assertNoDuplicateActiveApplication(JobVacancy $vacancy, string $email): void
-    {
+    private function assertNoDuplicateActiveApplication(
+        JobVacancy $vacancy,
+        string $email
+    ): void {
         $exists = Candidate::where('job_vacancy_id', $vacancy->id)
             ->where('email', $email)
-            ->whereNotIn('status', [CandidateStatus::Rejected->value, CandidateStatus::Hired->value])
+            ->whereNotIn('status', [
+                CandidateStatus::Rejected->value,
+                CandidateStatus::Hired->value,
+            ])
             ->exists();
 
         if ($exists) {
-            throw new CandidateValidationException('Email ini sudah pernah melamar ke Job Vacancy ini dan masih dalam proses.');
+            throw new CandidateValidationException(
+                'Email ini sudah pernah melamar ke Job Vacancy ini dan masih dalam proses.'
+            );
         }
     }
 
@@ -93,18 +137,62 @@ class CandidateService
         ?int $changedByUserId,
         ?string $notes = null,
     ): Candidate {
-        $from = $candidate->status;
+        return DB::transaction(function () use (
+            $candidate,
+            $to,
+            $changedByUserId,
+            $notes
+        ) {
+            $from = $candidate->status;
 
-        $candidate->update([
-            'status' => $to->value,
-            'held_at' => $to === CandidateStatus::Hold ? now() : $candidate->held_at,
-            'hired_at' => $to === CandidateStatus::Hired ? now() : $candidate->hired_at,
-            'rejected_at' => $to === CandidateStatus::Rejected ? now() : $candidate->rejected_at,
-        ]);
+            $candidate->update([
+                'status' => $to->value,
+                'held_at' => $to === CandidateStatus::Hold
+                    ? now()
+                    : $candidate->held_at,
+                'hired_at' => $to === CandidateStatus::Hired
+                    ? now()
+                    : $candidate->hired_at,
+                'rejected_at' => $to === CandidateStatus::Rejected
+                    ? now()
+                    : $candidate->rejected_at,
+            ]);
 
-        $this->recordStageChange($candidate, $from, $to, $changedByUserId, $notes);
+            $this->recordStageChange(
+                $candidate,
+                $from,
+                $to,
+                $changedByUserId,
+                $notes
+            );
 
-        return $candidate->fresh();
+            return $candidate->fresh();
+        });
+    }
+
+    /**
+     * Tandai Candidate sebagai Selected.
+     *
+     * Hanya Candidate dengan status Interview yang boleh
+     * dipindahkan ke status Selected.
+     */
+    public function select(
+        Candidate $candidate,
+        User $actor,
+        ?string $notes = null
+    ): Candidate {
+        if ($candidate->status !== CandidateStatus::Interview) {
+            throw new CandidateValidationException(
+                'Hanya Candidate berstatus Interview yang bisa ditandai Selected.'
+            );
+        }
+
+        return $this->transitionStatus(
+            $candidate,
+            CandidateStatus::Selected,
+            $actor->id,
+            $notes ?? 'Candidate dinyatakan selected.'
+        );
     }
 
     private function recordStageChange(
@@ -122,5 +210,24 @@ class CandidateService
             'notes' => $notes,
             'changed_at' => now(),
         ]);
+    }
+
+    public function hire(Candidate $candidate, User $actor, ?string $notes = null): Candidate
+    {
+        if ($candidate->status === CandidateStatus::Hired) {
+            throw new CandidateValidationException('Candidate ini sudah Hired sebelumnya.');
+        }
+
+        if ($candidate->status !== CandidateStatus::Offered) {
+            throw new CandidateValidationException('Candidate harus berstatus Offered sebelum bisa di-Hired.');
+        }
+
+        $accepted = $candidate->offerings()->where('status', OfferingStatus::Accepted->value)->exists();
+
+        if (! $accepted) {
+            throw new CandidateValidationException('Candidate ini belum memiliki Offering berstatus Accepted.');
+        }
+
+        return $this->transitionStatus($candidate, CandidateStatus::Hired, $actor->id, $notes ?? 'Candidate dinyatakan Hired.');
     }
 }

@@ -47,6 +47,14 @@ class StoreEmployeeMovementRequest extends FormRequest
     // transfer JADI tidak punya manager). rules() di atas sudah cukup.
 
     /**
+     * Cuma field yang BENAR-BENAR dikirim di request yang masuk sini —
+     * SENGAJA tidak default-kan field relevan yang tidak dikirim ke null.
+     * EmployeeMovementService yang menentukan: field yang tidak ada di sini
+     * artinya "tidak diubah, pertahankan nilai current Employee", BUKAN
+     * "kosongkan". Ini penting buat kasus seperti Extend Contract yang cuma
+     * kirim contract_end_date — employment_type_id/contract_start_date
+     * TIDAK BOLEH ikut ke-null-kan gara-gara tidak disertakan.
+     *
      * @return array<string, mixed>
      */
     public function afterValues(): array
@@ -54,6 +62,7 @@ class StoreEmployeeMovementRequest extends FormRequest
         $type = EmployeeMovementType::from($this->validated('movement_type'));
 
         return collect($type->relevantFields())
+            ->filter(fn (string $field) => $this->has($field))
             ->mapWithKeys(fn (string $field) => [$field => $this->input($field)])
             ->all();
     }

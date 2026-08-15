@@ -23,9 +23,26 @@ class EmployeeMovementController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $movements = $this->scope
-            ->apply(EmployeeMovement::query()->with(['employee', 'requestedBy'])->latest('effective_date'), $request->user())
-            ->paginate(15);
+        $query = $this->scope
+            ->apply(EmployeeMovement::query()->with(['employee', 'requestedBy'])->latest('effective_date'), $request->user());
+
+        if ($employeeId = $request->query('employee_id')) {
+            $query->where('employee_id', $employeeId);
+        }
+        if ($type = $request->query('movement_type')) {
+            $query->where('movement_type', $type);
+        }
+        if ($status = $request->query('status')) {
+            $query->where('status', $status);
+        }
+        if ($from = $request->query('effective_date_from')) {
+            $query->whereDate('effective_date', '>=', $from);
+        }
+        if ($to = $request->query('effective_date_to')) {
+            $query->whereDate('effective_date', '<=', $to);
+        }
+
+        $movements = $query->paginate(15);
 
         return response()->json(['success' => true, 'message' => 'OK', 'data' => $movements]);
     }

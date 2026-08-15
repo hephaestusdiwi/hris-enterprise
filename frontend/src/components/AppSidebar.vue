@@ -4,7 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import {
   LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound,
   CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch, CheckCircle2, Layers, CalendarRange, BarChart3,
-  Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle, HandCoins,
+  Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle, HandCoins, 
   ShieldCheck,
   WalletCards,
 } from 'lucide-vue-next'
@@ -53,7 +53,21 @@ const groups: MenuGroup[] = [
     label: 'Employees',
     icon: UserRound,
     items: [
-      { name: 'employees', label: 'Employee', icon: UserRound, to: '/employees', permission: 'view employees' },
+      {
+        name: 'employees',
+        label: 'Employee',
+        icon: UserRound,
+        to: '/employees',
+        permission: 'view employees',
+      },
+      {
+        name: 'contract-probation',
+        label: 'Contract & Probation',
+        icon: CalendarClock,
+        to: '/employees/contract-probation',
+        permission: 'view employees',
+      },
+      { name: 'employee-movements', label: 'Employee Movement', icon: GitBranch, to: '/employee-movements', permission: 'view employee movements' },
     ],
   },
   {

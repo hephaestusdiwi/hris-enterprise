@@ -96,6 +96,10 @@ class AppServiceProvider extends ServiceProvider
             \App\Modules\Employee\Contracts\EmployeeHierarchyServiceInterface::class,
             \App\Modules\Employee\Services\EmployeeHierarchyService::class,
         );
+        $this->app->bind(
+            \App\Modules\Employee\Contracts\ContractProbationServiceInterface::class,
+            \App\Modules\Employee\Services\ContractProbationService::class,
+        );
     }
 
     /**

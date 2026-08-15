@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
-import { ArrowLeft, Users, UserRound } from 'lucide-vue-next'
+import { ArrowLeft, Users, UserRound, GitBranch } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
+import EmployeeMovementFormModal from '@/components/employee/EmployeeMovementFormModal.vue'
 
 interface HierarchyPerson {
   id: number
   name: string
   position: string | null
-  photo_url: string | null
 }
 
 interface EmployeeDetail {
@@ -17,6 +17,8 @@ interface EmployeeDetail {
   first_name: string
   last_name: string | null
   photo_url: string | null
+  contract_end_date: string | null
+  probation_end_date: string | null
   company: { id: number; name: string } | null
   branch: { id: number; name: string } | null
   department: { id: number; name: string } | null
@@ -37,6 +39,24 @@ const loading = ref(true)
 const errorMessage = ref('')
 
 const employeeId = computed(() => Number(route.params.id))
+
+function remainingDays(dateStr: string | null): number | null {
+  if (!dateStr) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const end = new Date(dateStr)
+  end.setHours(0, 0, 0, 0)
+  return Math.round((end.getTime() - today.getTime()) / 86400000)
+}
+
+const contractRemaining = computed(() => remainingDays(employee.value?.contract_end_date ?? null))
+const probationRemaining = computed(() => remainingDays(employee.value?.probation_end_date ?? null))
+
+const movementModalType = ref<string | null>(null)
+function onMovementCreated() {
+  movementModalType.value = null
+  loadEmployee(employeeId.value) // refresh info dasar (nggak berubah sampai movement di-approve, tapi aman di-refresh)
+}
 
 const fullName = computed(() => {
   if (!employee.value) return ''
@@ -141,6 +161,35 @@ watch(employeeId, (id) => {
         </span>
       </div>
 
+      <div
+        v-if="employee.contract_end_date || employee.probation_end_date"
+        class="grid gap-4 sm:grid-cols-2"
+      >
+        <div v-if="employee.contract_end_date" class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+          <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Contract End Date</p>
+          <p class="mt-1 text-sm font-semibold text-slate-800">{{ employee.contract_end_date }}</p>
+          <p
+            v-if="contractRemaining !== null"
+            class="mt-1 text-xs"
+            :class="contractRemaining < 0 ? 'text-slate-400' : contractRemaining <= 7 ? 'font-medium text-red-600' : 'text-slate-500'"
+          >
+            {{ contractRemaining < 0 ? 'Sudah lewat' : contractRemaining === 0 ? 'Hari ini' : `${contractRemaining} hari lagi` }}
+          </p>
+        </div>
+
+        <div v-if="employee.probation_end_date" class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+          <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Probation End Date</p>
+          <p class="mt-1 text-sm font-semibold text-slate-800">{{ employee.probation_end_date }}</p>
+          <p
+            v-if="probationRemaining !== null"
+            class="mt-1 text-xs"
+            :class="probationRemaining < 0 ? 'text-slate-400' : probationRemaining <= 7 ? 'font-medium text-red-600' : 'text-slate-500'"
+          >
+            {{ probationRemaining < 0 ? 'Sudah lewat' : probationRemaining === 0 ? 'Hari ini' : `${probationRemaining} hari lagi` }}
+          </p>
+        </div>
+      </div>
+
       <div class="grid gap-6 sm:grid-cols-2">
         <!-- Manager -->
         <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
@@ -152,16 +201,8 @@ watch(employeeId, (id) => {
             class="mt-3 flex w-full items-center gap-3 rounded-xl border border-slate-100 p-3 text-left transition hover:border-primary/30 hover:bg-primary-soft/40"
             @click="goToEmployee(manager.id)"
           >
-            <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-soft text-xs font-semibold text-primary-dark">
-              <img
-                v-if="manager.photo_url"
-                :src="manager.photo_url"
-                :alt="manager.name"
-                class="h-full w-full object-cover"
-              />
-              <span v-else>
-                {{ manager.name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join('') }}
-              </span>
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+              <UserRound class="h-4 w-4" :stroke-width="2" />
             </div>
             <div class="min-w-0">
               <p class="truncate text-sm font-medium text-slate-800">{{ manager.name }}</p>
@@ -191,16 +232,8 @@ watch(employeeId, (id) => {
               class="flex w-full items-center gap-3 rounded-xl border border-slate-100 p-3 text-left transition hover:border-primary/30 hover:bg-primary-soft/40"
               @click="goToEmployee(report.id)"
             >
-              <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-soft text-xs font-semibold text-primary-dark">
-                <img
-                  v-if="report.photo_url"
-                  :src="report.photo_url"
-                  :alt="report.name"
-                  class="h-full w-full object-cover"
-                />
-                <span v-else>
-                  {{ report.name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join('') }}
-                </span>
+              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                <UserRound class="h-4 w-4" :stroke-width="2" />
               </div>
               <div class="min-w-0">
                 <p class="truncate text-sm font-medium text-slate-800">{{ report.name }}</p>
@@ -215,6 +248,44 @@ watch(employeeId, (id) => {
           </div>
         </div>
       </div>
+
+      <!-- Employee Movement actions — SEMUA perubahan lifecycle field lewat
+           sini, bukan edit langsung. -->
+      <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-slate-700">Employment Actions</h2>
+          <RouterLink
+            :to="{ name: 'employee-movements' }"
+            class="flex items-center gap-1 text-xs font-medium text-primary-dark hover:underline"
+          >
+            <GitBranch class="h-3.5 w-3.5" :stroke-width="2" />
+            Lihat Riwayat Movement
+          </RouterLink>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button type="button" @click="movementModalType = 'transfer'" class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50">
+            Transfer
+          </button>
+          <button type="button" @click="movementModalType = 'contract_change'" class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50">
+            Extend Contract
+          </button>
+          <button type="button" @click="movementModalType = 'probation_confirmed'" class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50">
+            Change Status
+          </button>
+          <button type="button" @click="movementModalType = 'resignation'" class="rounded-xl border border-red-100 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50">
+            Resignation
+          </button>
+        </div>
+      </div>
     </template>
+
+    <EmployeeMovementFormModal
+      v-if="movementModalType && employee"
+      :employee-id="employee.id"
+      :employee-name="fullName"
+      :default-type="movementModalType"
+      @close="movementModalType = null"
+      @created="onMovementCreated"
+    />
   </div>
 </template>

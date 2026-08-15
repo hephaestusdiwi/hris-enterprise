@@ -19,11 +19,12 @@ Route::middleware('permission:view payroll runs')->group(function () {
 Route::middleware('permission:create payroll runs')->group(function () {
     Route::post('/payroll-runs', [PayrollRunController::class, 'store']);
     Route::put('/payroll-runs/{payrollRun}/participants', [PayrollRunController::class, 'updateParticipants']);
-    // Satu endpoint buat generate pertama kali MAUPUN recalculate — lihat PayrollRunService::proceedPayslip()
     Route::post('/payroll-runs/{payrollRun}/proceed-payslip', [PayrollRunController::class, 'proceedPayslip']);
-    Route::post('/payroll-runs/{payrollRun}/request-approval', [PayrollRunController::class, 'requestApproval']);
     Route::post('/payroll-runs/{payrollRun}/cancel', [PayrollRunController::class, 'cancel']);
 });
+
+Route::middleware('permission:request payroll approval')
+    ->post('/payroll-runs/{payrollRun}/request-approval', [PayrollRunController::class, 'requestApproval']);
 
 Route::middleware('permission:lock payroll runs')->post('/payroll-runs/{payrollRun}/lock', [PayrollRunController::class, 'lock']);
 

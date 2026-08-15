@@ -55,4 +55,26 @@ class CandidateController extends Controller
             'data' => $candidate->load(['jobVacancy', 'stageHistories.changedBy']),
         ]);
     }
+
+    public function select(Candidate $candidate, Request $request): JsonResponse
+    {
+        $this->authorize('select', Candidate::class);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Candidate berhasil ditandai Selected.',
+            'data' => $this->service->select($candidate, $request->user(), $request->input('notes')),
+        ]);
+    }
+
+    public function hire(Candidate $candidate, Request $request): JsonResponse
+    {
+        $this->authorize('hire', Candidate::class);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Candidate berhasil di-Hired.',
+            'data' => $this->service->hire($candidate, $request->user(), $request->input('notes')),
+        ]);
+    }
 }

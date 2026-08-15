@@ -3,11 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Modules\Employee\Contracts\ContractProbationServiceInterface;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
 
 class DashboardController extends Controller
 {
+    public function __construct(private ContractProbationServiceInterface $contractProbationService)
+    {
+    }
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -24,8 +29,28 @@ class DashboardController extends Controller
                 'roles' => $user->getRoleNames(),
                 'permissions' => $user->getAllPermissions()->pluck('name'),
                 'stats' => $this->statsForUser($user),
+                'contract_probation' => $this->contractProbationSummary($user),
             ],
         ]);
+    }
+
+    /**
+     * Cuma dihitung kalau user punya permission 'view employees' — user
+     * yang nggak punya akses Employee sama sekali (mis. role employee polos
+     * tanpa hierarchy) nggak perlu query ini jalan sia-sia.
+     */
+    private function contractProbationSummary(User $user): ?array
+    {
+        if (! $user->can('view employees')) {
+            return null;
+        }
+
+        $items = $this->contractProbationService->upcoming($user);
+
+        return [
+            'contract_ending_soon' => $items->where('type', 'contract')->count(),
+            'probation_ending_soon' => $items->where('type', 'probation')->count(),
+        ];
     }
 
     /**

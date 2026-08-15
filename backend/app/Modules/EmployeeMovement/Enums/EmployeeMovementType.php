@@ -25,7 +25,11 @@ enum EmployeeMovementType: string
             self::Transfer => ['company_id', 'branch_id', 'department_id', 'position_id', 'manager_employee_id'],
             self::Promotion, self::Demotion => ['job_level_id', 'position_id'],
             self::ContractChange => ['employment_type_id', 'contract_start_date', 'contract_end_date'],
-            self::ProbationConfirmed => ['probation_end_date', 'employment_type_id'],
+            // Dipakai juga untuk aksi "Change Status" generik (bukan cuma
+            // probation) — employment_status_id ditambahkan di sini karena
+            // ini satu-satunya movement_type non-Resignation yang relevan
+            // buat perubahan status tanpa embel-embel resign_date.
+            self::ProbationConfirmed => ['probation_end_date', 'employment_type_id', 'employment_status_id'],
             self::Resignation => ['employment_status_id', 'resign_date'],
             self::Rehire => ['employment_status_id', 'resign_date', 'join_date'],
         };

@@ -40,7 +40,15 @@ class EmployeeMovementService
 
         $fields = $type->relevantFields();
         $beforeSnapshot = collect($fields)->mapWithKeys(fn (string $field) => [$field => $this->normalizeValue($employee->{$field})])->all();
-        $afterSnapshot = collect($fields)->mapWithKeys(fn (string $field) => [$field => $this->normalizeValue($afterValues[$field] ?? null)])->all();
+        // Field yang TIDAK ADA di $afterValues (tidak dikirim caller) fallback
+        // ke nilai current Employee — bukan null. Field yang ADA di
+        // $afterValues (termasuk yang sengaja bernilai null, mis. copot
+        // manager saat Transfer) dipakai apa adanya.
+        $afterSnapshot = collect($fields)->mapWithKeys(function (string $field) use ($employee, $afterValues) {
+            $value = array_key_exists($field, $afterValues) ? $afterValues[$field] : $employee->{$field};
+
+            return [$field => $this->normalizeValue($value)];
+        })->all();
 
         return DB::transaction(function () use ($employee, $type, $effectiveDate, $beforeSnapshot, $afterSnapshot, $requestedByUserId, $reason) {
             $movement = EmployeeMovement::create([

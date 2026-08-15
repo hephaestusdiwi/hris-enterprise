@@ -133,4 +133,55 @@ class EmployeeMovementFlowTest extends TestCase
         $blocked->assertStatus(422);
         $blocked->assertJsonValidationErrors(['company_id']);
     }
+
+    /**
+     * Regression test (Phase 1 Contract & Probation foundation): movement
+     * ContractChange yang cuma kirim contract_end_date (skenario "Extend
+     * Contract" — HR cuma mau perpanjang tanggal) TIDAK BOLEH nge-null-in
+     * employment_type_id/contract_start_date yang tidak ikut dikirim.
+     */
+    public function test_partial_contract_change_movement_preserves_untouched_fields(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $contractType = \App\Modules\EmploymentType\Models\EmploymentType::where('code', 'CONTRACT')->firstOrFail();
+        $employee = Employee::factory()->create([
+            'employment_type_id' => $contractType->id,
+            'contract_start_date' => '2026-01-01',
+            'contract_end_date' => '2026-08-31',
+        ]);
+
+        $approvalFlow = ApprovalFlow::create([
+            'company_id' => $employee->company_id,
+            'name' => 'Default Flow',
+            'code' => 'DEFAULT-'.$employee->company_id,
+            'is_active' => true,
+        ]);
+        ApprovalStep::create([
+            'approval_flow_id' => $approvalFlow->id,
+            'sequence' => 1,
+            'approver_type' => ApproverType::SpecificEmployee->value,
+            'approver_employee_id' => $employee->id,
+            'is_active' => true,
+        ]);
+
+        // SENGAJA cuma kirim contract_end_date, TIDAK kirim employment_type_id
+        // maupun contract_start_date — persis skenario "Extend Contract".
+        $response = $this->actingAs($admin)->postJson("/api/employees/{$employee->id}/movements", [
+            'movement_type' => 'contract_change',
+            'effective_date' => now()->toDateString(),
+            'contract_end_date' => '2026-12-31',
+        ]);
+
+        $response->assertStatus(201);
+
+        $movement = \App\Modules\EmployeeMovement\Models\EmployeeMovement::first();
+
+        $this->assertSame($contractType->id, $movement->after_snapshot['employment_type_id']);
+        $this->assertSame('2026-01-01', $movement->after_snapshot['contract_start_date']);
+        $this->assertSame('2026-12-31', $movement->after_snapshot['contract_end_date']);
+    }
 }

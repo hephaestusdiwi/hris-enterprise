@@ -22,3 +22,5 @@ Schedule::command('leave-balance:sync')->yearlyOn(1, 1, '00:10');
 // Safety net harian — nangkep employee yang baru eligible di tengah tahun murni karena
 // waktu berjalan (mis. baru genap min_service_months), yang gak ke-trigger oleh event Employee.
 Schedule::command('leave-balance:sync')->dailyAt('01:00');
+// Phase 3 Contract & Probation — cek milestone H-30/H-14/H-7 tiap hari.
+Schedule::command('contract-probation:send-reminders')->dailyAt('07:00');

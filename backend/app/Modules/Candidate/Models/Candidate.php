@@ -71,6 +71,11 @@ class Candidate extends Model
         return $this->hasMany(Candidate::class, 'reconsidered_from_candidate_id');
     }
 
+    public function offerings(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Offering\Models\Offering::class);
+    }
+
     // Phase 4+ tinggal nambah relasi di sini tanpa ubah tabel ini:
     // public function screenings(): HasMany { return $this->hasMany(Screening::class); }
     // public function interviews(): HasMany { return $this->hasMany(Interview::class); }

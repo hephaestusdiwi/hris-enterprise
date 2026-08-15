@@ -7,6 +7,8 @@ import DepartmentListView from '../views/DepartmentListView.vue'
 import PositionListView from '../views/PositionListView.vue'
 import EmployeeListView from '@/views/EmployeeListView.vue'
 import EmployeeDetailView from '@/views/EmployeeDetailView.vue'
+import ContractProbationListView from '@/views/ContractProbationListView.vue'
+import EmployeeMovementListView from '@/views/EmployeeMovementListView.vue'
 import HolidayListView from '@/views/HolidayListView.vue'
 import JobLevelListView from '@/views/JobLevelListView.vue'
 import ShiftListView from '@/views/ShiftListView.vue'
@@ -324,6 +326,18 @@ const router = createRouter({
       path: '/payroll-runs/:id',
       name: 'payroll-run-detail',
       component: PayrollRunDetailView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/employees/contract-probation',
+      name: 'contract-probation',
+      component: ContractProbationListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/employee-movements',
+      name: 'employee-movements',
+      component: EmployeeMovementListView,
       meta: { requiresAuth: true },
     },
     {

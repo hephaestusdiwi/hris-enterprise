@@ -19,6 +19,7 @@ interface LoanRow {
   id: number
   principal: string
   interest_rate: string | null
+  interest_type: 'flat' | 'effective' | null
   tenor: number
   installment_amount: string
   total_repayment: string
@@ -54,6 +55,12 @@ const installmentStatusClass: Record<InstallmentStatus, string> = {
 
 function formatCurrency(value: string | number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Number(value))
+}
+
+function interestTypeLabel(type: LoanRow['interest_type']) {
+  if (type === 'flat') return 'Flat'
+  if (type === 'effective') return 'Efektif'
+  return '-'
 }
 
 const loans = ref<LoanRow[]>([])
@@ -119,7 +126,12 @@ onMounted(loadLoans)
       >
         <div>
           <p class="font-medium text-slate-800">{{ formatCurrency(row.principal) }}</p>
-          <p class="mt-0.5 text-xs text-slate-500">{{ row.tenor }}x cicilan · {{ formatCurrency(row.installment_amount) }}/bulan</p>
+          <p class="mt-0.5 text-xs text-slate-500">
+            {{ row.tenor }}x cicilan · {{ formatCurrency(row.installment_amount) }}/bulan
+            <span v-if="row.interest_rate !== null">
+              · bunga {{ row.interest_rate }}% {{ interestTypeLabel(row.interest_type) }}
+            </span>
+          </p>
         </div>
         <span class="rounded-full px-2.5 py-1 text-xs font-medium" :class="statusBadgeClass[row.status]">
           {{ statusLabels[row.status] }}
@@ -146,8 +158,13 @@ onMounted(loadLoans)
               <p class="text-xs text-primary-dark">Principal</p>
               <p class="text-xl font-semibold text-primary-dark">{{ formatCurrency(drawerTarget.principal) }}</p>
               <p class="mt-1 text-xs text-slate-500">
-                {{ drawerTarget.tenor }}x cicilan · {{ formatCurrency(drawerTarget.installment_amount) }}/bulan
-                <span v-if="drawerTarget.interest_rate">· bunga {{ drawerTarget.interest_rate }}%</span>
+                {{ drawerTarget.tenor }}x cicilan ·
+                {{ formatCurrency(drawerTarget.installment_amount) }}/bulan
+
+                <span v-if="drawerTarget.interest_rate !== null">
+                  · bunga {{ drawerTarget.interest_rate }}%
+                  {{ interestTypeLabel(drawerTarget.interest_type) }}
+                </span>
               </p>
             </div>
 
