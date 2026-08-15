@@ -10,6 +10,6 @@ enum CandidateStatus: string
     case Offering = 'offering';
     case Offered = 'offered';
     case Hold = 'hold';
-    case Hire = 'hire';
+    case Hired = 'hired';
     case Rejected = 'rejected';
 }

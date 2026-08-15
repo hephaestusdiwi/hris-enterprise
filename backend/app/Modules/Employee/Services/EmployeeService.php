@@ -10,8 +10,10 @@ use Illuminate\Support\Str;
 
 class EmployeeService
 {
-    public function __construct(private LeaveBalanceGenerationService $leaveBalanceGenerationService)
-    {
+    public function __construct(
+        private LeaveBalanceGenerationService $leaveBalanceGenerationService,
+        private EmployeeNumberGenerator $employeeNumberGenerator, // BARU
+    ) {
     }
 
     /**
@@ -31,6 +33,14 @@ class EmployeeService
         return DB::transaction(function () use ($data) {
             $inviteLink = null;
 
+            // BARU — tambahan 3 baris, tidak mengubah apapun di bawahnya.
+            // employee_number selalu ada dari HTTP flow existing (StoreEmployeeRequest
+            // mewajibkannya), jadi baris ini TIDAK PERNAH tereksekusi untuk flow itu —
+            // cuma aktif untuk caller lain (Recruitment) yang tidak menyediakannya.
+            if (empty($data['employee_number'])) {
+                $data['employee_number'] = $this->employeeNumberGenerator->generate($data['company_id']);
+            }
+
             if (! empty($data['new_user']['email'])) {
                 [$user, $inviteLink] = $this->createPendingUser(
                     trim($data['first_name'].' '.($data['last_name'] ?? '')),
@@ -44,16 +54,9 @@ class EmployeeService
 
             $employee = Employee::create($data);
 
-            // Generate leave balance periode berjalan otomatis begitu Employee
-            // dibuat — supaya karyawan baru bisa langsung ajukan cuti tanpa
-            // perlu command manual (lihat GenerateLeaveBalances untuk backfill
-            // massal / generate ulang tahunan).
             $this->leaveBalanceGenerationService->generateForEmployee($employee, now());
 
-            return [
-                'employee' => $employee,
-                'invite_link' => $inviteLink,
-            ];
+            return ['employee' => $employee, 'invite_link' => $inviteLink];
         });
     }
 

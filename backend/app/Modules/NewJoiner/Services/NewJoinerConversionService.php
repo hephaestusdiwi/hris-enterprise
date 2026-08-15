@@ -1,4 +1,5 @@
-<?php // backend/app/Modules/NewJoiner/Services/NewJoinerConversionService.php
+<?php
+
 namespace App\Modules\NewJoiner\Services;
 
 use App\Modules\Employee\Models\Employee;
@@ -11,7 +12,6 @@ use App\Modules\NewJoiner\Models\NewJoiner;
 use App\Modules\Offering\Enums\OfferingStatus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 
 class NewJoinerConversionService
 {
@@ -21,25 +21,40 @@ class NewJoinerConversionService
     }
 
     /**
-     * @param array{job_level_id?: ?int, working_schedule_id?: ?int, employment_status_id?: ?int, manager_employee_id?: ?int} $organizationOverrides
-     *        Field organisasi yang memang belum bisa diisi dari Recruitment — HR lengkapi saat trigger action ini.
+     * @param array{
+     *     job_level_id?: ?int,
+     *     working_schedule_id?: ?int,
+     *     employment_status_id?: ?int,
+     *     manager_employee_id?: ?int
+     * } $organizationOverrides
+     *
+     * Field organisasi yang memang belum bisa diisi dari Recruitment —
+     * HR lengkapi saat trigger action ini.
      */
-    public function convertToEmployee(NewJoiner $newJoiner, array $organizationOverrides = []): Employee
-    {
+    public function convertToEmployee(
+        NewJoiner $newJoiner,
+        array $organizationOverrides = []
+    ): Employee {
         $this->assertEligible($newJoiner);
 
         $candidate = $newJoiner->candidate;
         $vacancy = $candidate->jobVacancy;
-        $offering = $candidate->offerings()->where('status', OfferingStatus::Accepted->value)->latest()->first();
+
+        $offering = $candidate
+            ->offerings()
+            ->where('status', OfferingStatus::Accepted->value)
+            ->latest()
+            ->first();
 
         if (! $offering) {
-            throw new NewJoinerValidationException('Tidak ditemukan Offering Accepted untuk Candidate ini.');
+            throw new NewJoinerValidationException(
+                'Tidak ditemukan Offering Accepted untuk Candidate ini.'
+            );
         }
 
         [$firstName, $lastName] = $this->splitName($candidate->full_name);
 
         $data = [
-            'employee_number' => $this->generateEmployeeNumber($vacancy->company_id),
             'company_id' => $vacancy->company_id,
             'branch_id' => $vacancy->branch_id,
             'department_id' => $vacancy->department_id,
@@ -49,8 +64,13 @@ class NewJoinerConversionService
             'employment_status_id' => $organizationOverrides['employment_status_id'] ?? null,
             'employment_type_id' => $vacancy->employment_type_id,
             'manager_employee_id' => $organizationOverrides['manager_employee_id'] ?? null,
-            'new_user' => ['email' => $candidate->email],
+
+            'new_user' => [
+                'email' => $candidate->email,
+            ],
+
             'join_date' => $offering->proposed_start_date->toDateString(),
+
             'first_name' => $firstName,
             'last_name' => $lastName,
             'gender' => $newJoiner->gender,
@@ -72,11 +92,17 @@ class NewJoinerConversionService
         $this->validateAgainstStoreEmployeeRequest($data);
 
         return DB::transaction(function () use ($newJoiner, $candidate, $data) {
-            $result = $this->employeeService->createWithUserAccount($data); // flow existing, apa adanya
+            $result = $this->employeeService->createWithUserAccount($data);
+
             $employee = $result['employee'];
 
-            $candidate->update(['converted_employee_id' => $employee->id]);
-            $newJoiner->update(['employee_id' => $employee->id]);
+            $candidate->update([
+                'converted_employee_id' => $employee->id,
+            ]);
+
+            $newJoiner->update([
+                'employee_id' => $employee->id,
+            ]);
 
             return $employee;
         });
@@ -84,32 +110,57 @@ class NewJoinerConversionService
 
     private function assertEligible(NewJoiner $newJoiner): void
     {
-        if ($newJoiner->status !== NewJoinerStatus::Submitted || ! $newJoiner->ready_for_employee_at) {
-            throw new NewJoinerValidationException('New Joiner harus Submitted dan sudah melalui "Proceed as employee" terlebih dahulu.');
+        if (
+            $newJoiner->status !== NewJoinerStatus::Submitted
+            || ! $newJoiner->ready_for_employee_at
+        ) {
+            throw new NewJoinerValidationException(
+                'New Joiner harus Submitted dan sudah melalui "Proceed as employee" terlebih dahulu.'
+            );
         }
 
         if ($newJoiner->employee_id) {
-            throw new NewJoinerValidationException('New Joiner ini sudah pernah dikonversi menjadi Employee.');
+            throw new NewJoinerValidationException(
+                'New Joiner ini sudah pernah dikonversi menjadi Employee.'
+            );
         }
 
         if ($newJoiner->candidate->converted_employee_id) {
-            throw new NewJoinerValidationException('Candidate ini sudah pernah dikonversi menjadi Employee.');
+            throw new NewJoinerValidationException(
+                'Candidate ini sudah pernah dikonversi menjadi Employee.'
+            );
         }
     }
 
     private function validateAgainstStoreEmployeeRequest(array $data): void
     {
-        Validator::make($data, (new StoreEmployeeRequest())->rules())->validate();
+        $rules = (new StoreEmployeeRequest())->rules();
 
-        // Replikasi manual 1 bagian withValidator() yang relevan di jalur ini (Contract
-        // employment type wajib contract dates). Cek user_id XOR new_user TIDAK
-        // direplikasi — jalur ini secara struktural selalu isi new_user saja.
+        // employee_number sekarang dibuat otomatis oleh EmployeeService.
+        // Jadi field ini tidak perlu divalidasi sebagai input dari conversion flow.
+        unset($rules['employee_number']);
+
+        Validator::make($data, $rules)->validate();
+
+        // Replikasi manual 1 bagian withValidator() yang relevan di jalur ini:
+        // Contract employment type wajib memiliki contract start/end date.
+        //
+        // Cek user_id XOR new_user TIDAK direplikasi karena jalur ini
+        // secara struktural selalu menggunakan new_user.
         if (! empty($data['employment_type_id'])) {
             $type = EmploymentType::find($data['employment_type_id']);
 
-            if ($type && $type->code === 'CONTRACT'
-                && (empty($data['contract_start_date']) || empty($data['contract_end_date']))) {
-                throw new NewJoinerValidationException('Employment Type Contract wajib Contract Start/End Date — lengkapi manual sebelum konversi.');
+            if (
+                $type
+                && $type->code === 'CONTRACT'
+                && (
+                    empty($data['contract_start_date'])
+                    || empty($data['contract_end_date'])
+                )
+            ) {
+                throw new NewJoinerValidationException(
+                    'Employment Type Contract wajib Contract Start/End Date — lengkapi manual sebelum konversi.'
+                );
             }
         }
     }
@@ -119,20 +170,9 @@ class NewJoinerConversionService
     {
         $parts = explode(' ', trim($fullName), 2);
 
-        return [$parts[0], $parts[1] ?? null];
-    }
-
-    /**
-     * GAP: Employee module belum punya employee_number generator (StoreEmployeeRequest
-     * mewajibkan input manual). Tambalan sementara KHUSUS jalur ini — tidak mengubah
-     * Employee module. Ganti pemanggilan ini kalau nanti ada generator resmi.
-     */
-    private function generateEmployeeNumber(int $companyId): string
-    {
-        do {
-            $number = sprintf('EMP-%d-%s', $companyId, strtoupper(Str::random(6)));
-        } while (Employee::where('employee_number', $number)->exists());
-
-        return $number;
+        return [
+            $parts[0],
+            $parts[1] ?? null,
+        ];
     }
 }
