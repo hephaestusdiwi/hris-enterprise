@@ -126,7 +126,7 @@ class EmployeeController extends Controller
         ]);
     }
 
-    private function generateEmployeeNumber(): string
+    public static function generateEmployeeNumber(): string
     {
         $year = date('Y');
         $prefix = "EMP-{$year}-";

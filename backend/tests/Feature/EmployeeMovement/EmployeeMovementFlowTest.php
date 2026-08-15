@@ -37,7 +37,8 @@ class EmployeeMovementFlowTest extends TestCase
             'manager_employee_id' => null,
         ]);
 
-        $response->assertStatus(500); // EmployeeMovementException, belum ada exception-handler khusus di test env
+        $response->assertStatus(422);
+        $this->assertStringContainsString('Approval Flow', $response->json('message'));
 
         $this->assertDatabaseCount('employee_movements', 0);
     }

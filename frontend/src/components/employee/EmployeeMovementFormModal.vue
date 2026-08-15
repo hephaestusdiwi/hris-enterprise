@@ -9,6 +9,21 @@ const props = defineProps<{
   employeeId: number
   employeeName: string
   defaultType?: string
+  currentEmployee?: {
+    company_id: number | null
+    branch_id: number | null
+    department_id: number | null
+    position_id: number | null
+    job_level_id: number | null
+    manager_employee_id: number | null
+    employment_type_id: number | null
+    employment_status_id: number | null
+    contract_start_date: string | null
+    contract_end_date: string | null
+    probation_end_date: string | null
+    resign_date: string | null
+    join_date: string | null
+  }
 }>()
 const emit = defineEmits<{ close: []; created: [] }>()
 
@@ -28,20 +43,23 @@ const reason = ref('')
 const saving = ref(false)
 const errorMessage = ref('')
 
+// Prefill dari data Employee SEKARANG — HR lihat "data saat ini" dulu,
+// baru ganti field yang memang mau diubah. Field yang tidak diapa-apakan
+// (masih sama seperti current) otomatis jadi no-op di backend.
 const form = ref<Record<string, string | number | null>>({
-  company_id: null,
-  branch_id: null,
-  department_id: null,
-  position_id: null,
-  manager_employee_id: null,
-  job_level_id: null,
-  employment_type_id: null,
-  employment_status_id: null,
-  contract_start_date: null,
-  contract_end_date: null,
-  probation_end_date: null,
-  resign_date: null,
-  join_date: null,
+  company_id: props.currentEmployee?.company_id ?? null,
+  branch_id: props.currentEmployee?.branch_id ?? null,
+  department_id: props.currentEmployee?.department_id ?? null,
+  position_id: props.currentEmployee?.position_id ?? null,
+  manager_employee_id: props.currentEmployee?.manager_employee_id ?? null,
+  job_level_id: props.currentEmployee?.job_level_id ?? null,
+  employment_type_id: props.currentEmployee?.employment_type_id ?? null,
+  employment_status_id: props.currentEmployee?.employment_status_id ?? null,
+  contract_start_date: props.currentEmployee?.contract_start_date ?? null,
+  contract_end_date: props.currentEmployee?.contract_end_date ?? null,
+  probation_end_date: props.currentEmployee?.probation_end_date ?? null,
+  resign_date: props.currentEmployee?.resign_date ?? null,
+  join_date: props.currentEmployee?.join_date ?? null,
 })
 
 const companies = ref<Ref[]>([])
@@ -229,7 +247,7 @@ async function submit() {
         </div>
 
         <p class="text-xs text-slate-400">
-          Field yang tidak diisi TIDAK akan diubah (tetap pakai nilai current employee) — cuma field yang kamu isi di atas yang benar-benar berubah.
+          Field di bawah sudah terisi data employee saat ini. Ganti field yang memang mau diubah — field yang kamu biarkan sama seperti sekarang tidak akan tercatat sebagai perubahan.
         </p>
         <p v-if="errorMessage" class="text-xs text-red-600">{{ errorMessage }}</p>
 

@@ -12,7 +12,6 @@ class EmployeeService
 {
     public function __construct(
         private LeaveBalanceGenerationService $leaveBalanceGenerationService,
-        private EmployeeNumberGenerator $employeeNumberGenerator, // BARU
     ) {
     }
 
@@ -38,7 +37,7 @@ class EmployeeService
             // mewajibkannya), jadi baris ini TIDAK PERNAH tereksekusi untuk flow itu —
             // cuma aktif untuk caller lain (Recruitment) yang tidak menyediakannya.
             if (empty($data['employee_number'])) {
-                $data['employee_number'] = $this->employeeNumberGenerator->generate($data['company_id']);
+                $data['employee_number'] = \App\Modules\Employee\Controllers\EmployeeController::generateEmployeeNumber();
             }
 
             if (! empty($data['new_user']['email'])) {

@@ -66,8 +66,59 @@ async function load() {
   }
 }
 
+interface PendingApproval {
+  id: number
+  sequence: number
+  approval_step: { id: number; sequence: number; approver_type: string }
+  request: {
+    id: number
+    employee: { id: number; first_name: string; last_name: string | null }
+    employee_movement: {
+      id: number
+      movement_type: string
+      effective_date: string
+      reason: string | null
+      before_snapshot: Record<string, unknown>
+      after_snapshot: Record<string, unknown>
+    }
+  }
+}
+
+const pendingApprovals = ref<PendingApproval[]>([])
+const pendingLoading = ref(true)
+const decidingId = ref<number | null>(null)
+
+async function loadPending() {
+  pendingLoading.value = true
+  try {
+    const response = await apiClient.get('/api/employee-movements/approvals/pending')
+    pendingApprovals.value = response.data.data
+  } catch {
+    // Diam-diam gagal — bukan bagian utama halaman ini, jangan timpa error state list movement.
+  } finally {
+    pendingLoading.value = false
+  }
+}
+
+async function decide(decisionId: number, action: 'approve' | 'reject') {
+  decidingId.value = decisionId
+  try {
+    await apiClient.post(`/api/employee-movements/approvals/${decisionId}/decide`, { action })
+    pendingApprovals.value = pendingApprovals.value.filter((p) => p.id !== decisionId)
+    await load() // refresh daftar utama, status movement-nya berubah
+  } catch (err: unknown) {
+    const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+    alert(message ?? 'Gagal menyimpan keputusan approval.')
+  } finally {
+    decidingId.value = null
+  }
+}
+
 watch(filters, load, { deep: true })
-onMounted(load)
+onMounted(() => {
+  load()
+  loadPending()
+})
 
 const detailTarget = ref<MovementRow | null>(null)
 
@@ -93,6 +144,53 @@ const FIELD_LABELS: Record<string, string> = {
     <div>
       <h1 class="text-lg font-semibold text-slate-900">Employee Movement</h1>
       <p class="mt-0.5 text-sm text-slate-500">Riwayat perubahan lifecycle employee (transfer, promosi, contract, status, dst).</p>
+    </div>
+
+    <div v-if="!pendingLoading && pendingApprovals.length > 0" class="space-y-2 rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+      <h2 class="text-sm font-semibold text-amber-800">
+        Pending Approval Saya ({{ pendingApprovals.length }})
+      </h2>
+      <div
+        v-for="p in pendingApprovals"
+        :key="p.id"
+        class="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-3"
+      >
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-slate-800">
+            {{ MOVEMENT_TYPE_LABELS[p.request.employee_movement.movement_type] ?? p.request.employee_movement.movement_type }}
+            — {{ p.request.employee.first_name }} {{ p.request.employee.last_name }}
+          </p>
+          <p class="text-xs text-slate-400">
+            Effective {{ p.request.employee_movement.effective_date }}
+            <span v-if="p.request.employee_movement.reason"> &middot; {{ p.request.employee_movement.reason }}</span>
+          </p>
+        </div>
+        <div class="flex shrink-0 gap-2">
+          <button
+            type="button"
+            @click="detailTarget = { ...p.request.employee_movement, employee: p.request.employee, status: 'pending_approval', requested_by: null } as unknown as MovementRow"
+            class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+          >
+            Lihat Detail
+          </button>
+          <button
+            type="button"
+            :disabled="decidingId === p.id"
+            @click="decide(p.id, 'reject')"
+            class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+          >
+            Reject
+          </button>
+          <button
+            type="button"
+            :disabled="decidingId === p.id"
+            @click="decide(p.id, 'approve')"
+            class="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-dark disabled:opacity-50"
+          >
+            {{ decidingId === p.id ? 'Memproses...' : 'Approve' }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="flex flex-wrap gap-3">

@@ -17,8 +17,19 @@ interface EmployeeDetail {
   first_name: string
   last_name: string | null
   photo_url: string | null
+  company_id: number | null
+  branch_id: number | null
+  department_id: number | null
+  position_id: number | null
+  job_level_id: number | null
+  manager_employee_id: number | null
+  employment_type_id: number | null
+  employment_status_id: number | null
+  contract_start_date: string | null
   contract_end_date: string | null
   probation_end_date: string | null
+  resign_date: string | null
+  join_date: string | null
   company: { id: number; name: string } | null
   branch: { id: number; name: string } | null
   department: { id: number; name: string } | null
@@ -275,6 +286,13 @@ watch(employeeId, (id) => {
           <button type="button" @click="movementModalType = 'resignation'" class="rounded-xl border border-red-100 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50">
             Resignation
           </button>
+          <button
+            type="button"
+            @click="movementModalType = 'edit'"
+            class="rounded-xl border border-primary/20 bg-primary-soft/40 px-3 py-2 text-xs font-medium text-primary-dark hover:bg-primary-soft"
+          >
+            Edit Employment Data
+          </button>
         </div>
       </div>
     </template>
@@ -283,7 +301,8 @@ watch(employeeId, (id) => {
       v-if="movementModalType && employee"
       :employee-id="employee.id"
       :employee-name="fullName"
-      :default-type="movementModalType"
+      :default-type="movementModalType === 'edit' ? undefined : movementModalType"
+      :current-employee="employee"
       @close="movementModalType = null"
       @created="onMovementCreated"
     />
