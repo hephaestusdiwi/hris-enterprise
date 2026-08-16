@@ -9,6 +9,7 @@ interface HierarchyPerson {
   id: number
   name: string
   position: string | null
+  photo_url: string | null
 }
 
 interface EmployeeDetail {
@@ -212,8 +213,18 @@ watch(employeeId, (id) => {
             class="mt-3 flex w-full items-center gap-3 rounded-xl border border-slate-100 p-3 text-left transition hover:border-primary/30 hover:bg-primary-soft/40"
             @click="goToEmployee(manager.id)"
           >
-            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-              <UserRound class="h-4 w-4" :stroke-width="2" />
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-slate-500">
+              <img
+                v-if="manager.photo_url"
+                :src="manager.photo_url"
+                :alt="manager.name"
+                class="h-full w-full object-cover"
+              />
+              <UserRound
+                v-else
+                class="h-4 w-4"
+                :stroke-width="2"
+              />
             </div>
             <div class="min-w-0">
               <p class="truncate text-sm font-medium text-slate-800">{{ manager.name }}</p>
@@ -243,8 +254,18 @@ watch(employeeId, (id) => {
               class="flex w-full items-center gap-3 rounded-xl border border-slate-100 p-3 text-left transition hover:border-primary/30 hover:bg-primary-soft/40"
               @click="goToEmployee(report.id)"
             >
-              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-                <UserRound class="h-4 w-4" :stroke-width="2" />
+              <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-slate-500">
+                <img
+                  v-if="report.photo_url"
+                  :src="report.photo_url"
+                  :alt="report.name"
+                  class="h-full w-full object-cover"
+                />
+                <UserRound
+                  v-else
+                  class="h-4 w-4"
+                  :stroke-width="2"
+                />
               </div>
               <div class="min-w-0">
                 <p class="truncate text-sm font-medium text-slate-800">{{ report.name }}</p>
