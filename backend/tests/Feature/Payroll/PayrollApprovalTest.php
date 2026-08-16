@@ -8,6 +8,7 @@ use App\Modules\ApprovalFlow\Models\ApprovalFlow;
 use App\Modules\ApprovalFlow\Models\ApprovalStep;
 use App\Modules\Company\Models\Company;
 use App\Modules\Employee\Models\Employee;
+use App\Modules\JobLevel\Models\JobLevel;
 use App\Modules\Payroll\Contracts\PayrollCalculationEngineInterface;
 use App\Modules\Payroll\DataTransferObjects\EmployeePayslipDraft;
 use App\Modules\Payroll\Enums\PayrollApprovalRequestStatus;
@@ -154,9 +155,17 @@ class PayrollApprovalTest extends TestCase
     {
         // Flow job-level-scoped ini seharusnya CUMA kepakai kalau resolusi berbasis
         // employee — Payroll harus tetap jatuh ke company-default, bukan ini.
+        $jobLevel = JobLevel::create([
+            'company_id' => $this->company->id,
+            'name' => 'Manager',
+            'code' => 'jl-'.uniqid(),
+            'level_order' => 1,
+            'is_active' => true,
+        ]);
+
         $jobLevelFlow = ApprovalFlow::create([
             'company_id' => $this->company->id,
-            'job_level_id' => 999999,
+            'job_level_id' => $jobLevel->id,
             'name' => 'Job Level Flow (harus diabaikan Payroll)',
             'code' => 'joblevel-'.uniqid(),
             'is_active' => true,

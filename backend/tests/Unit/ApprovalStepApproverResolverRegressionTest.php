@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit\ApprovalFlow;
+namespace Tests\Unit;
 
 use App\Models\User;
 use App\Modules\ApprovalFlow\Enums\ApproverType;

@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit\ApprovalFlow;
+namespace Tests\Feature\Payroll;
 
 use App\Modules\ApprovalFlow\Models\ApprovalFlow;
 use App\Modules\ApprovalFlow\Models\ApprovalFlowAssignment;

@@ -12,6 +12,11 @@ class Branch extends Model
 {
     use HasFactory, SoftDeletes;
 
+    protected static function newFactory()
+    {
+        return \Database\Factories\BranchFactory::new();
+    }
+
     protected $fillable = [
         'company_id',
         'name',
