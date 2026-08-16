@@ -4,7 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import {
   LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound,
   CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch, CheckCircle2, Layers, CalendarRange, BarChart3,
-  Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle, HandCoins, 
+  Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle, HandCoins, Receipt,
   ShieldCheck,
   WalletCards,
 } from 'lucide-vue-next'
@@ -124,6 +124,10 @@ const groups: MenuGroup[] = [
       { name: 'loans', label: 'Loan', icon: HandCoins, to: '/loans', permission: 'view loans' },
       { name: 'my-loans', label: 'My Loans', icon: HandCoins, to: '/my-loans', permission: null },
       { name: 'loan-approvals', label: 'Loan Approval', icon: ClipboardCheck, to: '/loan-approvals', permission: null },
+      { name: 'reimbursement-policies', label: 'Reimbursement Policy', icon: Receipt, to: '/reimbursement-policies', permission: 'manage reimbursement policies' },
+      { name: 'reimbursements', label: 'Reimbursement', icon: Receipt, to: '/reimbursements', permission: 'view reimbursements' },
+      { name: 'my-reimbursements', label: 'My Reimbursement', icon: Receipt, to: '/my-reimbursements', permission: null },
+      { name: 'reimbursement-approvals', label: 'Reimbursement Approval', icon: ClipboardCheck, to: '/reimbursement-approvals', permission: null },
     ],
   },
   {

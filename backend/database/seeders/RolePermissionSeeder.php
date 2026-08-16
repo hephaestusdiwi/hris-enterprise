@@ -111,6 +111,11 @@ class RolePermissionSeeder extends Seeder
             'disburse loans',
             'cancel loans',
             'settle loans',
+            'view reimbursements',
+            'create reimbursements',
+            'cancel reimbursements',
+            'disburse reimbursements',
+            'manage reimbursement policies',
             'view bpjs settings',
             'create bpjs settings',
             'edit bpjs settings',
@@ -123,6 +128,7 @@ class RolePermissionSeeder extends Seeder
             'create payroll runs',
             'lock payroll runs',
             'publish payroll runs',
+            'request payroll approval',
             'edit payroll settings',
             'view hiring requisitions',
             'create hiring requisitions',
@@ -190,6 +196,16 @@ class RolePermissionSeeder extends Seeder
             'disburse loans',
             'cancel loans',
             'settle loans',
+            'view reimbursements',
+            'cancel reimbursements',
+            'disburse reimbursements',
+            'manage reimbursement policies',
+            'view payroll runs',
+            'create payroll runs',
+            'request payroll approval',
+            'lock payroll runs',
+            'publish payroll runs',
+            'edit payroll settings',
         ]);
 
         $employee = Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'web']);
@@ -198,6 +214,7 @@ class RolePermissionSeeder extends Seeder
             'create hiring requisitions',
             'create employee movements',
             'create attendance requests',
+            'create reimbursements',
         ]);
     }
 }

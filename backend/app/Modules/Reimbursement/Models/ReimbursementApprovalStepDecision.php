@@ -1,0 +1,48 @@
+<?php
+
+namespace App\Modules\Reimbursement\Models;
+
+use App\Models\User;
+use App\Modules\ApprovalFlow\Models\ApprovalStep;
+use App\Modules\Reimbursement\Enums\ReimbursementApprovalStepDecisionStatus;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class ReimbursementApprovalStepDecision extends Model
+{
+    protected $fillable = [
+        'reimbursement_approval_request_id',
+        'approval_step_id',
+        'sequence',
+        'status',
+        'decided_by_user_id',
+        'notes',
+        'decided_at',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'status' => ReimbursementApprovalStepDecisionStatus::class,
+            'decided_at' => 'datetime',
+        ];
+    }
+
+    public function request(): BelongsTo
+    {
+        return $this->belongsTo(
+            ReimbursementApprovalRequest::class,
+            'reimbursement_approval_request_id'
+        );
+    }
+
+    public function approvalStep(): BelongsTo
+    {
+        return $this->belongsTo(ApprovalStep::class);
+    }
+
+    public function decidedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'decided_by_user_id');
+    }
+}

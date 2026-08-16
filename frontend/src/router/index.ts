@@ -41,6 +41,10 @@ import EmployeeDeductionListView from '@/views/EmployeeDeductionListView.vue'
 import LoanListView from '@/views/LoanListView.vue'
 import MyLoanView from '@/views/MyLoanView.vue'
 import LoanApprovalListView from '@/views/LoanApprovalListView.vue'
+import ReimbursementPolicyListView from '@/views/ReimbursementPolicyListView.vue'
+import ReimbursementListView from '@/views/ReimbursementListView.vue'
+import MyReimbursementView from '@/views/MyReimbursementView.vue'
+import ReimbursementApprovalListView from '@/views/ReimbursementApprovalListView.vue'
 import BpjsSettingView from '@/views/BpjsSettingView.vue'
 import EmployeeBpjsListView from '@/views/EmployeeBpjsListView.vue'
 import TaxSettingsView from '@/views/TaxSettingsView.vue'
@@ -290,6 +294,30 @@ const router = createRouter({
       path: '/loan-approvals',
       name: 'loan-approvals.list',
       component: LoanApprovalListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/reimbursement-policies',
+      name: 'reimbursement-policies.list',
+      component: ReimbursementPolicyListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/reimbursements',
+      name: 'reimbursements.list',
+      component: ReimbursementListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/my-reimbursements',
+      name: 'my-reimbursements.list',
+      component: MyReimbursementView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/reimbursement-approvals',
+      name: 'reimbursement-approvals.list',
+      component: ReimbursementApprovalListView,
       meta: { requiresAuth: true },
     },
     {
