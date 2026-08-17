@@ -73,11 +73,6 @@ class PayrollRunController extends Controller
         }
     }
 
-    /**
-     * Dipakai buat generate payslip PERTAMA KALI (dari Draft) MAUPUN
-     * recalculate (dari Processed/PendingApproval/Approved) — satu endpoint,
-     * ga digating approval sama sekali.
-     */
     public function proceedPayslip(Request $request, PayrollRun $payrollRun)
     {
         try {
@@ -93,9 +88,6 @@ class PayrollRunController extends Controller
         }
     }
 
-    /**
-     * Minta akses buat Lock — gerbang approval, cuma valid dari status Processed.
-     */
     public function requestApproval(PayrollRun $payrollRun)
     {
         try {

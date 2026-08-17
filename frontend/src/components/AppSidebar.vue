@@ -4,7 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import {
   LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound,
   CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch, CheckCircle2, Layers, CalendarRange, BarChart3,
-  Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle, HandCoins, Receipt,
+  Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle, HandCoins, Receipt, BriefcaseBusiness,
   ShieldCheck,
   WalletCards,
 } from 'lucide-vue-next'
@@ -140,6 +140,14 @@ const groups: MenuGroup[] = [
       { name: 'tax-settings', label: 'Tax Settings', icon: ShieldCheck, to: '/tax-settings', permission: 'view tax settings' },
       { name: 'employee-tax', label: 'Employee Tax', icon: ShieldCheck, to: '/employee-tax', permission: 'view tax settings' },
       { name: 'payroll-history', label: 'Payroll History', icon: WalletCards, to: '/payroll', permission: 'view payroll runs' },
+    ],
+  },
+  {
+    name: 'recruitment',
+    label: 'Recruitment',
+    icon: BriefcaseBusiness,
+    items: [
+      { name: 'job-vacancies', label: 'Job Vacancies', icon: BriefcaseBusiness, to: '/job-vacancies', permission: 'view job vacancies' },
     ],
   },
   {

@@ -22,10 +22,10 @@ class ReimbursementController extends Controller
     public function index()
     {
         $reimbursements = ReimbursementRequestModel::with([
-                'employee',
-                'policy',
-                'items.benefit',
-            ])
+            'employee',
+            'policy',
+            'items.benefit'
+        ])
             ->when(
                 request('status'),
                 fn ($q) => $q->where('status', request('status'))
@@ -92,10 +92,10 @@ class ReimbursementController extends Controller
         );
 
         $reimbursements = ReimbursementRequestModel::with([
-                'policy',
-                'items.benefit',
-                'attachments',
-            ])
+            'policy',
+            'items.benefit',
+            'attachments'
+        ])
             ->where('employee_id', $employee->id)
             ->latest()
             ->paginate(20);
@@ -128,7 +128,7 @@ class ReimbursementController extends Controller
                 'balance',
                 'items.benefit',
                 'attachments',
-                'approvalRequest.stepDecisions.approvalStep',
+                'approvalRequest.stepDecisions.approvalStep'
             ]),
         ]);
     }

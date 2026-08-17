@@ -11,8 +11,16 @@ class ApprovalStepApproverResolver
 {
     /**
      * @return array<int, int> daftar user_id yang berhak mutusin step ini
+     *
+     * $subjectEmployee nullable — SpecificEmployee & SpecificRole self-contained
+     * di ApprovalStep-nya sendiri, ga butuh subject. DirectManager tetap butuh
+     * subject Employee (buat cari manager-nya) — kalau null, secara eksplisit
+     * unresolvable (array kosong), BUKAN diam-diam pakai proxy lain. Ini yang
+     * bikin business-process non-employee (Payroll Run, dst) aman pakai
+     * DirectManager sebagai sinyal "flow ini salah dikonfigurasi", bukan
+     * silently approve ke orang yang salah.
      */
-    public function resolveApproverUserIds(ApprovalStep $step, Employee $subjectEmployee): array
+    public function resolveApproverUserIds(ApprovalStep $step, ?Employee $subjectEmployee): array
     {
         return match ($step->approver_type) {
             ApproverType::DirectManager => $this->resolveDirectManager($subjectEmployee),
@@ -21,8 +29,12 @@ class ApprovalStepApproverResolver
         };
     }
 
-    private function resolveDirectManager(Employee $subjectEmployee): array
+    private function resolveDirectManager(?Employee $subjectEmployee): array
     {
+        if (! $subjectEmployee) {
+            return [];
+        }
+
         $manager = $subjectEmployee->manager;
 
         return $manager?->user_id ? [$manager->user_id] : [];

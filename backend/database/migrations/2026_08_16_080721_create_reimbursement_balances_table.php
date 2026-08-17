@@ -8,9 +8,10 @@ return new class extends Migration
 {
     /**
      * "Assign/Balance Employee": hasil assign satu Policy ke satu Employee.
-     * Balance itu sendiri (assigned_amount) tidak pernah di-update langsung --
-     * histori perubahan/pemakaian ada di reimbursement_balance_transactions
-     * (ledger), sama seperti prinsip yang sudah dipakai di Loan installment.
+     *
+     * Balance tidak di-update langsung ketika terjadi pemakaian.
+     * Seluruh perubahan saldo dicatat melalui reimbursement_balance_transactions
+     * sebagai ledger.
      */
     public function up(): void
     {
@@ -25,14 +26,21 @@ return new class extends Migration
                 ->constrained('reimbursement_policies')
                 ->cascadeOnDelete();
 
-            $table->date('effective_date');
-            $table->date('ended_at')->nullable();
-
             // Nullable = unlimited.
             $table->decimal('assigned_amount', 15, 2)->nullable();
 
-            // Status balance: active / ended.
+            $table->date('effective_date');
+            $table->date('expiration_date')->nullable();
+
             $table->string('status')->default('active');
+
+            $table->timestamp('stopped_at')->nullable();
+            $table->text('stop_reason')->nullable();
+
+            $table->foreignId('assigned_by_user_id')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
 
             $table->timestamps();
 
@@ -41,11 +49,9 @@ return new class extends Migration
                 'reimbursement_policy_id',
             ]);
         });
+
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('reimbursement_balances');

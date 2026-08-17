@@ -183,4 +183,131 @@ class AnnouncementFlowTest extends TestCase
         $this->assertSame(2, $countAfterFirst);
         $this->assertSame($countAfterFirst, $countAfterSecond);
     }
+
+    public function test_draft_announcement_can_upload_attachment(): void
+    {
+        $admin = $this->admin();
+        $category = AnnouncementCategory::factory()->create();
+        $announcement = app(AnnouncementService::class)->create([
+            'title' => 'x', 'content' => 'x', 'announcement_category_id' => $category->id, 'target_type' => 'all',
+        ], $admin);
+
+        $file = UploadedFile::fake()->create('brosur.pdf', 500, 'application/pdf');
+        $this->actingAs($admin)
+            ->post("/api/announcements/{$announcement->id}/attachments", ['file' => $file])
+            ->assertStatus(201);
+    }
+
+    public function test_published_announcement_cannot_upload_attachment(): void
+    {
+        $admin = $this->admin();
+        $category = AnnouncementCategory::factory()->create();
+        $announcement = app(AnnouncementService::class)->create([
+            'title' => 'x', 'content' => 'x', 'announcement_category_id' => $category->id, 'target_type' => 'all',
+        ], $admin);
+        app(AnnouncementService::class)->publish($announcement);
+
+        $file = UploadedFile::fake()->create('brosur.pdf', 500, 'application/pdf');
+        $response = $this->actingAs($admin)
+            ->post("/api/announcements/{$announcement->id}/attachments", ['file' => $file]);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseCount('announcement_attachments', 0);
+    }
+
+    public function test_draft_announcement_can_delete_own_attachment(): void
+    {
+        $admin = $this->admin();
+        $category = AnnouncementCategory::factory()->create();
+        $announcement = app(AnnouncementService::class)->create([
+            'title' => 'x', 'content' => 'x', 'announcement_category_id' => $category->id, 'target_type' => 'all',
+        ], $admin);
+
+        $file = UploadedFile::fake()->create('brosur.pdf', 500, 'application/pdf');
+        $uploadResponse = $this->actingAs($admin)->post("/api/announcements/{$announcement->id}/attachments", ['file' => $file]);
+        $attachmentId = $uploadResponse->json('data.id');
+
+        $this->actingAs($admin)
+            ->delete("/api/announcements/{$announcement->id}/attachments/{$attachmentId}")
+            ->assertOk();
+
+        $this->assertDatabaseCount('announcement_attachments', 0);
+    }
+
+    public function test_published_announcement_cannot_delete_attachment(): void
+    {
+        $admin = $this->admin();
+        $category = AnnouncementCategory::factory()->create();
+        $announcement = app(AnnouncementService::class)->create([
+            'title' => 'x', 'content' => 'x', 'announcement_category_id' => $category->id, 'target_type' => 'all',
+        ], $admin);
+
+        $file = UploadedFile::fake()->create('brosur.pdf', 500, 'application/pdf');
+        $uploadResponse = $this->actingAs($admin)->post("/api/announcements/{$announcement->id}/attachments", ['file' => $file]);
+        $attachmentId = $uploadResponse->json('data.id');
+
+        app(AnnouncementService::class)->publish($announcement->fresh());
+
+        $response = $this->actingAs($admin)
+            ->delete("/api/announcements/{$announcement->id}/attachments/{$attachmentId}");
+
+        $response->assertStatus(422);
+        $this->assertDatabaseCount('announcement_attachments', 1); // masih ada, tidak jadi kehapus
+    }
+
+    public function test_attachment_of_announcement_a_cannot_be_deleted_via_announcement_b(): void
+    {
+        $admin = $this->admin();
+        $category = AnnouncementCategory::factory()->create();
+
+        $announcementA = app(AnnouncementService::class)->create([
+            'title' => 'A', 'content' => 'x', 'announcement_category_id' => $category->id, 'target_type' => 'all',
+        ], $admin);
+        $announcementB = app(AnnouncementService::class)->create([
+            'title' => 'B', 'content' => 'x', 'announcement_category_id' => $category->id, 'target_type' => 'all',
+        ], $admin);
+
+        $file = UploadedFile::fake()->create('brosur.pdf', 500, 'application/pdf');
+        $uploadResponse = $this->actingAs($admin)->post("/api/announcements/{$announcementA->id}/attachments", ['file' => $file]);
+        $attachmentId = $uploadResponse->json('data.id');
+
+        // Coba hapus attachment milik A lewat URL B.
+        $response = $this->actingAs($admin)
+            ->delete("/api/announcements/{$announcementB->id}/attachments/{$attachmentId}");
+
+        $response->assertStatus(422);
+        $this->assertDatabaseCount('announcement_attachments', 1); // masih ada
+        $this->assertDatabaseHas('announcement_attachments', ['id' => $attachmentId, 'announcement_id' => $announcementA->id]);
+    }
+
+    public function test_update_category_with_same_code_still_succeeds(): void
+    {
+        $admin = $this->admin();
+        $category = AnnouncementCategory::factory()->create(['code' => 'UMUM', 'name' => 'Umum']);
+
+        $response = $this->actingAs($admin)->putJson("/api/announcement-categories/{$category->id}", [
+            'name' => 'Umum (updated)',
+            'code' => 'UMUM', // code SAMA, tidak berubah
+            'is_active' => true,
+        ]);
+
+        $response->assertOk();
+        $this->assertSame('Umum (updated)', $category->fresh()->name);
+    }
+
+    public function test_update_category_with_another_categorys_code_fails(): void
+    {
+        $admin = $this->admin();
+        AnnouncementCategory::factory()->create(['code' => 'HR']);
+        $category = AnnouncementCategory::factory()->create(['code' => 'UMUM']);
+
+        $response = $this->actingAs($admin)->putJson("/api/announcement-categories/{$category->id}", [
+            'name' => 'Umum',
+            'code' => 'HR', // punya category lain
+            'is_active' => true,
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['code']);
+    }
 }

@@ -54,9 +54,9 @@ class JobVacancyController extends Controller
         ], 201);
     }
 
-    public function show(JobVacany $jobVacancy): JsonResponse
+    public function show(JobVacancy $jobVacancy): JsonResponse
     {
-        $this->authorize('view', $jobVacancy)
+        $this->authorize('view', $jobVacancy);
 
         return response()->json([
             'success' => true,

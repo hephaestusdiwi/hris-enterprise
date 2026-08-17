@@ -15,7 +15,8 @@ class ReimbursementBenefitController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'OK',
-            'data' => $reimbursementPolicy->benefits()
+            'data' => $reimbursementPolicy
+                ->benefits()
                 ->orderBy('name')
                 ->get(),
         ]);

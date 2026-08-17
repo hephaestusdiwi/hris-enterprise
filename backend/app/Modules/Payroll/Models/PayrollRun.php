@@ -73,7 +73,7 @@ class PayrollRun extends Model
 
     public function approvalRequest(): HasOne
     {
-        return $this->hasOne(PayrollApprovalRequest::class);
+        return $this->hasOne(PayrollApprovalRequest::class)->latestOfMany('id');
     }
 
     public function isEditableParticipants(): bool

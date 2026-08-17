@@ -50,14 +50,17 @@ class ReimbursementBalance extends Model
 
     public function assignedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'assigned_by_user_id');
+        return $this->belongsTo(
+            User::class,
+            'assigned_by_user_id'
+        );
     }
 
     public function transactions(): HasMany
     {
-        return $this->hasMany(
-            ReimbursementBalanceTransaction::class
-        )->orderBy('id');
+        return $this
+            ->hasMany(ReimbursementBalanceTransaction::class)
+            ->orderBy('id');
     }
 
     public function requests(): HasMany
@@ -71,7 +74,8 @@ class ReimbursementBalance extends Model
             return null;
         }
 
-        $lastTransaction = $this->transactions()
+        $lastTransaction = $this
+            ->transactions()
             ->latest('id')
             ->first();
 

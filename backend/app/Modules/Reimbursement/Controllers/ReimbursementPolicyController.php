@@ -11,9 +11,15 @@ class ReimbursementPolicyController extends Controller
 {
     public function index()
     {
-        $policies = ReimbursementPolicy::withCount('benefits')->orderByDesc('id')->get();
+        $policies = ReimbursementPolicy::withCount('benefits')
+            ->orderByDesc('id')
+            ->get();
 
-        return response()->json(['success' => true, 'message' => 'OK', 'data' => $policies]);
+        return response()->json([
+            'success' => true,
+            'message' => 'OK',
+            'data' => $policies,
+        ]);
     }
 
     public function show(ReimbursementPolicy $reimbursementPolicy)
@@ -32,13 +38,23 @@ class ReimbursementPolicyController extends Controller
             'created_by_user_id' => $request->user()?->id,
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Policy berhasil dibuat', 'data' => $policy], 201);
+        return response()->json([
+            'success' => true,
+            'message' => 'Policy berhasil dibuat',
+            'data' => $policy,
+        ], 201);
     }
 
-    public function update(UpdateReimbursementPolicyRequest $request, ReimbursementPolicy $reimbursementPolicy)
-    {
+    public function update(
+        UpdateReimbursementPolicyRequest $request,
+        ReimbursementPolicy $reimbursementPolicy
+    ) {
         $reimbursementPolicy->update($request->validated());
 
-        return response()->json(['success' => true, 'message' => 'Policy berhasil diperbarui', 'data' => $reimbursementPolicy->fresh()]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Policy berhasil diperbarui',
+            'data' => $reimbursementPolicy->fresh(),
+        ]);
     }
 }

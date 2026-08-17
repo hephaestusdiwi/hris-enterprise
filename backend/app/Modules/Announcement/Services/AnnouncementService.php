@@ -50,9 +50,7 @@ class AnnouncementService
      */
     public function update(Announcement $announcement, array $data): Announcement
     {
-        if ($announcement->status !== AnnouncementStatus::Draft) {
-            throw new AnnouncementException('Announcement yang sudah Published tidak bisa diedit.');
-        }
+        $this->assertIsDraft($announcement);
 
         return DB::transaction(function () use ($announcement, $data) {
             $announcement->update([
@@ -68,6 +66,19 @@ class AnnouncementService
 
             return $announcement->fresh(['targets']);
         });
+    }
+
+    /**
+     * Dipakai juga oleh AnnouncementAttachmentController — begitu Published,
+     * announcement LOCKED TOTAL, bukan cuma title/content/target tapi juga
+     * attachment (upload maupun delete). Satu titik enforcement, bukan
+     * duplikasi pengecekan status di tiap Controller.
+     */
+    public function assertIsDraft(Announcement $announcement): void
+    {
+        if ($announcement->status !== AnnouncementStatus::Draft) {
+            throw new AnnouncementException('Announcement yang sudah Published tidak bisa diubah (termasuk attachment).');
+        }
     }
 
     /**

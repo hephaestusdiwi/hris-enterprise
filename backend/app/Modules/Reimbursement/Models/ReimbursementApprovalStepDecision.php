@@ -43,6 +43,9 @@ class ReimbursementApprovalStepDecision extends Model
 
     public function decidedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'decided_by_user_id');
+        return $this->belongsTo(
+            User::class,
+            'decided_by_user_id'
+        );
     }
 }

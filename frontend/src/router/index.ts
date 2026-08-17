@@ -51,6 +51,10 @@ import TaxSettingsView from '@/views/TaxSettingsView.vue'
 import EmployeeTaxListView from '@/views/EmployeeTaxListView.vue'
 import PayrollRunListView from '@/views/PayrollRunListView.vue'
 import PayrollRunDetailView from '@/views/PayrollRunDetailView.vue'
+import JobVacancyListView from '@/views/recruitment/JobVacancyListView.vue'
+import JobVacancyDetailView from '@/views/recruitment/JobVacancyDetailView.vue'
+import HiringRequisitionListView from '@/views/recruitment/HiringRequisitionListView.vue'
+import HiringRequisitionDetailView from '@/views/recruitment/HiringRequisitionDetailView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -366,6 +370,30 @@ const router = createRouter({
       path: '/employee-movements',
       name: 'employee-movements',
       component: EmployeeMovementListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/job-vacancies',
+      name: 'job-vacancies.index',
+      component: JobVacancyListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/job-vacancies/:id',
+      name: 'job-vacancies.show',
+      component: JobVacancyDetailView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/hiring-requisitions',
+      name: 'hiring-requisitions.index',
+      component: HiringRequisitionListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/hiring-requisitions/:id',
+      name: 'hiring-requisitions.show',
+      component: HiringRequisitionDetailView,
       meta: { requiresAuth: true },
     },
     {

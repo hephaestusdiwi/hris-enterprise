@@ -70,7 +70,10 @@ class ReimbursementRequest extends Model
 
     public function disbursedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'disbursed_by_user_id');
+        return $this->belongsTo(
+            User::class,
+            'disbursed_by_user_id'
+        );
     }
 
     public function approvalRequest(): HasOne

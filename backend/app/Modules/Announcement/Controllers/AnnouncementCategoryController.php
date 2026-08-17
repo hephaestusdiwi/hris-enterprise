@@ -5,6 +5,7 @@ namespace App\Modules\Announcement\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Announcement\Models\AnnouncementCategory;
 use App\Modules\Announcement\Requests\StoreAnnouncementCategoryRequest;
+use App\Modules\Announcement\Requests\UpdateAnnouncementCategoryRequest;
 
 class AnnouncementCategoryController extends Controller
 {
@@ -24,7 +25,7 @@ class AnnouncementCategoryController extends Controller
         return response()->json(['success' => true, 'message' => 'Category dibuat.', 'data' => $category], 201);
     }
 
-    public function update(StoreAnnouncementCategoryRequest $request, AnnouncementCategory $announcementCategory)
+    public function update(UpdateAnnouncementCategoryRequest $request, AnnouncementCategory $announcementCategory)
     {
         $announcementCategory->update($request->validated());
 

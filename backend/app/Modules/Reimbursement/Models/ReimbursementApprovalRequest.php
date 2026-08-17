@@ -50,8 +50,8 @@ class ReimbursementApprovalRequest extends Model
 
     public function stepDecisions(): HasMany
     {
-        return $this->hasMany(
-            ReimbursementApprovalStepDecision::class
-        )->orderBy('sequence');
+        return $this
+            ->hasMany(ReimbursementApprovalStepDecision::class)
+            ->orderBy('sequence');
     }
 }

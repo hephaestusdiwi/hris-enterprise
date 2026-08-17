@@ -14,32 +14,17 @@ class AssignReimbursementBalanceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'employee_id' => [
-                'required',
-                'exists:employees,id',
-            ],
-
+            'employee_id' => ['required', 'exists:employees,id'],
             'reimbursement_policy_id' => [
                 'required',
-                'exists:reimbursement_policies,id',
+                'exists:reimbursement_policies,id'
             ],
-
-            // Null = pakai default_limit_amount dari policy.
-            'assigned_amount' => [
-                'nullable',
-                'numeric',
-                'min:0',
-            ],
-
-            'effective_date' => [
-                'required',
-                'date',
-            ],
-
+            'assigned_amount' => ['nullable', 'numeric', 'min:0'],
+            'effective_date' => ['required', 'date'],
             'expiration_date' => [
                 'nullable',
                 'date',
-                'after_or_equal:effective_date',
+                'after_or_equal:effective_date'
             ],
         ];
     }

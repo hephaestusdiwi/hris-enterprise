@@ -427,20 +427,53 @@ class PayrollApprovalTest extends TestCase
 
         $run = $this->createDraftRun();
         $this->proceed($run);
-        $this->actingAs($this->admin)->postJson("/api/payroll-runs/{$run->id}/request-approval")->assertOk();
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/payroll-runs/{$run->id}/request-approval")
+            ->assertOk();
+
         $decision1 = $run->approvalRequest->stepDecisions()->first();
-        $this->actingAs($approverUser)->postJson("/api/payroll-approvals/{$decision1->id}/decide", ['action' => 'reject', 'notes' => 'salah'])->assertOk();
+
+        $this->actingAs($approverUser)
+            ->postJson("/api/payroll-approvals/{$decision1->id}/decide", [
+                'action' => 'reject',
+                'notes' => 'salah',
+            ])
+            ->assertOk();
 
         $this->proceed($run); // revisi ke-2
-        $this->actingAs($this->admin)->postJson("/api/payroll-runs/{$run->id}/request-approval")->assertOk();
-        $decision2 = $run->approvalRequest->stepDecisions()->first();
-        $this->actingAs($approverUser)->postJson("/api/payroll-approvals/{$decision2->id}/decide", ['action' => 'approve'])->assertOk();
 
-        $this->assertEquals(2, PayrollApprovalRequest::where('payroll_run_id', $run->id)->count());
+        $this->actingAs($this->admin)
+            ->postJson("/api/payroll-runs/{$run->id}/request-approval")
+            ->assertOk();
+
+        // Ambil approval request terbaru setelah revision.
+        $run->refresh();
+
+        $decision2 = $run->approvalRequest->stepDecisions()->firstOrFail();
+
+        $this->actingAs($approverUser)
+            ->postJson("/api/payroll-approvals/{$decision2->id}/decide", [
+                'action' => 'approve',
+            ])
+            ->assertOk();
+
+        $this->assertEquals(
+            2,
+            PayrollApprovalRequest::where('payroll_run_id', $run->id)->count()
+        );
+
         $this->assertEquals(
             PayrollApprovalRequestStatus::Rejected,
-            PayrollApprovalRequest::where('payroll_run_id', $run->id)->orderBy('id')->first()->status,
+            PayrollApprovalRequest::where('payroll_run_id', $run->id)
+                ->orderBy('id')
+                ->first()
+                ->status
         );
-        $this->assertEquals(PayrollRunStatus::Approved, $run->fresh()->status);
+
+        $this->assertEquals(
+            PayrollRunStatus::Approved,
+            $run->fresh()->status
+        );
     }
 }

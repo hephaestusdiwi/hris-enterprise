@@ -20,6 +20,7 @@ Route::middleware('permission:create payroll runs')->group(function () {
     Route::post('/payroll-runs', [PayrollRunController::class, 'store']);
     Route::put('/payroll-runs/{payrollRun}/participants', [PayrollRunController::class, 'updateParticipants']);
     Route::post('/payroll-runs/{payrollRun}/proceed-payslip', [PayrollRunController::class, 'proceedPayslip']);
+    Route::post('/payroll-runs/{payrollRun}/request-approval', [PayrollRunController::class, 'requestApproval']);
     Route::post('/payroll-runs/{payrollRun}/cancel', [PayrollRunController::class, 'cancel']);
 });
 

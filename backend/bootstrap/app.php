@@ -25,5 +25,17 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Semua route project ini didaftarkan di bawah prefix /api (lihat
+        // withRouting() di atas). Tanpa ini, Laravel nentuin JSON vs redirect
+        // berdasarkan header Accept request — request yang WAJIB multipart
+        // (file upload, tidak bisa pakai postJson()) jadi kena redirect 302
+        // waktu validasi gagal, bukan 422 JSON. Ini pattern bawaan Laravel 11
+        // buat API-only app, bukan custom exception handler baru.
+        $exceptions->shouldRenderJsonWhen(function ($request, \Throwable $e) {
+            if ($request->is('api/*')) {
+                return true;
+            }
+
+            return $request->expectsJson();
+        });
     })->create();
