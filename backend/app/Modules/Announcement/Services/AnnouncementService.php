@@ -8,6 +8,7 @@ use App\Modules\Announcement\Exceptions\AnnouncementException;
 use App\Modules\Announcement\Models\Announcement;
 use App\Modules\Announcement\Models\AnnouncementRecipient;
 use App\Modules\Announcement\Models\AnnouncementTarget;
+use App\Modules\Announcement\Notifications\AnnouncementPublishedNotification;
 use App\Modules\Employee\Models\Employee;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -94,7 +95,7 @@ class AnnouncementService
             return $announcement;
         }
 
-        return DB::transaction(function () use ($announcement) {
+        $announcement = DB::transaction(function () use ($announcement) {
             $employeeIds = $this->resolveTargetEmployeeIds($announcement);
 
             $now = now();
@@ -118,8 +119,40 @@ class AnnouncementService
                 'published_at' => $now,
             ]);
 
-            return $announcement->fresh(['recipients']);
+            return $announcement->fresh(['recipients.employee.user']);
         });
+
+        // SENGAJA di LUAR transaction — notifikasi baru dikirim setelah
+        // status Published+recipient beneran committed ke DB. Kalau publish
+        // dipanggil lagi setelah ini (status sudah Published), method
+        // langsung return di awal (guard di atas) — notification TIDAK
+        // pernah terkirim dua kali, tanpa perlu dedup checking terpisah
+        // (beda dari Contract & Probation reminder yang butuh dedup, karena
+        // di sini publish cuma "terjadi" sekali per announcement).
+        $this->notifyRecipients($announcement);
+
+        return $announcement;
+    }
+
+    private function notifyRecipients(Announcement $announcement): void
+    {
+        foreach ($announcement->recipients as $recipient) {
+            $user = $recipient->employee?->user;
+
+            if (! $user) {
+                continue;
+            }
+
+            try {
+                $user->notify(new AnnouncementPublishedNotification($announcement));
+            } catch (\Throwable $e) {
+                // Kegagalan kirim notifikasi/email TIDAK BOLEH bikin publish
+                // dianggap gagal — announcement sudah Published & recipient
+                // sudah tercatat di step sebelumnya, itu yang jadi source of
+                // truth. Log saja, jangan di-rethrow.
+                report($e);
+            }
+        }
     }
 
     /**

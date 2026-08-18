@@ -4,7 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import {
   LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound,
   CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch, CheckCircle2, Layers, CalendarRange, BarChart3,
-  Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle, HandCoins, Receipt, BriefcaseBusiness,
+  Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle, HandCoins, Receipt, BriefcaseBusiness, Megaphone,
   ShieldCheck,
   WalletCards,
 } from 'lucide-vue-next'
@@ -33,6 +33,7 @@ interface MenuGroup {
 
 const standaloneItems: MenuItem[] = [
   { name: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: '/', permission: null },
+  { name: 'announcements.inbox', label: 'Announcement', icon: Megaphone, to: '/announcements', permission: null },
 ]
 
 const groups: MenuGroup[] = [
@@ -148,6 +149,7 @@ const groups: MenuGroup[] = [
     icon: BriefcaseBusiness,
     items: [
       { name: 'job-vacancies', label: 'Job Vacancies', icon: BriefcaseBusiness, to: '/job-vacancies', permission: 'view job vacancies' },
+      { name: 'job-vacancies', label: 'Hiring Requisitions', icon: BriefcaseBusiness, to: '/hiring-requisitions', permission: 'view hiring requisitions' },
     ],
   },
   {
@@ -156,6 +158,7 @@ const groups: MenuGroup[] = [
     icon: Users,
     items: [
       { name: 'users', label: 'Users', icon: Users, to: '/users', permission: 'view users' },
+      { name: 'announcements.manage', label: 'Announcement Management', icon: Megaphone, to: '/announcements/manage', permission: 'view announcements' },
     ],
   },
 ]

@@ -9,6 +9,8 @@ import EmployeeListView from '@/views/EmployeeListView.vue'
 import EmployeeDetailView from '@/views/EmployeeDetailView.vue'
 import ContractProbationListView from '@/views/ContractProbationListView.vue'
 import EmployeeMovementListView from '@/views/EmployeeMovementListView.vue'
+import AnnouncementManagementView from '@/views/AnnouncementManagementView.vue'
+import AnnouncementInboxView from '@/views/AnnouncementInboxView.vue'
 import HolidayListView from '@/views/HolidayListView.vue'
 import JobLevelListView from '@/views/JobLevelListView.vue'
 import ShiftListView from '@/views/ShiftListView.vue'
@@ -370,6 +372,18 @@ const router = createRouter({
       path: '/employee-movements',
       name: 'employee-movements',
       component: EmployeeMovementListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/announcements/manage',
+      name: 'announcements.manage',
+      component: AnnouncementManagementView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/announcements',
+      name: 'announcements.inbox',
+      component: AnnouncementInboxView,
       meta: { requiresAuth: true },
     },
     {

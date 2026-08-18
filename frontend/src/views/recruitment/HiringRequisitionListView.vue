@@ -138,22 +138,33 @@ function openCreateModal() {
 async function submitCreate() {
   saving.value = true
   formError.value = ''
+
   try {
+    const selectedEmploymentType = employmentTypes.value.find(
+      (type) => type.id === form.employment_type_id
+    )
+
     await apiClient.post('/api/hiring-requisitions', {
       branch_id: form.branch_id || null,
       department_id: form.department_id,
       position_id: form.position_id,
       reason: form.reason,
-      replacement_for_employee_id: form.reason === 'replacement' ? form.replacement_for_employee_id : null,
-      employment_type_id: form.employment_type_id,
+      replacement_for_employee_id:
+        form.reason === 'replacement'
+          ? form.replacement_for_employee_id
+          : null,
+      employment_type: selectedEmploymentType?.name ?? '',
       headcount_requested: form.headcount_requested,
       target_start_date: form.target_start_date || null,
       justification: form.justification,
     })
+
     showCreateModal.value = false
     await loadRequisitions()
   } catch (err: any) {
-    formError.value = err.response?.data?.message || 'Gagal mengajukan Hiring Requisition.'
+    formError.value =
+      err.response?.data?.message ||
+      'Gagal mengajukan Hiring Requisition.'
   } finally {
     saving.value = false
   }

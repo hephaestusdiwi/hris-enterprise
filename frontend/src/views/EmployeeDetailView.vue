@@ -205,7 +205,7 @@ watch(employeeId, (id) => {
       <div class="grid gap-6 sm:grid-cols-2">
         <!-- Manager -->
         <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
-          <h2 class="text-sm font-semibold text-slate-700">Manager</h2>
+          <h2 class="text-sm font-semibold text-slate-700">Approval Line</h2>
 
           <button
             v-if="manager"

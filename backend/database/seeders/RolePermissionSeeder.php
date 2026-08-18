@@ -175,40 +175,49 @@ class RolePermissionSeeder extends Seeder
         $hr->syncPermissions([
             'view dashboard',
             'view users',
+
+            // Organization master data yang dibutuhkan HR
+            // untuk Hiring Requisition dan employee management.
+            'view branches',
+            'view departments',
+            'view positions',
+            'view employment types',
+
             // Employee core: HR bisa kelola data karyawan sehari-hari.
-            // 'delete employees' SENGAJA tidak dikasih dulu — hapus employee
-            // itu aksi destruktif yang seharusnya lewat flow Offboarding
-            // (Phase 2 Employee Lifecycle), bukan hard delete langsung.
             'view employees',
             'create employees',
             'edit employees',
             'view employee movements',
             'create employee movements',
             'edit contract probation settings',
+
             'view announcements',
             'create announcements',
             'edit announcements',
             'publish announcements',
+
             'view hiring requisitions',
             'create hiring requisitions',
             'edit hiring requisitions',
             'cancel hiring requisitions',
+
             'create job vacancies',
+
             'view attendance requests',
             'create attendance requests',
-            // Loan: HR yang mengelola siklus loan karyawan sehari-hari,
-            // termasuk final settlement saat resignation (bagian dari
-            // Employment Lifecycle yang sudah HR pegang).
+
             'view loans',
             'create loans',
             'edit loans',
             'disburse loans',
             'cancel loans',
             'settle loans',
+
             'view reimbursements',
             'cancel reimbursements',
             'disburse reimbursements',
             'manage reimbursement policies',
+
             'view payroll runs',
             'create payroll runs',
             'request payroll approval',

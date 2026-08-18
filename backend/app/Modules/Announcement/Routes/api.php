@@ -10,6 +10,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Inbox pribadi — semua employee login boleh akses punya sendiri,
     // tidak butuh permission 'view announcements' (itu buat management list).
     Route::get('/my-announcements', [AnnouncementRecipientController::class, 'myAnnouncements']);
+    Route::get('/my-announcements/unread-count', [AnnouncementRecipientController::class, 'unreadCount']);
+    Route::get('/my-announcements/{announcement}', [AnnouncementRecipientController::class, 'show']);
     Route::post('/announcements/{announcement}/read', [AnnouncementRecipientController::class, 'markRead']);
 
     Route::middleware('permission:view announcements')->group(function () {
