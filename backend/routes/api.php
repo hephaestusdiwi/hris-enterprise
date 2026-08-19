@@ -50,6 +50,7 @@ Route::middleware('auth:sanctum')->group(function () {
     require __DIR__.'/../app/Modules/EmployeeDeduction/Routes/api.php';
     require __DIR__.'/../app/Modules/Loan/Routes/api.php';
     require __DIR__.'/../app/Modules/Reimbursement/Routes/api.php';
+    require __DIR__.'/../app/Modules/CashAdvance/Routes/api.php';
     require __DIR__.'/../app/Modules/Bpjs/Routes/api.php';
     require __DIR__.'/../app/Modules/Pph21/Routes/api.php';
     require __DIR__.'/../app/Modules/Payroll/Routes/api.php';

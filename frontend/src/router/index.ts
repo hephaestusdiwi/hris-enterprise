@@ -47,6 +47,10 @@ import ReimbursementPolicyListView from '@/views/ReimbursementPolicyListView.vue
 import ReimbursementListView from '@/views/ReimbursementListView.vue'
 import MyReimbursementView from '@/views/MyReimbursementView.vue'
 import ReimbursementApprovalListView from '@/views/ReimbursementApprovalListView.vue'
+import CashAdvancePolicyListView from '@/views/CashAdvancePolicyListView.vue'
+import CashAdvanceListView from '@/views/CashAdvanceListView.vue'
+import MyCashAdvanceView from '@/views/MyCashAdvanceView.vue'
+import CashAdvanceApprovalListView from '@/views/CashAdvanceApprovalListView.vue'
 import BpjsSettingView from '@/views/BpjsSettingView.vue'
 import EmployeeBpjsListView from '@/views/EmployeeBpjsListView.vue'
 import TaxSettingsView from '@/views/TaxSettingsView.vue'
@@ -57,6 +61,7 @@ import JobVacancyListView from '@/views/recruitment/JobVacancyListView.vue'
 import JobVacancyDetailView from '@/views/recruitment/JobVacancyDetailView.vue'
 import HiringRequisitionListView from '@/views/recruitment/HiringRequisitionListView.vue'
 import HiringRequisitionDetailView from '@/views/recruitment/HiringRequisitionDetailView.vue'
+import CandidateListView from '@/views/recruitment/CandidateListView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -327,6 +332,30 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/cash-advance-policies',
+      name: 'cash-advance-policies.list',
+      component: CashAdvancePolicyListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/cash-advances',
+      name: 'cash-advances.list',
+      component: CashAdvanceListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/my-cash-advances',
+      name: 'my-cash-advances.list',
+      component: MyCashAdvanceView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/cash-advance-approvals',
+      name: 'cash-advance-approvals.list',
+      component: CashAdvanceApprovalListView,
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/bpjs/settings',
       name: 'bpjs-settings',
       component: BpjsSettingView,
@@ -408,6 +437,12 @@ const router = createRouter({
       path: '/hiring-requisitions/:id',
       name: 'hiring-requisitions.show',
       component: HiringRequisitionDetailView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/candidates',
+      name: 'candidates.index',
+      component: CandidateListView,
       meta: { requiresAuth: true },
     },
     {

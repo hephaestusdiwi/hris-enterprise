@@ -121,6 +121,19 @@ class RolePermissionSeeder extends Seeder
             'cancel reimbursements',
             'disburse reimbursements',
             'manage reimbursement policies',
+            'view cash advance policies',
+            'create cash advance policies',
+            'edit cash advance policies',
+            'view cash advance categories',
+            'create cash advance categories',
+            'edit cash advance categories',
+            'delete cash advance categories',
+            'view cash advances',
+            'create cash advances',
+            'cancel cash advances',
+            'disburse cash advances',
+            'view cash advance approvals',
+            'view cash advance settlements',
             'view bpjs settings',
             'create bpjs settings',
             'edit bpjs settings',
@@ -190,34 +203,39 @@ class RolePermissionSeeder extends Seeder
             'view employee movements',
             'create employee movements',
             'edit contract probation settings',
-
             'view announcements',
             'create announcements',
             'edit announcements',
             'publish announcements',
-
             'view hiring requisitions',
             'create hiring requisitions',
             'edit hiring requisitions',
             'cancel hiring requisitions',
-
             'create job vacancies',
-
             'view attendance requests',
             'create attendance requests',
-
             'view loans',
             'create loans',
             'edit loans',
             'disburse loans',
             'cancel loans',
             'settle loans',
-
             'view reimbursements',
             'cancel reimbursements',
             'disburse reimbursements',
             'manage reimbursement policies',
-
+            // Cash Advance: HR/Finance kelola policy+category, proses
+            // approval-visibility, disbursement, dan verifikasi settlement.
+            'view cash advance policies',
+            'create cash advance policies',
+            'edit cash advance policies',
+            'view cash advance categories',
+            'create cash advance categories',
+            'edit cash advance categories',
+            'delete cash advance categories',
+            'view cash advances',
+            'cancel cash advances',
+            'disburse cash advances',
             'view payroll runs',
             'create payroll runs',
             'request payroll approval',
@@ -233,6 +251,7 @@ class RolePermissionSeeder extends Seeder
             'create employee movements',
             'create attendance requests',
             'create reimbursements',
+            'create cash advances',
         ]);
     }
 }

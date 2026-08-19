@@ -45,7 +45,11 @@ class AnnouncementRecipientController extends Controller
         }
 
         $recipients = AnnouncementRecipient::where('employee_id', $employee->id)
-            ->with(['announcement.category', 'announcement.attachments', 'announcement.createdBy.employee'])
+            ->with([
+                'announcement.category',
+                'announcement.attachments',
+                'announcement.createdBy.employee.position',
+            ])
             ->latest('id')
             ->paginate(15);
 
@@ -64,6 +68,7 @@ class AnnouncementRecipientController extends Controller
                 'id' => $creator->id,
                 'name' => $creator->name,
                 'photo_url' => $creator->employee?->photo_url,
+                'position' => $creator->employee?->position?->name,
             ] : null;
 
             return $data;
@@ -102,7 +107,11 @@ class AnnouncementRecipientController extends Controller
             abort(403, 'Kamu bukan recipient announcement ini.');
         }
 
-        $announcement->load(['category', 'attachments', 'createdBy.employee']);
+        $announcement->load([
+            'category',
+            'attachments',
+            'createdBy.employee.position',
+        ]);
 
         $data = $announcement->toArray();
         $creator = $announcement->createdBy;
@@ -110,6 +119,7 @@ class AnnouncementRecipientController extends Controller
             'id' => $creator->id,
             'name' => $creator->name,
             'photo_url' => $creator->employee?->photo_url,
+            'position' => $creator->employee?->position?->name,
         ] : null;
 
         return response()->json([

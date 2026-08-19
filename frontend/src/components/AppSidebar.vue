@@ -4,7 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import {
   LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound,
   CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch, CheckCircle2, Layers, CalendarRange, BarChart3,
-  Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle, HandCoins, Receipt, BriefcaseBusiness, Megaphone,
+  Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle, HandCoins, Receipt, BriefcaseBusiness, Megaphone, Landmark,
   ShieldCheck,
   WalletCards,
 } from 'lucide-vue-next'
@@ -129,6 +129,10 @@ const groups: MenuGroup[] = [
       { name: 'reimbursements', label: 'Reimbursement', icon: Receipt, to: '/reimbursements', permission: 'view reimbursements' },
       { name: 'my-reimbursements', label: 'My Reimbursement', icon: Receipt, to: '/my-reimbursements', permission: null },
       { name: 'reimbursement-approvals', label: 'Reimbursement Approval', icon: ClipboardCheck, to: '/reimbursement-approvals', permission: null },
+      { name: 'cash-advance-policies', label: 'Cash Advance Policy', icon: Landmark, to: '/cash-advance-policies', permission: 'view cash advance policies' },
+      { name: 'cash-advances', label: 'Cash Advance', icon: Landmark, to: '/cash-advances', permission: 'view cash advances' },
+      { name: 'my-cash-advances', label: 'My Cash Advance', icon: Landmark, to: '/my-cash-advances', permission: null },
+      { name: 'cash-advance-approvals', label: 'Cash Advance Approval', icon: ClipboardCheck, to: '/cash-advance-approvals', permission: null },
     ],
   },
   {
@@ -150,6 +154,7 @@ const groups: MenuGroup[] = [
     items: [
       { name: 'job-vacancies', label: 'Job Vacancies', icon: BriefcaseBusiness, to: '/job-vacancies', permission: 'view job vacancies' },
       { name: 'job-vacancies', label: 'Hiring Requisitions', icon: BriefcaseBusiness, to: '/hiring-requisitions', permission: 'view hiring requisitions' },
+      { name: 'candidates', label: 'Candidates', icon: BriefcaseBusiness, to: '/candidates', permission: 'view candidates' },
     ],
   },
   {
