@@ -15,6 +15,8 @@ use App\Modules\Payroll\Enums\PayrollApprovalRequestStatus;
 use App\Modules\Payroll\Enums\PayrollRunStatus;
 use App\Modules\Payroll\Models\PayrollApprovalRequest;
 use App\Modules\Payroll\Models\PayrollRun;
+use App\Modules\Payroll\Services\PayrollApprovalService;
+use App\Modules\Payroll\Services\PayrollRunService;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -475,5 +477,72 @@ class PayrollApprovalTest extends TestCase
             PayrollRunStatus::Approved,
             $run->fresh()->status
         );
+    }
+
+    /**
+     * 15. requestApproval() harus atomic — kalau initiate() gagal di tengah
+     * jalan, status run TIDAK BOLEH nyangkut di PendingApproval tanpa
+     * ApprovalRequest. Dipanggil lewat service langsung (bukan HTTP), karena
+     * yang diuji adalah atomicity DB::transaction()-nya, bukan error-mapping
+     * controller.
+     */
+    public function test_request_approval_rolls_back_if_initiate_fails(): void
+    {
+        $run = $this->createDraftRun();
+        $this->proceed($run);
+        $this->makeSpecificRoleFlow();
+
+        $this->partialMock(PayrollApprovalService::class, function ($mock) {
+            $mock->shouldReceive('initiate')->once()->andThrow(new \RuntimeException('simulated initiate failure'));
+        });
+
+        $service = app(PayrollRunService::class);
+
+        try {
+            $service->requestApproval($run->fresh());
+            $this->fail('Exception dari initiate() harusnya ke-propagate, bukan ketelan.');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('simulated initiate failure', $e->getMessage());
+        }
+
+        $run->refresh();
+        $this->assertEquals(PayrollRunStatus::Processed, $run->status);
+        $this->assertNull($run->requested_at);
+        $this->assertDatabaseCount('payroll_approval_requests', 0);
+    }
+
+    // 16. Endpoint request-approval sekarang cuma butuh permission 'request payroll approval' — tidak lagi butuh 'create payroll runs'.
+    public function test_request_approval_only_needs_request_payroll_approval_permission(): void
+    {
+        $run = $this->createDraftRun();
+        $this->proceed($run);
+        $this->makeSpecificRoleFlow();
+
+        $role = Role::firstOrCreate(['name' => 'payroll-approval-requester', 'guard_name' => 'web']);
+        $role->givePermissionTo('request payroll approval');
+
+        $user = User::factory()->create();
+        $user->assignRole($role);
+
+        $this->actingAs($user)
+            ->postJson("/api/payroll-runs/{$run->id}/request-approval")
+            ->assertOk();
+    }
+
+    // 17. Sebaliknya, permission 'create payroll runs' doang sudah TIDAK cukup buat request-approval (dulu cukup, sekarang tidak — sesuai fix route duplikat).
+    public function test_create_payroll_runs_permission_alone_cannot_request_approval(): void
+    {
+        $run = $this->createDraftRun();
+        $this->proceed($run);
+
+        $role = Role::firstOrCreate(['name' => 'payroll-creator-only', 'guard_name' => 'web']);
+        $role->givePermissionTo('create payroll runs');
+
+        $user = User::factory()->create();
+        $user->assignRole($role);
+
+        $this->actingAs($user)
+            ->postJson("/api/payroll-runs/{$run->id}/request-approval")
+            ->assertForbidden();
     }
 }

@@ -97,19 +97,6 @@ function backToOverview() {
   selectedPayslip.value = null
 }
 
-async function submitRun() {
-  actionProcessing.value = true
-  actionError.value = ''
-  try {
-    await apiClient.post(`/api/payroll-runs/${runId}/submit`)
-    await loadRun()
-  } catch (err: any) {
-    actionError.value = err.response?.data?.message || 'Gagal submit.'
-  } finally {
-    actionProcessing.value = false
-  }
-}
-
 async function proceedPayslip() {
   if (!confirm('Generate payslip untuk semua peserta? Ini akan membuat revisi baru.')) return
   actionProcessing.value = true
@@ -124,6 +111,20 @@ async function proceedPayslip() {
   }
 }
 
+async function requestApproval() {
+  if (!confirm('Ajukan payroll run ini untuk approval Lock?')) return
+  actionProcessing.value = true
+  actionError.value = ''
+  try {
+    await apiClient.post(`/api/payroll-runs/${runId}/request-approval`)
+    await loadRun()
+  } catch (err: any) {
+    actionError.value = err.response?.data?.message || 'Gagal mengajukan approval.'
+  } finally {
+    actionProcessing.value = false
+  }
+}
+
 const showRecalcForm = ref(false)
 const recalcReason = ref('')
 
@@ -132,7 +133,7 @@ async function submitRecalculate() {
   actionProcessing.value = true
   actionError.value = ''
   try {
-    await apiClient.post(`/api/payroll-runs/${runId}/recalculate`, { reason: recalcReason.value })
+    await apiClient.post(`/api/payroll-runs/${runId}/proceed-payslip`, { note: recalcReason.value })
     showRecalcForm.value = false
     recalcReason.value = ''
     await loadRun()
@@ -231,19 +232,19 @@ onMounted(loadRun)
 
       <!-- ACTIONS -->
       <div class="flex flex-wrap gap-2">
-        <button v-if="run.status === 'draft'" @click="submitRun" :disabled="actionProcessing" class="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-50">
-          <Send class="h-4 w-4" :stroke-width="1.75" /> Submit untuk Approval
+        <button v-if="run.status === 'draft'" @click="proceedPayslip" :disabled="actionProcessing" class="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-50">
+          <Play class="h-4 w-4" :stroke-width="1.75" /> Proses Payroll
         </button>
 
-        <button v-if="run.status === 'approved'" @click="proceedPayslip" :disabled="actionProcessing" class="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-50">
-          <Play class="h-4 w-4" :stroke-width="1.75" /> Proceed Payslip
+        <button v-if="run.status === 'processed'" @click="requestApproval" :disabled="actionProcessing" class="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-50">
+          <Send class="h-4 w-4" :stroke-width="1.75" /> Request Approval
         </button>
 
-        <button v-if="['approved', 'processed'].includes(run.status)" @click="showRecalcForm = !showRecalcForm" class="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+        <button v-if="['processed', 'pending_approval', 'approved'].includes(run.status)" @click="showRecalcForm = !showRecalcForm" class="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
           <RotateCcw class="h-4 w-4" :stroke-width="1.75" /> Recalculate
         </button>
 
-        <button v-if="run.status === 'processed'" @click="lockRun" :disabled="actionProcessing" class="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
+        <button v-if="run.status === 'approved'" @click="lockRun" :disabled="actionProcessing" class="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
           <Lock class="h-4 w-4" :stroke-width="1.75" /> Lock Payroll
         </button>
 
@@ -260,7 +261,10 @@ onMounted(loadRun)
       </div>
 
       <div v-if="showRecalcForm" class="space-y-2 rounded-xl border border-slate-200 bg-white p-4">
-        <p class="text-xs text-slate-500">Recalculate akan reset status ke Draft — kalau sudah pernah Approved, harus submit &amp; approve ulang sebelum Proceed Payslip lagi.</p>
+        <p class="text-xs text-slate-500">
+          Menghitung ulang payslip akan membuat revisi baru; payslip revisi sebelumnya tetap tersimpan sebagai histori.
+          <template v-if="['pending_approval', 'approved'].includes(run.status)"> Approval yang sedang berjalan akan otomatis dibatalkan dan status turun ke Processed — perlu Request Approval ulang sebelum bisa Lock.</template>
+        </p>
         <textarea v-model="recalcReason" rows="2" placeholder="Alasan recalculate (wajib)" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"></textarea>
         <button @click="submitRecalculate" :disabled="!recalcReason.trim() || actionProcessing" class="rounded-xl bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-50">Konfirmasi Recalculate</button>
       </div>
@@ -327,7 +331,7 @@ onMounted(loadRun)
       </div>
 
       <div v-else-if="viewMode === 'overview' && payslips.length === 0" class="rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-400">
-        Payslip belum di-generate — klik "Proceed Payslip" setelah Approved.
+        Payslip belum di-generate — klik "Proses Payroll".
       </div>
 
       <!-- DETAIL MODE -->

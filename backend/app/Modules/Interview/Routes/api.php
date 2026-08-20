@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Interview\Controllers\InterviewController;
+use App\Modules\Interview\Controllers\InterviewStageController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->prefix('interviews')->group(function () {
@@ -11,3 +12,5 @@ Route::middleware('auth:sanctum')->prefix('interviews')->group(function () {
     Route::post('/{interview}/complete', [InterviewController::class, 'complete']);
     Route::post('/{interview}/cancel', [InterviewController::class, 'cancel']);
 });
+
+Route::middleware('auth:sanctum')->get('/interview-stages', [InterviewStageController::class, 'index']);

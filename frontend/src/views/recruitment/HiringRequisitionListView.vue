@@ -29,12 +29,29 @@ interface HiringRequisitionRow {
   requested_by: EmployeeOption | null
 }
 
+interface PendingApproval {
+  id: number
+  approval_step: { name: string } | null
+  request: {
+    employee: EmployeeOption | null
+    hiring_requisition: {
+      id: number
+      position: RefOption | null
+    }
+  }
+}
+
 const router = useRouter()
 const authStore = useAuthStore()
 
 const loading = ref(true)
 const errorMessage = ref('')
 const requisitions = ref<HiringRequisitionRow[]>([])
+
+const actionError = ref('')
+const pendingApprovals = ref<PendingApproval[]>([])
+const decidingId = ref<number | null>(null)
+const decideNotes = ref<Record<number, string>>({})
 
 const search = ref('')
 const statusFilter = ref('')
@@ -83,6 +100,47 @@ async function loadRequisitions() {
       'Gagal memuat daftar Hiring Requisition.'
   } finally {
     loading.value = false
+  }
+}
+
+async function loadPendingApprovals() {
+  try {
+    const response = await apiClient.get(
+      '/api/hiring-requisitions/approvals/pending'
+    )
+
+    pendingApprovals.value = response.data.data
+  } catch {
+    // Panel approval bersifat opsional — jangan ganggu list utama.
+  }
+}
+
+async function decide(
+  decision: PendingApproval,
+  action: 'approve' | 'reject'
+) {
+  decidingId.value = decision.id
+  actionError.value = ''
+
+  try {
+    await apiClient.post(
+      `/api/hiring-requisitions/approvals/${decision.id}/decide`,
+      {
+        action,
+        notes: decideNotes.value[decision.id] || null,
+      }
+    )
+
+    await Promise.all([
+      loadRequisitions(),
+      loadPendingApprovals(),
+    ])
+  } catch (err: any) {
+    actionError.value =
+      err.response?.data?.message ||
+      'Gagal menyimpan keputusan approval.'
+  } finally {
+    decidingId.value = null
   }
 }
 
@@ -252,6 +310,7 @@ function goToDetail(id: number) {
 onMounted(async () => {
   await loadRequisitions()
   await loadReferenceData()
+  await loadPendingApprovals()
 })
 </script>
 
@@ -283,6 +342,68 @@ onMounted(async () => {
 
         Ajukan Requisition
       </button>
+    </div>
+
+    <!-- Approval Panel -->
+    <div
+      v-if="actionError"
+      class="rounded-xl bg-red-50 p-3 text-sm text-red-600"
+    >
+      {{ actionError }}
+    </div>
+
+    <div
+      v-if="pendingApprovals.length"
+      class="rounded-2xl border border-amber-200 bg-amber-50 p-4"
+    >
+      <h2 class="text-sm font-semibold text-amber-800">
+        Menunggu Approval Anda ({{ pendingApprovals.length }})
+      </h2>
+
+      <div class="mt-3 space-y-2">
+        <div
+          v-for="d in pendingApprovals"
+          :key="d.id"
+          class="rounded-xl border border-amber-100 bg-white p-3 text-sm"
+        >
+          <div class="flex items-center justify-between">
+            <span class="font-medium text-slate-700">
+              {{ d.request.hiring_requisition.position?.name || '-' }}
+              —
+              diajukan {{ employeeName(d.request.employee) }}
+            </span>
+
+            <span class="text-xs text-slate-400">
+              Step: {{ d.approval_step?.name || '-' }}
+            </span>
+          </div>
+
+          <textarea
+            v-model="decideNotes[d.id]"
+            rows="1"
+            placeholder="Catatan (opsional)"
+            class="mt-2 w-full rounded-lg border border-slate-200 p-1.5 text-xs"
+          />
+
+          <div class="mt-2 flex gap-2">
+            <button
+              :disabled="decidingId === d.id"
+              class="rounded-lg bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600 disabled:opacity-50"
+              @click="decide(d, 'approve')"
+            >
+              Approve
+            </button>
+
+            <button
+              :disabled="decidingId === d.id"
+              class="rounded-lg bg-red-50 px-3 py-1 text-xs font-medium text-red-600 disabled:opacity-50"
+              @click="decide(d, 'reject')"
+            >
+              Reject
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Search & Filter -->

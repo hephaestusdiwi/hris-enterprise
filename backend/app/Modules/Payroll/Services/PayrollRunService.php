@@ -152,8 +152,10 @@ class PayrollRunService
             throw new PayrollValidationException('Payroll run harus berstatus Processed (sudah ada payslip) sebelum minta approval Lock.');
         }
 
-        $run->update(['status' => PayrollRunStatus::PendingApproval->value, 'requested_at' => now()]);
-        $this->approvalService->initiate($run);
+        DB::transaction(function () use ($run) {
+            $run->update(['status' => PayrollRunStatus::PendingApproval->value, 'requested_at' => now()]);
+            $this->approvalService->initiate($run);
+        });
 
         return $run->fresh();
     }

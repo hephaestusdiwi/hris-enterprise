@@ -3,8 +3,7 @@
 namespace App\Modules\CashAdvance\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\CashAdvance\Exceptions\CashAdvanceValidationException;
-use App\Modules\CashAdvance\Models\CashAdvanceRequest as CashAdvanceRequestModel;
+use App\Modules\CashAdvance\Models\CashAdvanceRequest;
 use App\Modules\CashAdvance\Requests\CancelCashAdvanceRequest;
 use App\Modules\CashAdvance\Requests\DisburseCashAdvanceRequest;
 use App\Modules\CashAdvance\Requests\StoreCashAdvanceRequest;
@@ -13,108 +12,158 @@ use Illuminate\Http\Request;
 
 class CashAdvanceController extends Controller
 {
-    public function __construct(private CashAdvanceService $cashAdvanceService)
-    {
+    public function __construct(
+        private CashAdvanceService $cashAdvanceService,
+    ) {
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $cashAdvances = CashAdvanceRequestModel::with(['employee', 'policy', 'items.category'])
-            ->when(request('status'), fn ($q) => $q->where('status', request('status')))
-            ->when(request('cash_advance_policy_id'), fn ($q) => $q->where('cash_advance_policy_id', request('cash_advance_policy_id')))
-            ->when(request('search'), fn ($q) => $q->where('purpose', 'like', '%'.request('search').'%'))
-            ->latest()
-            ->paginate(20);
+        $query = CashAdvanceRequest::query()
+            ->with([
+                'employee',
+                'policy',
+                'items.category',
+            ])
+            ->latest();
 
-        return response()->json(['success' => true, 'message' => 'OK', 'data' => $cashAdvances]);
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status'));
+        }
+
+        if ($request->filled('cash_advance_policy_id')) {
+            $query->where(
+                'cash_advance_policy_id',
+                $request->integer('cash_advance_policy_id'),
+            );
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->string('search');
+
+            $query->where(function ($q) use ($search) {
+                $q->where('purpose', 'ilike', "%{$search}%")
+                    ->orWhereHas('employee', function ($employee) use ($search) {
+                        $employee
+                            ->where('first_name', 'ilike', "%{$search}%")
+                            ->orWhere('last_name', 'ilike', "%{$search}%")
+                            ->orWhere('employee_number', 'ilike', "%{$search}%");
+                    });
+            });
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OK',
+            'data' => $query->paginate(15),
+        ]);
     }
 
-    public function show(CashAdvanceRequestModel $cashAdvance)
+    public function show(CashAdvanceRequest $cashAdvance)
     {
         return response()->json([
             'success' => true,
             'message' => 'OK',
             'data' => $cashAdvance->load([
-                'employee.department', 'policy', 'items.category', 'attachments',
-                'approvalRequest.stepDecisions.approvalStep', 'disbursedBy',
-                'settlements.items.category', 'settlements.attachments', 'settlements.approvalRequest.stepDecisions.approvalStep',
+                'employee.department',
+                'policy',
+                'items.category',
+                'attachments',
+                'approvalRequest.stepDecisions.approvalStep',
+                'disbursedBy',
+                'settlements.items.category',
+                'settlements.attachments',
+                'settlements.approvalRequest.stepDecisions.approvalStep',
             ]),
         ]);
     }
-
-    // ---- Self-service ----
 
     public function myCashAdvances(Request $request)
     {
         $employee = $request->user()->employee;
 
-        abort_if(! $employee, 422, 'User ini tidak terhubung dengan data employee.');
-
-        $cashAdvances = CashAdvanceRequestModel::with(['policy', 'items.category', 'attachments'])
-            ->where('employee_id', $employee->id)
-            ->latest()
-            ->paginate(20);
-
-        return response()->json(['success' => true, 'message' => 'OK', 'data' => $cashAdvances]);
-    }
-
-    public function myCashAdvanceShow(Request $request, CashAdvanceRequestModel $cashAdvance)
-    {
-        $employee = $request->user()->employee;
-
-        abort_if(! $employee || $cashAdvance->employee_id !== $employee->id, 403, 'Anda tidak berhak melihat request ini.');
+        if (! $employee) {
+            return response()->json([
+                'success' => true,
+                'message' => 'OK',
+                'data' => [],
+            ]);
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'OK',
-            'data' => $cashAdvance->load([
-                'policy', 'items.category', 'attachments', 'approvalRequest.stepDecisions.approvalStep',
-                'settlements.items.category', 'settlements.attachments', 'settlements.approvalRequest.stepDecisions.approvalStep',
-            ]),
+            'data' => CashAdvanceRequest::query()
+                ->with(['policy', 'items.category'])
+                ->where('employee_id', $employee->id)
+                ->latest()
+                ->paginate(15),
         ]);
+    }
+
+    public function myCashAdvanceShow(
+        Request $request,
+        CashAdvanceRequest $cashAdvance,
+    ) {
+        abort_unless(
+            $cashAdvance->employee_id === $request->user()->employee?->id,
+            403,
+        );
+
+        return $this->show($cashAdvance);
     }
 
     public function store(StoreCashAdvanceRequest $request)
     {
-        $employee = $request->user()->employee;
+        $result = $this->cashAdvanceService->submit(
+            $request->user(),
+            $request->validated(),
+        );
 
-        abort_if(! $employee, 422, 'User ini tidak terhubung dengan data employee.');
-
-        try {
-            $cashAdvance = $this->cashAdvanceService->submit($employee, $request->validated());
-
-            return response()->json(['success' => true, 'message' => 'Cash Advance berhasil diajukan', 'data' => $cashAdvance], 201);
-        } catch (CashAdvanceValidationException $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage(), 'data' => null], 422);
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Cash Advance berhasil diajukan',
+            'data' => $result,
+        ], 201);
     }
 
-    public function cancel(CancelCashAdvanceRequest $request, CashAdvanceRequestModel $cashAdvance)
-    {
-        $employee = $request->user()->employee;
-        $isOwner = $employee && $cashAdvance->employee_id === $employee->id;
+    public function cancel(
+        CancelCashAdvanceRequest $request,
+        CashAdvanceRequest $cashAdvance,
+    ) {
+        abort_unless(
+            $cashAdvance->employee_id === $request->user()->employee?->id
+                || $request->user()->can('cancel cash advances'),
+            403,
+        );
 
-        abort_if(! $isOwner && ! $request->user()->can('cancel cash advances'), 403, 'Anda tidak berhak membatalkan request ini.');
+        $result = $this->cashAdvanceService->cancel(
+            $cashAdvance,
+            $request->user(),
+            $request->validated('reason'),
+        );
 
-        try {
-            $cashAdvance = $this->cashAdvanceService->cancel($cashAdvance, $request->validated('reason'));
-
-            return response()->json(['success' => true, 'message' => 'Cash Advance berhasil dibatalkan', 'data' => $cashAdvance]);
-        } catch (CashAdvanceValidationException $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage(), 'data' => null], 422);
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Cash Advance berhasil dibatalkan',
+            'data' => $result,
+        ]);
     }
 
-    // ---- Finance/HR action ----
+    public function disburse(
+        DisburseCashAdvanceRequest $request,
+        CashAdvanceRequest $cashAdvance,
+    ) {
+        $result = $this->cashAdvanceService->disburse(
+            $cashAdvance,
+            $request->user(),
+            $request->validated(),
+        );
 
-    public function disburse(DisburseCashAdvanceRequest $request, CashAdvanceRequestModel $cashAdvance)
-    {
-        try {
-            $cashAdvance = $this->cashAdvanceService->disburse($cashAdvance, $request->validated('disbursement_note'), $request->user());
-
-            return response()->json(['success' => true, 'message' => 'Disbursement berhasil dicatat', 'data' => $cashAdvance]);
-        } catch (CashAdvanceValidationException $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage(), 'data' => null], 422);
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Cash Advance berhasil dicairkan',
+            'data' => $result,
+        ]);
     }
 }

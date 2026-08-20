@@ -11,19 +11,27 @@ use Illuminate\Http\Request;
 
 class CashAdvanceApprovalController extends Controller
 {
-    public function __construct(private CashAdvanceApprovalService $approvalService)
-    {
+    public function __construct(
+        private CashAdvanceApprovalService $approvalService,
+    ) {
     }
 
     public function index(Request $request)
     {
-        $decisions = $this->approvalService->pendingDecisionsForUser($request->user());
+        $decisions = $this->approvalService
+            ->pendingDecisionsForUser($request->user());
 
-        return response()->json(['success' => true, 'message' => 'OK', 'data' => $decisions]);
+        return response()->json([
+            'success' => true,
+            'message' => 'OK',
+            'data' => $decisions,
+        ]);
     }
 
-    public function decide(DecideCashAdvanceApprovalRequest $request, CashAdvanceApprovalStepDecision $decision)
-    {
+    public function decide(
+        DecideCashAdvanceApprovalRequest $request,
+        CashAdvanceApprovalStepDecision $decision,
+    ) {
         try {
             $result = $this->approvalService->decide(
                 $decision,
@@ -34,11 +42,17 @@ class CashAdvanceApprovalController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => $request->validated('action') === 'approve' ? 'Berhasil di-approve' : 'Berhasil ditolak',
+                'message' => $request->validated('action') === 'approve'
+                    ? 'Berhasil di-approve'
+                    : 'Berhasil ditolak',
                 'data' => $result,
             ]);
         } catch (CashAdvanceApprovalException $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage(), 'data' => null], 422);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null,
+            ], 422);
         }
     }
 }

@@ -4,43 +4,67 @@ namespace App\Modules\CashAdvance\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\CashAdvance\Models\CashAdvanceAttachment;
-use App\Modules\CashAdvance\Models\CashAdvanceRequest as CashAdvanceRequestModel;
+use App\Modules\CashAdvance\Models\CashAdvanceRequest;
 use App\Modules\CashAdvance\Requests\StoreCashAdvanceAttachmentRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class CashAdvanceAttachmentController extends Controller
 {
-    public function store(StoreCashAdvanceAttachmentRequest $request, CashAdvanceRequestModel $cashAdvance)
-    {
+    public function store(
+        StoreCashAdvanceAttachmentRequest $request,
+        CashAdvanceRequest $cashAdvance,
+    ) {
         $employee = $request->user()->employee;
-        $isOwner = $employee && $cashAdvance->employee_id === $employee->id;
 
-        abort_if(! $isOwner && ! $request->user()->can('view cash advances'), 403, 'Anda tidak berhak menambah attachment di request ini.');
+        abort_unless(
+            $employee?->id === $cashAdvance->employee_id
+                || $request->user()->can('view cash advances'),
+            403,
+        );
 
-        $attachments = [];
+        $file = $request->file('file');
 
-        foreach ($request->file('attachments', []) as $file) {
-            $path = $file->store("cash-advance-attachments/{$cashAdvance->employee_id}", 'public');
+        $path = $file->store(
+            "cash-advance-attachments/{$cashAdvance->employee_id}",
+            'public',
+        );
 
-            $attachments[] = CashAdvanceAttachment::create([
-                'cash_advance_request_id' => $cashAdvance->id,
-                'file_path' => $path,
-                'file_name' => $file->getClientOriginalName(),
-                'file_size' => $file->getSize(),
-                'mime_type' => $file->getClientMimeType(),
-            ]);
-        }
+        $attachment = $cashAdvance->attachments()->create([
+            'file_path' => $path,
+            'file_name' => $file->getClientOriginalName(),
+            'file_size' => $file->getSize(),
+            'mime_type' => $file->getMimeType(),
+        ]);
 
-        return response()->json(['success' => true, 'message' => 'Attachment berhasil ditambahkan', 'data' => $attachments], 201);
+        return response()->json([
+            'success' => true,
+            'message' => 'Attachment berhasil diupload',
+            'data' => $attachment,
+        ], 201);
     }
 
-    public function destroy(CashAdvanceRequestModel $cashAdvance, CashAdvanceAttachment $attachment)
-    {
-        abort_if($attachment->cash_advance_request_id !== $cashAdvance->id, 404);
+    public function destroy(
+        Request $request,
+        CashAdvanceAttachment $attachment,
+    ) {
+        $cashAdvance = $attachment->request;
+
+        $employee = $request->user()->employee;
+
+        abort_unless(
+            $employee?->id === $cashAdvance->employee_id
+                || $request->user()->can('view cash advances'),
+            403,
+        );
 
         Storage::disk('public')->delete($attachment->file_path);
         $attachment->delete();
 
-        return response()->json(['success' => true, 'message' => 'Attachment berhasil dihapus', 'data' => null]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Attachment berhasil dihapus',
+            'data' => null,
+        ]);
     }
 }

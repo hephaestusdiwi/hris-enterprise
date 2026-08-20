@@ -11,23 +11,41 @@ class CashAdvanceCategoryController extends Controller
 {
     public function index()
     {
-        $categories = CashAdvanceCategory::orderBy('name')->get();
-
-        return response()->json(['success' => true, 'message' => 'OK', 'data' => $categories]);
+        return response()->json([
+            'success' => true,
+            'message' => 'OK',
+            'data' => CashAdvanceCategory::query()
+                ->orderBy('name')
+                ->get(),
+        ]);
     }
 
     public function store(StoreCashAdvanceCategoryRequest $request)
     {
-        $category = CashAdvanceCategory::create($request->validated());
+        $category = CashAdvanceCategory::create(
+            $request->validated()
+        );
 
-        return response()->json(['success' => true, 'message' => 'Kategori berhasil dibuat', 'data' => $category], 201);
+        return response()->json([
+            'success' => true,
+            'message' => 'Kategori berhasil dibuat',
+            'data' => $category,
+        ], 201);
     }
 
-    public function update(UpdateCashAdvanceCategoryRequest $request, CashAdvanceCategory $cashAdvanceCategory)
-    {
-        $cashAdvanceCategory->update($request->validated());
+    public function update(
+        UpdateCashAdvanceCategoryRequest $request,
+        CashAdvanceCategory $cashAdvanceCategory,
+    ) {
+        $cashAdvanceCategory->update(
+            $request->validated()
+        );
 
-        return response()->json(['success' => true, 'message' => 'Kategori berhasil diperbarui', 'data' => $cashAdvanceCategory->fresh()]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Kategori berhasil diperbarui',
+            'data' => $cashAdvanceCategory->fresh(),
+        ]);
     }
 
     public function destroy(CashAdvanceCategory $cashAdvanceCategory)
@@ -42,6 +60,10 @@ class CashAdvanceCategoryController extends Controller
 
         $cashAdvanceCategory->delete();
 
-        return response()->json(['success' => true, 'message' => 'Kategori berhasil dihapus', 'data' => null]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Kategori berhasil dihapus',
+            'data' => null,
+        ]);
     }
 }
