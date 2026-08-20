@@ -26,7 +26,10 @@ class LeaveApprovalService
     {
         $employee = $leaveRequest->employee;
 
-        $approvalFlow = $this->approvalFlowResolver->resolveFor($employee);
+        $approvalFlow = $this->approvalFlowResolver->resolveFor(
+            $employee,
+            'leave'
+        );
 
         if (! $approvalFlow) {
             $this->autoApprove($leaveRequest);

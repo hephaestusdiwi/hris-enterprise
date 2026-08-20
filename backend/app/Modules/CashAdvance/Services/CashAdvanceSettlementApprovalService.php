@@ -32,7 +32,11 @@ class CashAdvanceSettlementApprovalService
     public function initiate(CashAdvanceSettlement $settlement): void
     {
         $employee = $settlement->request->employee;
-        $approvalFlow = $this->approvalFlowResolver->resolveFor($employee);
+
+        $approvalFlow = $this->approvalFlowResolver->resolveFor(
+            $employee,
+            'cash_advance_settlement'
+        );
 
         if (! $approvalFlow) {
             $this->autoApprove($settlement);
@@ -40,7 +44,10 @@ class CashAdvanceSettlementApprovalService
             return;
         }
 
-        $steps = $approvalFlow->steps()->where('is_active', true)->orderBy('sequence')->get();
+        $steps = $approvalFlow->steps()
+            ->where('is_active', true)
+            ->orderBy('sequence')
+            ->get();
 
         if ($steps->isEmpty()) {
             $this->autoApprove($settlement);

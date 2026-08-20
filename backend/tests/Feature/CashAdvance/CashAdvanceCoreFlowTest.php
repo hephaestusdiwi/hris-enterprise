@@ -29,7 +29,10 @@ class CashAdvanceCoreFlowTest extends TestCase
     {
         $policy = CashAdvancePolicy::create([
             'name' => 'Business Trip',
-            'effective_date' => '2027-01-01',
+            // Harus sudah efektif relatif ke "sekarang" saat test dijalankan
+            // (isCurrentlyEffective() cek effective_date <= now()) -- dulu
+            // hardcoded 2027-01-01 dan gagal begitu tanggal berjalan lewat 2026.
+            'effective_date' => now()->subYear()->toDateString(),
             'settlement_due_days' => 14,
             'is_active' => true,
         ]);
@@ -150,7 +153,11 @@ class CashAdvanceCoreFlowTest extends TestCase
         $approverEmployee = Employee::factory()->create();
 
         $flow = ApprovalFlow::create([
+            // company_id NOT NULL di skema approval_flows -- pakai company
+            // milik employee fixture yang dipakai test ini, bukan ID hardcode.
+            'company_id' => $employee->company_id,
             'name' => 'CA Flow',
+            'code' => 'CA-FLOW-'.uniqid(),
             'is_active' => true,
         ]);
 
@@ -216,7 +223,9 @@ class CashAdvanceCoreFlowTest extends TestCase
         $approverEmployee = Employee::factory()->create();
 
         $flow = ApprovalFlow::create([
+            'company_id' => $employee->company_id,
             'name' => 'CA Flow Reject',
+            'code' => 'CA-FLOW-REJECT-'.uniqid(),
             'is_active' => true,
         ]);
 
@@ -372,7 +381,9 @@ class CashAdvanceCoreFlowTest extends TestCase
         $approverEmployee = Employee::factory()->create();
 
         $flow = ApprovalFlow::create([
+            'company_id' => $employee->company_id,
             'name' => 'CA Settlement Flow',
+            'code' => 'CA-SETTLEMENT-FLOW-'.uniqid(),
             'is_active' => true,
         ]);
 
@@ -476,7 +487,9 @@ class CashAdvanceCoreFlowTest extends TestCase
         $approverEmployee = Employee::factory()->create();
 
         $flow = ApprovalFlow::create([
+            'company_id' => $employee->company_id,
             'name' => 'CA Settlement Flow 2',
+            'code' => 'CA-SETTLEMENT-FLOW-2-'.uniqid(),
             'is_active' => true,
         ]);
 

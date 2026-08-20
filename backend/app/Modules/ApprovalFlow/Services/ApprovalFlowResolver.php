@@ -10,76 +10,122 @@ use App\Modules\Employee\Models\Employee;
 class ApprovalFlowResolver
 {
     /**
-     * Resolusi ApprovalFlow untuk seorang Employee — TIDAK BERUBAH secara
-     * behavior dari versi sebelumnya. Sekarang cuma wrapper tipis di atas
-     * resolveForScope(): bangun ApprovalScope dari atribut employee, lalu
-     * delegasikan. Semua caller existing (Leave/Attendance/Loan/Hiring
-     * Requisition) hasil-nya identik seperti sebelumnya.
+     * Resolusi ApprovalFlow untuk seorang Employee berdasarkan
+     * business process / approval type.
+     *
+     * Cascading tetap sama seperti sebelumnya.
+     * Perubahan hanya: resolver sekarang wajib mengetahui
+     * jenis approval yang sedang dicari.
      */
-    public function resolveFor(Employee $employee): ?ApprovalFlow
-    {
-        return $this->resolveForScope(ApprovalScope::fromEmployee($employee));
+    public function resolveFor(
+        Employee $employee,
+        string $approvalType
+    ): ?ApprovalFlow {
+        return $this->resolveForScope(
+            ApprovalScope::fromEmployee($employee),
+            $approvalType
+        );
     }
 
     /**
-     * Core resolver, generik untuk subject apa pun — Employee (lewat
-     * resolveFor() di atas) maupun business-process non-employee seperti
-     * Payroll Run. Cascading order ala Mekari Talenta, dari paling spesifik
-     * ke paling umum:
+     * Core resolver untuk subject apa pun.
      *
-     *   1. Employee   — assignment manual langsung (cuma applicable kalau scope->employeeId terisi)
+     * Cascading:
+     *
+     *   1. Employee assignment
      *   2. Job Level
      *   3. Department
      *   4. Branch
-     *   5. Company    — flow default company-wide (semua kolom scope NULL)
+     *   5. Company-wide
      *
-     * Berhenti di tier pertama yang match. Tier yang datanya NULL di scope
-     * (mis. Payroll Run yang ga punya job_level/department) otomatis dilewati.
+     * Semua tier sekarang dibatasi oleh approval_type.
      */
-    public function resolveForScope(ApprovalScope $scope): ?ApprovalFlow
-    {
+    public function resolveForScope(
+        ApprovalScope $scope,
+        string $approvalType
+    ): ?ApprovalFlow {
         if ($scope->employeeId) {
-            $assignment = ApprovalFlowAssignment::where('employee_id', $scope->employeeId)
+            $assignment = ApprovalFlowAssignment::query()
+                ->where('employee_id', $scope->employeeId)
                 ->where('is_active', true)
                 ->first();
 
             if ($assignment) {
-                return $assignment->approvalFlow;
+                $flow = $assignment->approvalFlow;
+
+                /*
+                 * Assignment juga harus cocok dengan business process.
+                 */
+                if (
+                    $flow &&
+                    $flow->approval_type === $approvalType &&
+                    $flow->is_active
+                ) {
+                    return $flow;
+                }
             }
         }
 
         if ($scope->jobLevelId) {
-            $flow = $this->activeFlow($scope->companyId, ['job_level_id' => $scope->jobLevelId]);
+            $flow = $this->activeFlow(
+                $scope->companyId,
+                $approvalType,
+                ['job_level_id' => $scope->jobLevelId]
+            );
+
             if ($flow) {
                 return $flow;
             }
         }
 
         if ($scope->departmentId) {
-            $flow = $this->activeFlow($scope->companyId, ['department_id' => $scope->departmentId]);
+            $flow = $this->activeFlow(
+                $scope->companyId,
+                $approvalType,
+                ['department_id' => $scope->departmentId]
+            );
+
             if ($flow) {
                 return $flow;
             }
         }
 
         if ($scope->branchId) {
-            $flow = $this->activeFlow($scope->companyId, ['branch_id' => $scope->branchId]);
+            $flow = $this->activeFlow(
+                $scope->companyId,
+                $approvalType,
+                ['branch_id' => $scope->branchId]
+            );
+
             if ($flow) {
                 return $flow;
             }
         }
 
-        return $this->activeFlow($scope->companyId, []);
+        return $this->activeFlow(
+            $scope->companyId,
+            $approvalType,
+            []
+        );
     }
 
     /**
-     * @param  array<string, int>  $scope  Kolom scope yang harus terisi (yang lain harus NULL)
+     * @param array<string, int> $scope
      */
-    private function activeFlow(int $companyId, array $scope): ?ApprovalFlow
-    {
-        $query = ApprovalFlow::where('company_id', $companyId)->where('is_active', true);
+    private function activeFlow(
+        int $companyId,
+        string $approvalType,
+        array $scope
+    ): ?ApprovalFlow {
+        $query = ApprovalFlow::query()
+            ->where('company_id', $companyId)
+            ->where('approval_type', $approvalType)
+            ->where('is_active', true);
 
-        foreach (['job_level_id', 'department_id', 'branch_id'] as $column) {
+        foreach (
+            ['job_level_id', 'department_id', 'branch_id']
+            as $column
+        ) {
             if (array_key_exists($column, $scope)) {
                 $query->where($column, $scope[$column]);
             } else {

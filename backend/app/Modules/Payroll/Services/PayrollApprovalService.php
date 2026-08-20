@@ -31,8 +31,14 @@ class PayrollApprovalService
      */
     public function initiate(PayrollRun $payrollRun): void
     {
-        $scope = new ApprovalScope(companyId: $payrollRun->company_id);
-        $approvalFlow = $this->approvalFlowResolver->resolveForScope($scope);
+        $scope = new ApprovalScope(
+            companyId: $payrollRun->company_id
+        );
+
+        $approvalFlow = $this->approvalFlowResolver->resolveForScope(
+            $scope,
+            'payroll'
+        );
 
         if (! $approvalFlow) {
             $this->autoApprove($payrollRun);

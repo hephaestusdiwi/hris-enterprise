@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   ChevronDown, ChevronLeft, ChevronRight, Fingerprint, CalendarDays, Clock, Wallet,
   HeartPulse, Hourglass, Megaphone, MoreVertical, UserRound, Gift, Flag, ArrowRight,
   Receipt, History, Folder, ShieldCheck, HelpCircle, Timer, CheckCircle2, Loader2,
+  FileText, GraduationCap,
 } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
 import AttendanceSelfServiceCard from '@/views/AttendanceSelfServiceCard.vue'
+
+const router = useRouter()
 
 interface DashboardData {
   user: { id: number; name: string; email: string }
@@ -114,13 +118,105 @@ async function loadWhosOffToday() {
   }
 }
 
-// ---------- Announcement tabs (PLACEHOLDER, UI aja dulu) ----------
+// ---------- Announcement tab (BENERAN, pakai /api/my-announcements) ----------
 const activeTab = ref<'announcement' | 'contract' | 'tasks'>('announcement')
-const announcements = [
-  { icon: '🏠', title: 'Update Kebijakan Work From Office (WFO)', body: 'Mulai 1 Agustus 2026, perusahaan menerapkan kebijakan...', time: '2 jam lalu' },
-  { icon: '🎂', title: 'Sundar Pichai berulang tahun hari ini!', body: 'Jangan lupa ucapkan selamat ulang tahun 🎉', time: '3 jam lalu' },
-  { icon: '📄', title: 'Mindway HRIS versi terbaru telah dirilis', body: 'Beberapa fitur baru telah tersedia pada versi terbaru.', time: '1 hari lalu' },
-]
+
+interface AnnouncementPreviewRow {
+  id: number
+  read_at: string | null
+  announcement: {
+    id: number
+    title: string
+    content: string
+    published_at: string | null
+    category: { id: number; name: string } | null
+  }
+}
+
+const announcements = ref<AnnouncementPreviewRow[]>([])
+const announcementsLoading = ref(true)
+const announcementsError = ref('')
+
+async function loadAnnouncements() {
+  announcementsLoading.value = true
+  announcementsError.value = ''
+  try {
+    const response = await apiClient.get('/api/my-announcements')
+    announcements.value = (response.data.data.data as AnnouncementPreviewRow[]).slice(0, 5)
+  } catch {
+    announcementsError.value = 'Gagal memuat announcement.'
+  } finally {
+    announcementsLoading.value = false
+  }
+}
+
+// Sama persis dengan formatRelativeDate di AnnouncementInboxView.vue —
+// belum ada shared date util di project ini, jadi ikut konvensi yang
+// sudah ada (duplikat kecil per-view) daripada bikin abstraksi baru.
+function formatRelativeDate(dateStr: string | null) {
+  if (!dateStr) return '-'
+  const date = new Date(dateStr)
+  const diffMin = Math.floor((Date.now() - date.getTime()) / 60000)
+  if (diffMin < 1) return 'Baru saja'
+  if (diffMin < 60) return `${diffMin} menit lalu`
+  const diffHour = Math.floor(diffMin / 60)
+  if (diffHour < 24) return `${diffHour} jam lalu`
+  const diffDay = Math.floor(diffHour / 24)
+  if (diffDay < 7) return `${diffDay} hari lalu`
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+// ---------- Contract & Probation tab (BENERAN, pakai /api/employees/contract-probation/summary) ----------
+interface ContractProbationPreviewItem {
+  type: 'contract' | 'probation'
+  end_date: string
+  remaining_days: number
+  employee: { id: number; employee_number: string; name: string; photo_url: string | null; position: string | null }
+}
+
+interface ContractProbationSummary {
+  contract_ending_soon: number
+  probation_ending_soon: number
+  preview: ContractProbationPreviewItem[]
+}
+
+const contractProbation = ref<ContractProbationSummary | null>(null)
+const contractProbationLoading = ref(true)
+const contractProbationForbidden = ref(false)
+const contractProbationError = ref('')
+
+async function loadContractProbation() {
+  contractProbationLoading.value = true
+  contractProbationForbidden.value = false
+  contractProbationError.value = ''
+  try {
+    const response = await apiClient.get('/api/employees/contract-probation/summary')
+    contractProbation.value = response.data.data
+  } catch (err) {
+    // Endpoint di-gate permission 'view employees' — user tanpa akses akan
+    // kena 403, itu bukan error, cuma kondisi "nggak berhak liat", jadi
+    // ditangani beda dari error network/500 beneran.
+    const status = (err as { response?: { status?: number } })?.response?.status
+    if (status === 403) {
+      contractProbationForbidden.value = true
+    } else {
+      contractProbationError.value = 'Gagal memuat data Contract & Probation.'
+    }
+  } finally {
+    contractProbationLoading.value = false
+  }
+}
+
+// Sama persis dengan urgencyClass/remainingLabel di ContractProbationListView.vue.
+function urgencyClass(days: number) {
+  if (days <= 7) return 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-100'
+  if (days <= 14) return 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-100'
+  return 'bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-100'
+}
+function remainingLabel(days: number) {
+  if (days === 0) return 'Hari ini'
+  return `${days} hari`
+}
 
 // ---------- Upcoming & Pending (PLACEHOLDER) ----------
 const upcomingPending = [
@@ -202,6 +298,8 @@ const pendingActionCount = ref(2)
 onMounted(() => {
   loadDashboard()
   loadWhosOffToday()
+  loadAnnouncements()
+  loadContractProbation()
   clockTimer = setInterval(() => { now.value = new Date() }, 1000)
 })
 
@@ -398,20 +496,94 @@ onUnmounted(() => {
             </button>
           </div>
 
-          <div class="space-y-4">
-            <div v-for="(a, i) in announcements" :key="i" class="flex items-start gap-3">
-              <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-50 text-sm">{{ a.icon }}</div>
-              <div class="min-w-0 flex-1">
-                <p class="text-sm font-medium text-slate-800">{{ a.title }}</p>
-                <p class="truncate text-xs text-slate-400">{{ a.body }}</p>
+          <div v-if="announcementsLoading" class="flex items-center gap-2 py-6 text-xs text-slate-400">
+            <Loader2 class="h-4 w-4 animate-spin" :stroke-width="2" />
+            Memuat...
+          </div>
+          <div v-else-if="announcementsError" class="py-6 text-center text-xs text-slate-400">
+            {{ announcementsError }}
+          </div>
+          <div v-else-if="announcements.length === 0" class="py-6 text-center text-xs text-slate-400">
+            Belum ada announcement untuk kamu.
+          </div>
+          <div v-else class="space-y-4">
+            <div v-for="row in announcements" :key="row.id" class="flex items-start gap-3">
+              <div class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-dark">
+                <Megaphone class="h-4 w-4" :stroke-width="1.75" />
+                <span v-if="!row.read_at" class="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
               </div>
-              <span class="shrink-0 text-[11px] text-slate-300">{{ a.time }}</span>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-medium text-slate-800">{{ row.announcement.title }}</p>
+                <p class="truncate text-xs text-slate-400">{{ row.announcement.content }}</p>
+              </div>
+              <span class="shrink-0 text-[11px] text-slate-300">{{ formatRelativeDate(row.announcement.published_at) }}</span>
             </div>
           </div>
 
-          <button type="button" class="mt-4 text-xs font-medium text-primary-dark hover:underline">
+          <button
+            type="button"
+            @click="router.push({ name: 'announcements.inbox' })"
+            class="mt-4 text-xs font-medium text-primary-dark hover:underline"
+          >
             View all announcement ›
           </button>
+        </template>
+
+        <template v-else-if="activeTab === 'contract'">
+          <div v-if="contractProbationLoading" class="flex items-center gap-2 py-6 text-xs text-slate-400">
+            <Loader2 class="h-4 w-4 animate-spin" :stroke-width="2" />
+            Memuat...
+          </div>
+          <div v-else-if="contractProbationForbidden" class="py-10 text-center text-sm text-slate-400">
+            Kamu tidak punya akses untuk melihat data ini.
+          </div>
+          <div v-else-if="contractProbationError" class="py-10 text-center text-sm text-slate-400">
+            {{ contractProbationError }}
+          </div>
+          <template v-else-if="contractProbation">
+            <div class="mb-4 flex gap-3">
+              <div class="flex-1 rounded-xl bg-slate-50 px-3 py-2">
+                <p class="text-lg font-semibold text-slate-800">{{ contractProbation.contract_ending_soon }}</p>
+                <p class="text-[11px] text-slate-400">Contract Ending Soon</p>
+              </div>
+              <div class="flex-1 rounded-xl bg-slate-50 px-3 py-2">
+                <p class="text-lg font-semibold text-slate-800">{{ contractProbation.probation_ending_soon }}</p>
+                <p class="text-[11px] text-slate-400">Probation Ending Soon</p>
+              </div>
+            </div>
+
+            <div v-if="contractProbation.preview.length === 0" class="py-6 text-center text-xs text-slate-400">
+              Tidak ada kontrak/probation yang akan berakhir dalam waktu dekat.
+            </div>
+            <div v-else class="space-y-4">
+              <div v-for="item in contractProbation.preview" :key="`${item.type}-${item.employee.id}`" class="flex items-center gap-3">
+                <img v-if="item.employee.photo_url" :src="item.employee.photo_url" alt="" class="h-8 w-8 shrink-0 rounded-full object-cover" />
+                <div v-else class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark">
+                  {{ initialsFromName(item.employee.name) }}
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-sm font-medium text-slate-800">{{ item.employee.name }}</p>
+                  <p class="truncate text-xs text-slate-400">{{ item.employee.position ?? '-' }}</p>
+                </div>
+                <component
+                  :is="item.type === 'contract' ? FileText : GraduationCap"
+                  class="h-3.5 w-3.5 shrink-0 text-slate-400"
+                  :stroke-width="1.75"
+                />
+                <span class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium" :class="urgencyClass(item.remaining_days)">
+                  {{ remainingLabel(item.remaining_days) }}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              @click="router.push({ name: 'contract-probation' })"
+              class="mt-4 text-xs font-medium text-primary-dark hover:underline"
+            >
+              View all ›
+            </button>
+          </template>
         </template>
 
         <div v-else class="py-10 text-center text-sm text-slate-400">Belum ada data.</div>

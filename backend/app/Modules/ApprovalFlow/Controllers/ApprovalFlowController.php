@@ -6,13 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Modules\ApprovalFlow\Models\ApprovalFlow;
 use App\Modules\ApprovalFlow\Requests\StoreApprovalFlowRequest;
 use App\Modules\ApprovalFlow\Requests\UpdateApprovalFlowRequest;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
 class ApprovalFlowController extends Controller
 {
     public function index()
     {
-        $approvalFlows = ApprovalFlow::with(['company', 'branch', 'department', 'jobLevel'])
+        $approvalFlows = ApprovalFlow::with([
+                'company',
+                'branch',
+                'department',
+                'jobLevel',
+            ])
             ->withCount('steps')
             ->latest()
             ->paginate(15);
@@ -35,12 +41,36 @@ class ApprovalFlowController extends Controller
 
     public function store(StoreApprovalFlowRequest $request)
     {
-        $approvalFlow = ApprovalFlow::create($request->validated());
+        $data = $request->validated();
+
+        $approvalFlow = DB::transaction(function () use ($data) {
+            $isDefault = (bool) ($data['is_default'] ?? false);
+
+            if ($isDefault) {
+                ApprovalFlow::query()
+                    ->where('company_id', $data['company_id'])
+                    ->where('is_default', true)
+                    ->update([
+                        'is_default' => false,
+                    ]);
+
+                // Pastikan tidak ada default lama yang tersisa.
+                // Ini penting sebelum INSERT karena PostgreSQL punya
+                // partial unique constraint untuk default per company.
+                $data['is_default'] = true;
+            }
+
+            return ApprovalFlow::create($data);
+        });
 
         return response()->json([
             'success' => true,
             'message' => 'Approval Flow berhasil dibuat',
-            'data' => $approvalFlow->load(['company', 'branch', 'department']),
+            'data' => $approvalFlow->load([
+                'company',
+                'branch',
+                'department',
+            ]),
         ], 201);
     }
 
@@ -49,18 +79,48 @@ class ApprovalFlowController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'OK',
-            'data' => $approvalFlow->load(['company', 'branch', 'department', 'jobLevel', 'steps', 'assignments.employee']),
+            'data' => $approvalFlow->load([
+                'company',
+                'branch',
+                'department',
+                'jobLevel',
+                'steps',
+                'assignments.employee',
+            ]),
         ]);
     }
 
-    public function update(UpdateApprovalFlowRequest $request, ApprovalFlow $approvalFlow)
-    {
-        $approvalFlow->update($request->validated());
+    public function update(
+        UpdateApprovalFlowRequest $request,
+        ApprovalFlow $approvalFlow
+    ) {
+        $data = $request->validated();
+
+        DB::transaction(function () use ($data, $approvalFlow) {
+            /*
+             * Kalau flow ini dijadikan default,
+             * cabut default dari flow lain dalam company yang sama.
+             */
+            if (! empty($data['is_default'])) {
+                ApprovalFlow::where('company_id', $approvalFlow->company_id)
+                    ->where('id', '!=', $approvalFlow->id)
+                    ->where('is_default', true)
+                    ->update([
+                        'is_default' => false,
+                    ]);
+            }
+
+            $approvalFlow->update($data);
+        });
 
         return response()->json([
             'success' => true,
             'message' => 'Approval Flow berhasil diperbarui',
-            'data' => $approvalFlow->load(['company', 'branch', 'department']),
+            'data' => $approvalFlow->fresh()->load([
+                'company',
+                'branch',
+                'department',
+            ]),
         ]);
     }
 

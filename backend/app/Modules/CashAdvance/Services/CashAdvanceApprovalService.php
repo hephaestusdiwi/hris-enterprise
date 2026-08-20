@@ -30,7 +30,10 @@ class CashAdvanceApprovalService
     public function initiate(CashAdvanceRequest $request): void
     {
         $employee = $request->employee;
-        $approvalFlow = $this->approvalFlowResolver->resolveFor($employee);
+        $approvalFlow = $this->approvalFlowResolver->resolveFor(
+            $employee,
+            'cash_advance'
+        );
 
         if (! $approvalFlow) {
             $this->autoApprove($request);

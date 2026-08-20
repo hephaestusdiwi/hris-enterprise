@@ -31,7 +31,10 @@ class EmployeeMovementApprovalService
 
     public function initiate(EmployeeMovement $movement, Employee $subjectEmployee): void
     {
-        $approvalFlow = $this->approvalFlowResolver->resolveFor($subjectEmployee);
+        $approvalFlow = $this->approvalFlowResolver->resolveFor(
+            $subjectEmployee,
+            'employee_movement'
+        );
 
         if (! $approvalFlow) {
             throw new EmployeeMovementException(
@@ -39,7 +42,10 @@ class EmployeeMovementApprovalService
             );
         }
 
-        $steps = $approvalFlow->steps()->where('is_active', true)->orderBy('sequence')->get();
+        $steps = $approvalFlow->steps()
+            ->where('is_active', true)
+            ->orderBy('sequence')
+            ->get();
 
         if ($steps->isEmpty()) {
             throw new EmployeeMovementException(

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Candidate\Models\Candidate;
 use App\Modules\Candidate\Requests\ReconsiderCandidateRequest;
 use App\Modules\Candidate\Services\CandidateService;
+use App\Modules\NewJoiner\Services\NewJoinerService;
 use App\Modules\JobVacancy\Models\JobVacancy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

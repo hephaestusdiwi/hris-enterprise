@@ -34,7 +34,10 @@ class AttendanceRequestApprovalService
     public function initiate(AttendanceRequest $attendanceRequest): void
     {
         $employee = $attendanceRequest->employee;
-        $approvalFlow = $this->approvalFlowResolver->resolveFor($employee);
+        $approvalFlow = $this->approvalFlowResolver->resolveFor(
+            $employee,
+            'attendance_request'
+        );
 
         if (! $approvalFlow) {
             $this->applyApproval($attendanceRequest);

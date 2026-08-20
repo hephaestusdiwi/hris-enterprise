@@ -23,6 +23,7 @@ class ApprovalFlow extends Model
         'job_level_id',
         'name',
         'code',
+        'approval_type',
         'description',
         'is_active',
     ];

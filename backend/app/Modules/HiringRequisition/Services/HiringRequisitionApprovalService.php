@@ -25,7 +25,10 @@ class HiringRequisitionApprovalService
 
     public function initiate(HiringRequisition $hiringRequisition, Employee $requestedBy): void
     {
-        $approvalFlow = $this->approvalFlowResolver->resolveFor($requestedBy);
+        $approvalFlow = $this->approvalFlowResolver->resolveFor(
+            $requestedBy,
+            'hiring_requisition'
+        );
 
         if (! $approvalFlow) {
             // Beda dengan Leave: headcount TIDAK auto-approve kalau tidak ada Approval Flow.

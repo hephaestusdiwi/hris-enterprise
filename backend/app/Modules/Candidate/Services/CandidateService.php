@@ -217,17 +217,13 @@ class CandidateService
         if ($candidate->status === CandidateStatus::Hired) {
             throw new CandidateValidationException('Candidate ini sudah Hired sebelumnya.');
         }
-
         if ($candidate->status !== CandidateStatus::Offered) {
             throw new CandidateValidationException('Candidate harus berstatus Offered sebelum bisa di-Hired.');
         }
-
         $accepted = $candidate->offerings()->where('status', OfferingStatus::Accepted->value)->exists();
-
         if (! $accepted) {
             throw new CandidateValidationException('Candidate ini belum memiliki Offering berstatus Accepted.');
         }
-
         return $this->transitionStatus($candidate, CandidateStatus::Hired, $actor->id, $notes ?? 'Candidate dinyatakan Hired.');
     }
 }

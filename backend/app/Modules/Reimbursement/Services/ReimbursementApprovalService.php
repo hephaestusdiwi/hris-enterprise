@@ -31,7 +31,8 @@ class ReimbursementApprovalService
         $employee = $request->employee;
 
         $approvalFlow = $this->approvalFlowResolver->resolveFor(
-            $employee
+            $employee,
+            'reimbursement'
         );
 
         if (! $approvalFlow) {

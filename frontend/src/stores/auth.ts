@@ -6,6 +6,7 @@ interface User {
   id: number
   name: string
   email: string
+  photo_url: string | null
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -35,7 +36,14 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await apiClient.get('/api/user')
       const data = response.data.data
-      user.value = { id: data.id, name: data.name, email: data.email }
+
+      user.value = {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        photo_url: data.photo_url ?? null,
+      }
+
       roles.value = data.roles ?? []
       permissions.value = data.permissions ?? []
     } catch {
@@ -45,5 +53,13 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { user, roles, permissions, isAuthenticated, login, logout, fetchUser }
+  return {
+    user,
+    roles,
+    permissions,
+    isAuthenticated,
+    login,
+    logout,
+    fetchUser,
+  }
 })

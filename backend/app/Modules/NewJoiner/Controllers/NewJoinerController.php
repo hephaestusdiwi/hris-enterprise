@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Modules\Candidate\Models\Candidate;
 use App\Modules\NewJoiner\Models\NewJoiner;
 use App\Modules\NewJoiner\Requests\SendNewJoinerRequest;
+use App\Modules\NewJoiner\Requests\ConvertNewJoinerRequest;
 use App\Modules\NewJoiner\Services\NewJoinerService;
+use App\Modules\NewJoiner\Services\NewJoinerConversionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 

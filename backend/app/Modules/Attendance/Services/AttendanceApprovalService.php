@@ -50,7 +50,10 @@ class AttendanceApprovalService
             return;
         }
 
-        $approvalFlow = $this->approvalFlowResolver->resolveFor($employee);
+        $approvalFlow = $this->approvalFlowResolver->resolveFor(
+            $employee,
+            'attendance'
+        );
 
         if (! $approvalFlow) {
             $this->applyApprovedValue($attendance, $type, $detectedValue);

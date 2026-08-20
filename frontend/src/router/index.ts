@@ -62,6 +62,7 @@ import JobVacancyDetailView from '@/views/recruitment/JobVacancyDetailView.vue'
 import HiringRequisitionListView from '@/views/recruitment/HiringRequisitionListView.vue'
 import HiringRequisitionDetailView from '@/views/recruitment/HiringRequisitionDetailView.vue'
 import CandidateListView from '@/views/recruitment/CandidateListView.vue'
+import NewJoinerListView from '@/views/recruitment/NewJoinerListView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -443,6 +444,12 @@ const router = createRouter({
       path: '/candidates',
       name: 'candidates.index',
       component: CandidateListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/new-joiners',
+      name: 'new-joiners.index',
+      component: NewJoinerListView,
       meta: { requiresAuth: true },
     },
     {

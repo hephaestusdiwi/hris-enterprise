@@ -25,7 +25,10 @@ class LoanApprovalService
     {
         $employee = $loan->employee;
 
-        $approvalFlow = $this->approvalFlowResolver->resolveFor($employee);
+        $approvalFlow = $this->approvalFlowResolver->resolveFor(
+            $employee,
+            'loan'
+        );
 
         if (! $approvalFlow) {
             $this->autoApprove($loan);

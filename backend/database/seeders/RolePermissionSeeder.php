@@ -171,6 +171,9 @@ class RolePermissionSeeder extends Seeder
             'view interviews',
             'schedule interviews',
             'conduct interviews',
+            'view new joiners',
+            'manage new joiners',
+            'proceed as employee',
         ];
 
         foreach ($permissions as $permission) {
@@ -242,6 +245,9 @@ class RolePermissionSeeder extends Seeder
             'lock payroll runs',
             'publish payroll runs',
             'edit payroll settings',
+            'view new joiners',
+            'manage new joiners',
+            'proceed as employee',
         ]);
 
         $employee = Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'web']);

@@ -155,6 +155,7 @@ const groups: MenuGroup[] = [
       { name: 'job-vacancies', label: 'Job Vacancies', icon: BriefcaseBusiness, to: '/job-vacancies', permission: 'view job vacancies' },
       { name: 'job-vacancies', label: 'Hiring Requisitions', icon: BriefcaseBusiness, to: '/hiring-requisitions', permission: 'view hiring requisitions' },
       { name: 'candidates', label: 'Candidates', icon: BriefcaseBusiness, to: '/candidates', permission: 'view candidates' },
+      { name: 'new-joiners', label: 'New Joiner', icon: BriefcaseBusiness, to: '/new-joiners', permission: 'view new joiners' },
     ],
   },
   {

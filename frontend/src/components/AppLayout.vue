@@ -58,7 +58,7 @@ const isAttendanceActive = computed(() => attendancePaths.includes(route.path))
           M
         </div>
         <button class="hidden items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 sm:flex">
-          Mindway HRIS
+          Bakat HRIS
           <ChevronDown class="h-3.5 w-3.5" :stroke-width="2" />
         </button>
       </div>
@@ -86,8 +86,19 @@ const isAttendanceActive = computed(() => attendancePaths.includes(route.path))
         <div class="mx-1 hidden h-6 w-px bg-slate-100 sm:block"></div>
 
         <div v-if="authStore.isAuthenticated" class="flex items-center gap-1.5">
-          <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark">
-            {{ initials(authStore.user?.name) }}
+          <div
+            class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-soft text-xs font-semibold text-primary-dark"
+          >
+            <img
+              v-if="authStore.user?.photo_url"
+              :src="authStore.user.photo_url"
+              :alt="authStore.user?.name ?? 'User'"
+              class="h-full w-full object-cover"
+            />
+
+            <span v-else>
+              {{ initials(authStore.user?.name) }}
+            </span>
           </div>
           <span class="hidden text-sm font-medium text-slate-700 md:inline">{{ authStore.user?.name }}</span>
 
