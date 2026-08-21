@@ -156,6 +156,7 @@ class CashAdvanceCoreFlowTest extends TestCase
             // company_id NOT NULL di skema approval_flows -- pakai company
             // milik employee fixture yang dipakai test ini, bukan ID hardcode.
             'company_id' => $employee->company_id,
+            'approval_type' => 'cash_advance',
             'name' => 'CA Flow',
             'code' => 'CA-FLOW-'.uniqid(),
             'is_active' => true,
@@ -224,6 +225,7 @@ class CashAdvanceCoreFlowTest extends TestCase
 
         $flow = ApprovalFlow::create([
             'company_id' => $employee->company_id,
+            'approval_type' => 'cash_advance',
             'name' => 'CA Flow Reject',
             'code' => 'CA-FLOW-REJECT-'.uniqid(),
             'is_active' => true,
@@ -380,8 +382,32 @@ class CashAdvanceCoreFlowTest extends TestCase
         $employee = Employee::factory()->create();
         $approverEmployee = Employee::factory()->create();
 
+        // Request-level approval tetap dibutuhkan sebelum Cash Advance bisa disburse.
+        $requestFlow = ApprovalFlow::create([
+            'company_id' => $employee->company_id,
+            'approval_type' => 'cash_advance',
+            'name' => 'CA Request Flow',
+            'code' => 'CA-REQUEST-FLOW-'.uniqid(),
+            'is_active' => true,
+        ]);
+
+        ApprovalStep::create([
+            'approval_flow_id' => $requestFlow->id,
+            'sequence' => 1,
+            'approver_type' => ApproverType::SpecificEmployee->value,
+            'approver_employee_id' => $approverEmployee->id,
+            'is_active' => true,
+        ]);
+
+        ApprovalFlowAssignment::create([
+            'approval_flow_id' => $requestFlow->id,
+            'employee_id' => $employee->id,
+            'is_active' => true,
+        ]);
+
         $flow = ApprovalFlow::create([
             'company_id' => $employee->company_id,
+            'approval_type' => 'cash_advance_settlement',
             'name' => 'CA Settlement Flow',
             'code' => 'CA-SETTLEMENT-FLOW-'.uniqid(),
             'is_active' => true,
@@ -395,11 +421,6 @@ class CashAdvanceCoreFlowTest extends TestCase
             'is_active' => true,
         ]);
 
-        ApprovalFlowAssignment::create([
-            'approval_flow_id' => $flow->id,
-            'employee_id' => $employee->id,
-            'is_active' => true,
-        ]);
 
         $cashAdvanceService = app(CashAdvanceService::class);
 
@@ -486,8 +507,32 @@ class CashAdvanceCoreFlowTest extends TestCase
         $employee = Employee::factory()->create();
         $approverEmployee = Employee::factory()->create();
 
+        // Request-level approval tetap dibutuhkan sebelum Cash Advance bisa disburse.
+        $requestFlow = ApprovalFlow::create([
+            'company_id' => $employee->company_id,
+            'approval_type' => 'cash_advance',
+            'name' => 'CA Request Flow 2',
+            'code' => 'CA-REQUEST-FLOW-2-'.uniqid(),
+            'is_active' => true,
+        ]);
+
+        ApprovalStep::create([
+            'approval_flow_id' => $requestFlow->id,
+            'sequence' => 1,
+            'approver_type' => ApproverType::SpecificEmployee->value,
+            'approver_employee_id' => $approverEmployee->id,
+            'is_active' => true,
+        ]);
+
+        ApprovalFlowAssignment::create([
+            'approval_flow_id' => $requestFlow->id,
+            'employee_id' => $employee->id,
+            'is_active' => true,
+        ]);
+
         $flow = ApprovalFlow::create([
             'company_id' => $employee->company_id,
+            'approval_type' => 'cash_advance_settlement',
             'name' => 'CA Settlement Flow 2',
             'code' => 'CA-SETTLEMENT-FLOW-2-'.uniqid(),
             'is_active' => true,
@@ -501,11 +546,6 @@ class CashAdvanceCoreFlowTest extends TestCase
             'is_active' => true,
         ]);
 
-        ApprovalFlowAssignment::create([
-            'approval_flow_id' => $flow->id,
-            'employee_id' => $employee->id,
-            'is_active' => true,
-        ]);
 
         $cashAdvanceService = app(CashAdvanceService::class);
 

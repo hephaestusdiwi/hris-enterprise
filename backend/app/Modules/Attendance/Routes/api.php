@@ -20,6 +20,12 @@ Route::post('/attendance/clock-in', [AttendanceSelfServiceController::class, 'cl
 Route::post('/attendance/clock-out', [AttendanceSelfServiceController::class, 'clockOut']);
 Route::get('/attendance/today', [AttendanceSelfServiceController::class, 'today']);
 
+// Attendance History (self-service): riwayat & detail attendance milik
+// employee yang login sendiri. Sama seperti /my-attendance-requests,
+// tanpa permission khusus -- object-level ownership check di controller.
+Route::get('/my-attendances', [AttendanceSelfServiceController::class, 'myAttendances']);
+Route::get('/my-attendances/{attendance}', [AttendanceSelfServiceController::class, 'show']);
+
 // Attendance Device (admin management)
 Route::middleware('permission:view attendance devices')->group(function () {
     Route::get('/attendance-devices', [AttendanceDeviceController::class, 'index']);

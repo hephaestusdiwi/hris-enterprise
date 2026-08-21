@@ -14,6 +14,7 @@ class AttendanceController extends Controller
     {
         $attendances = Attendance::with(['employee', 'shift'])
             ->when($request->query('employee_id'), fn ($query, $employeeId) => $query->where('employee_id', $employeeId))
+            ->when($request->query('status'), fn ($query, $status) => $query->where('status', $status))
             ->when($request->query('date_from'), fn ($query, $dateFrom) => $query->where('attendance_date', '>=', $dateFrom))
             ->when($request->query('date_to'), fn ($query, $dateTo) => $query->where('attendance_date', '<=', $dateTo))
             ->latest('attendance_date')

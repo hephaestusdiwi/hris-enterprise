@@ -64,6 +64,11 @@ interface OfferingRow {
   sent_at: string | null
 }
 
+interface NewJoinerRow {
+  id: number
+  status: string
+}
+
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
@@ -73,6 +78,7 @@ const candidate = ref<CandidateDetail | null>(null)
 const screenings = ref<ScreeningRow[]>([])
 const interviews = ref<InterviewRow[]>([])
 const offerings = ref<OfferingRow[]>([])
+const newJoiners = ref<NewJoinerRow[]>([])
 const employees = ref<EmployeeOption[]>([])
 const jobVacancies = ref<JobVacancyOption[]>([])
 const interviewStages = ref<InterviewStageOption[]>([])
@@ -80,6 +86,7 @@ const interviewStages = ref<InterviewStageOption[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
 const actionError = ref('')
+const successMessage = ref('')
 
 function employeeName(e: EmployeeOption | null): string {
   if (!e) return '-'
@@ -114,16 +121,18 @@ async function loadAll() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [candRes, scrRes, intRes, offRes] = await Promise.all([
+    const [candRes, scrRes, intRes, offRes, njRes] = await Promise.all([
       apiClient.get(`/api/candidates/${candidateId.value}`),
       apiClient.get('/api/screenings', { params: { candidate_id: candidateId.value } }),
       apiClient.get('/api/interviews', { params: { candidate_id: candidateId.value } }),
       apiClient.get('/api/offerings', { params: { candidate_id: candidateId.value } }),
+      apiClient.get('/api/new-joiners', { params: { candidate_id: candidateId.value } }), // BARU
     ])
     candidate.value = candRes.data.data
     screenings.value = scrRes.data.data.data
     interviews.value = intRes.data.data.data
     offerings.value = offRes.data.data.data
+    newJoiners.value = njRes.data.data.data // BARU — dipakai buat cek duplicate
   } catch (err: any) {
     errorMessage.value = err.response?.data?.message || 'Gagal memuat detail Candidate.'
   } finally {
@@ -140,11 +149,12 @@ async function loadReferenceData() {
   employees.value = empRes.data.data.data ?? empRes.data.data
   const vacList = vacRes.data.data.data ?? vacRes.data.data
   jobVacancies.value = vacList.map((v: any) => ({ id: v.id, title: v.title }))
-  interviewStages.value = stageRes.data.data 
+  interviewStages.value = stageRes.data.data
 }
 
 async function runAction(fn: () => Promise<any>) {
   actionError.value = ''
+  successMessage.value = ''
   try {
     await fn()
     await loadAll()
@@ -162,6 +172,25 @@ function hireCandidate() {
 }
 
 const canOffer = computed(() => offerings.value.some((o) => o.status === 'accepted'))
+
+// ---- Send New Joiner Form — BARU ----
+const sendingNewJoiner = ref(false)
+async function sendNewJoinerForm() {
+  sendingNewJoiner.value = true
+  actionError.value = ''
+  successMessage.value = ''
+  try {
+    await apiClient.post('/api/new-joiners', {
+      candidate_id: candidateId.value,
+    })
+    successMessage.value = 'New Joiner form berhasil dikirim.'
+    await loadAll()
+  } catch (err: any) {
+    actionError.value = err.response?.data?.message || 'Gagal mengirim New Joiner form.'
+  } finally {
+    sendingNewJoiner.value = false
+  }
+}
 
 // ---- Reconsider ----
 const showReconsiderModal = ref(false)
@@ -204,7 +233,7 @@ function decideScreening(screening: ScreeningRow, result: 'passed' | 'failed' | 
   runAction(() => apiClient.post(`/api/screenings/${screening.id}/decide`, { result }))
 }
 
-// ---- Interview (existing rows only — lihat catatan gap) ----
+// ---- Interview ----
 function startInterview(interview: InterviewRow) {
   runAction(() => apiClient.post(`/api/interviews/${interview.id}/start`))
 }
@@ -242,7 +271,6 @@ const scheduleInterviewForm = ref({
   notes: '',
 })
 const scheduleInterviewSaving = ref(false)
-
 async function submitScheduleInterview() {
   scheduleInterviewSaving.value = true
   try {
@@ -255,7 +283,7 @@ async function submitScheduleInterview() {
     })
     showScheduleInterviewModal.value = false
     scheduleInterviewForm.value = { interview_stage_id: '', interviewer_employee_id: '', scheduled_at: '', notes: '' }
-    await loadAll() // refresh interview list
+    await loadAll()
   } catch (err: any) {
     actionError.value = err.response?.data?.message || 'Gagal menjadwalkan Interview.'
   } finally {
@@ -312,6 +340,7 @@ onMounted(async () => {
 
     <div v-else-if="candidate" class="space-y-4">
       <div v-if="actionError" class="rounded-xl bg-red-50 p-3 text-sm text-red-600">{{ actionError }}</div>
+      <div v-if="successMessage" class="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-600">{{ successMessage }}</div>
 
       <!-- Header -->
       <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
@@ -350,6 +379,18 @@ onMounted(async () => {
           <button v-if="candidate.status === 'hold'" class="rounded-xl border border-slate-200 px-3 py-1.5 text-sm hover:bg-slate-50" @click="showReconsiderModal = true">
             Reconsider
           </button>
+          <!-- BARU -->
+          <button
+            v-if="candidate.status === 'hired' && newJoiners.length === 0 && authStore.permissions.includes('manage new joiners')"
+            :disabled="sendingNewJoiner"
+            class="rounded-xl bg-primary px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            @click="sendNewJoinerForm"
+          >
+            {{ sendingNewJoiner ? 'Mengirim...' : 'Send New Joiner Form' }}
+          </button>
+          <span v-else-if="candidate.status === 'hired' && newJoiners.length > 0" class="rounded-xl bg-slate-50 px-3 py-1.5 text-sm text-slate-400">
+            New Joiner form sudah dikirim
+          </span>
         </div>
       </div>
 

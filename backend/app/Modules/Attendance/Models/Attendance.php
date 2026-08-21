@@ -13,11 +13,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Modules\Attendance\Models\AttendanceApprovalRequest;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class Attendance extends Model
 {
     use HasFactory, SoftDeletes;
 
+    // clock_in_photo_path/clock_out_photo_path SENGAJA tidak masuk $fillable
+    // -- AttendanceService (clockIn/clockOut) selalu set langsung lewat
+    // attribute assignment ($attendance->clock_in_photo_path = ...), bukan
+    // mass-assignment, jadi behavior existing itu tidak berubah. Accessor
+    // di bawah cuma nambah representasi URL buat konsumsi API (Attendance
+    // History), pola persis sama seperti Employee::photo_url.
     protected $fillable = [
         'employee_id',
         'attendance_date',
@@ -47,6 +54,8 @@ class Attendance extends Model
         'notes',
     ];
 
+    protected $appends = ['clock_in_photo_url', 'clock_out_photo_url'];
+
     protected function casts(): array
     {
         return [
@@ -60,6 +69,16 @@ class Attendance extends Model
             'clock_out_longitude' => 'decimal:7',
             'status' => AttendanceStatus::class,
         ];
+    }
+
+    public function getClockInPhotoUrlAttribute(): ?string
+    {
+        return $this->clock_in_photo_path ? Storage::disk('public')->url($this->clock_in_photo_path) : null;
+    }
+
+    public function getClockOutPhotoUrlAttribute(): ?string
+    {
+        return $this->clock_out_photo_path ? Storage::disk('public')->url($this->clock_out_photo_path) : null;
     }
 
     public function employee(): BelongsTo

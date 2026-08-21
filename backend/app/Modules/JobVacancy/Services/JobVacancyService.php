@@ -5,6 +5,7 @@ namespace App\Modules\JobVacancy\Services;
 use App\Modules\Employee\Models\Employee;
 use App\Modules\HiringRequisition\Enums\HiringRequisitionStatus;
 use App\Modules\HiringRequisition\Models\HiringRequisition;
+use App\Modules\JobVacancy\Enums\ApplicationMethod;
 use App\Modules\JobVacancy\Enums\JobVacancyStatus;
 use App\Modules\JobVacancy\Exceptions\JobVacancyValidationException;
 use App\Modules\JobVacancy\Models\JobVacancy;

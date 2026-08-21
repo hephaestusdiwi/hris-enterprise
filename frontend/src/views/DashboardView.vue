@@ -387,7 +387,7 @@ onUnmounted(() => {
       <AttendanceSelfServiceCard />
 
       <!-- Leave Balance -->
-      <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+      <div class="min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
         <div class="mb-4 flex items-center justify-between">
           <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Leave Balance</h3>
           <button type="button" class="text-xs font-medium text-primary-dark hover:underline">View detail ›</button>
@@ -419,7 +419,7 @@ onUnmounted(() => {
       </div>
 
       <!-- Who's Off Today (BENERAN, pakai /api/leave-calendar yang sudah ada) -->
-      <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+      <div class="min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
         <div class="mb-4 flex items-center justify-between">
           <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Who's Off Today</h3>
           <button type="button" class="text-xs font-medium text-primary-dark hover:underline">View all ›</button>
@@ -453,7 +453,7 @@ onUnmounted(() => {
     <!-- Row: Announcement / Upcoming & Pending / Calendar -->
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1.3fr_1.3fr]">
       <!-- Announcement -->
-      <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+      <div class="min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
         <div class="mb-4 flex gap-4 border-b border-slate-100 text-sm">
           <button
             type="button"
@@ -507,13 +507,13 @@ onUnmounted(() => {
             Belum ada announcement untuk kamu.
           </div>
           <div v-else class="space-y-4">
-            <div v-for="row in announcements" :key="row.id" class="flex items-start gap-3">
+            <div v-for="row in announcements" :key="row.id" class="flex min-w-0 items-start gap-3">
               <div class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-dark">
                 <Megaphone class="h-4 w-4" :stroke-width="1.75" />
                 <span v-if="!row.read_at" class="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
               </div>
               <div class="min-w-0 flex-1">
-                <p class="text-sm font-medium text-slate-800">{{ row.announcement.title }}</p>
+                <p class="truncate text-sm font-medium text-slate-800">{{ row.announcement.title }}</p>
                 <p class="truncate text-xs text-slate-400">{{ row.announcement.content }}</p>
               </div>
               <span class="shrink-0 text-[11px] text-slate-300">{{ formatRelativeDate(row.announcement.published_at) }}</span>
@@ -556,7 +556,7 @@ onUnmounted(() => {
               Tidak ada kontrak/probation yang akan berakhir dalam waktu dekat.
             </div>
             <div v-else class="space-y-4">
-              <div v-for="item in contractProbation.preview" :key="`${item.type}-${item.employee.id}`" class="flex items-center gap-3">
+              <div v-for="item in contractProbation.preview" :key="`${item.type}-${item.employee.id}`" class="flex min-w-0 items-center gap-3">
                 <img v-if="item.employee.photo_url" :src="item.employee.photo_url" alt="" class="h-8 w-8 shrink-0 rounded-full object-cover" />
                 <div v-else class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark">
                   {{ initialsFromName(item.employee.name) }}
@@ -590,14 +590,14 @@ onUnmounted(() => {
       </div>
 
       <!-- Upcoming & Pending -->
-      <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+      <div class="min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
         <div class="mb-4 flex items-center justify-between">
           <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Upcoming & Pending</h3>
           <button type="button" class="text-xs font-medium text-primary-dark hover:underline">View all ›</button>
         </div>
 
         <div class="space-y-3">
-          <div v-for="(item, i) in upcomingPending" :key="i" class="flex items-center gap-3">
+          <div v-for="(item, i) in upcomingPending" :key="i" class="flex min-w-0 items-center gap-3">
             <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" :class="palettes[item.palette].bg">
               <component :is="item.icon" class="h-4 w-4" :class="palettes[item.palette].text" :stroke-width="1.75" />
             </div>
@@ -611,7 +611,7 @@ onUnmounted(() => {
       </div>
 
       <!-- Calendar -->
-      <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+      <div class="min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
         <div class="mb-3 flex items-center justify-between">
           <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Calendar</h3>
           <div class="flex items-center gap-1">
@@ -649,7 +649,7 @@ onUnmounted(() => {
 
     <!-- Row: Quick Links / Next Holiday / Birthday / Pending Action -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-      <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)] lg:col-span-2">
+      <div class="min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)] lg:col-span-2">
         <h3 class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Quick Links</h3>
         <div class="grid grid-cols-4 gap-3">
           <button
@@ -666,7 +666,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+      <div class="min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
         <h3 class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Next Holiday</h3>
         <div class="flex items-center gap-2 text-red-500">
           <Flag class="h-4 w-4" :stroke-width="1.75" />
@@ -676,9 +676,9 @@ onUnmounted(() => {
         <p class="mt-0.5 text-xs text-slate-400">{{ daysUntilHoliday }} hari lagi</p>
       </div>
 
-      <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+      <div class="min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
         <h3 class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Today's Birthday</h3>
-        <div v-if="todaysBirthday" class="flex items-center gap-3">
+        <div v-if="todaysBirthday" class="flex min-w-0 items-center gap-3">
           <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark">
             {{ initialsFromName(todaysBirthday.name) }}
           </div>
@@ -691,7 +691,7 @@ onUnmounted(() => {
         <p v-else class="py-4 text-center text-xs text-slate-400">Tidak ada ulang tahun hari ini.</p>
       </div>
 
-      <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+      <div class="min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
         <h3 class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Pending Action</h3>
         <div class="flex items-center justify-between">
           <div>
@@ -704,5 +704,37 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- Bottom navigation — mobile only. Idealnya ini pindah ke layout
+         wrapper (AppLayout/MobileNav) kalau sudah ada, biar persist pas
+         pindah halaman, bukan cuma nongol di Dashboard. -->
+    <nav
+      class="fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-slate-100 bg-white pb-[env(safe-area-inset-bottom)] sm:hidden"
+    >
+      <template v-for="item in bottomNavItems" :key="item.label">
+        <!-- Tombol tengah (Finance) — elevated, nongol di atas bar -->
+        <div v-if="item.isCenter" class="flex flex-1 items-start justify-center">
+          <button
+            type="button"
+            @click="item.action"
+            class="-mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 ring-4 ring-white transition hover:bg-primary-dark"
+          >
+            <component :is="item.icon" class="h-6 w-6" :stroke-width="2.25" />
+          </button>
+        </div>
+
+        <!-- Item nav biasa -->
+        <button
+          v-else
+          type="button"
+          @click="item.action"
+          class="flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium transition-colors"
+          :class="item.active ? 'text-primary-dark' : 'text-slate-400'"
+        >
+          <component :is="item.icon" class="h-5 w-5" :stroke-width="item.active ? 2.25 : 1.75" />
+          <span class="truncate">{{ item.label }}</span>
+        </button>
+      </template>
+    </nav>
   </div>
 </template>

@@ -23,6 +23,20 @@ interface Payslip {
   lines: PayslipLine[]
 }
 interface StepDecision { id: number; sequence: number; status: string; approval_step: { name: string | null; sequence: number } }
+interface RevisionEntry {
+  id: number
+  revision_number: number
+  calculated_at: string
+  note: string | null
+  payslips: Payslip[]
+}
+interface ApprovalRequestEntry {
+  id: number
+  status: 'pending' | 'approved' | 'rejected'
+  requested_at: string
+  decided_at: string | null
+  step_decisions: StepDecision[]
+}
 interface RunDetail {
   id: number
   period_year: number
@@ -31,9 +45,14 @@ interface RunDetail {
   current_revision: number
   published_at: string | null
   participants: Employee[]
-  current_revision_data?: { payslips: Payslip[] }
-  currentRevision?: { payslips: Payslip[] }
+  // Data revisi AKTIF, di-expose di key TERPISAH dari current_revision
+  // (integer counter) sengaja — backend gak bisa nge-load relation
+  // currentRevision() dan nyimpen di key 'current_revision' bareng, karena
+  // nama-nya bakal collide sama kolom integer current_revision pas di-JSON-kan.
+  current_revision_data?: { revision_number: number; payslips: Payslip[] } | null
+  revisions?: RevisionEntry[]
   approval_request?: { step_decisions: StepDecision[] } | null
+  approval_requests?: ApprovalRequestEntry[]
 }
 
 const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
@@ -53,12 +72,21 @@ const lineTypeLabels: Record<string, string> = {
   earning: 'Penambah', deduction: 'Potongan', bpjs_employee: 'BPJS (Karyawan)',
   bpjs_employer: 'BPJS (Company)', tax: 'PPh 21', loan_installment: 'Cicilan Loan',
 }
+const approvalRequestStatusLabels: Record<string, string> = {
+  pending: 'Menunggu', approved: 'Disetujui', rejected: 'Ditolak',
+}
 
 function employeeName(e: { first_name: string; last_name: string | null }) {
   return [e.first_name, e.last_name].filter(Boolean).join(' ')
 }
 function formatCurrency(value: string | number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Number(value))
+}
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
+}
+function revisionNetTotal(revision: RevisionEntry) {
+  return revision.payslips.reduce((sum, p) => sum + Number(p.net_pay), 0)
 }
 
 const route = useRoute()
@@ -72,8 +100,19 @@ const actionProcessing = ref(false)
 const viewMode = ref<'overview' | 'detail'>('overview')
 const selectedPayslip = ref<Payslip | null>(null)
 
-const payslips = computed(() => run.value?.currentRevision?.payslips ?? [])
+// Tab level atas: Overview (revisi aktif, default) vs Riwayat Revisi
+// (seluruh revisi + approval request lama, read-only murni buat lihat histori).
+const activeTab = ref<'overview' | 'history'>('overview')
+const expandedRevisionId = ref<number | null>(null)
+function toggleRevisionExpand(id: number) {
+  expandedRevisionId.value = expandedRevisionId.value === id ? null : id
+}
+
+const payslips = computed(() => run.value?.current_revision_data?.payslips ?? [])
 const totalNetPay = computed(() => payslips.value.reduce((sum, p) => sum + Number(p.net_pay), 0))
+// Terbaru dulu — konsisten sama pola "log", revisi paling baru paling atas.
+const revisionHistory = computed(() => [...(run.value?.revisions ?? [])].sort((a, b) => b.revision_number - a.revision_number))
+const approvalHistory = computed(() => [...(run.value?.approval_requests ?? [])].sort((a, b) => b.id - a.id))
 
 async function loadRun() {
   loading.value = true
@@ -221,13 +260,24 @@ onMounted(loadRun)
           </div>
         </div>
 
-        <div v-if="viewMode === 'detail'">
+        <div v-if="activeTab === 'overview' && viewMode === 'detail'">
           <button @click="backToOverview" class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
             Kembali ke Overview
           </button>
         </div>
       </div>
 
+      <!-- TAB: Overview (default) vs Riwayat Revisi -->
+      <div class="flex gap-1 border-b border-slate-100">
+        <button @click="activeTab = 'overview'" class="border-b-2 px-3 py-2 text-sm font-medium" :class="activeTab === 'overview' ? 'border-primary text-primary-dark' : 'border-transparent text-slate-400 hover:text-slate-600'">
+          Overview
+        </button>
+        <button @click="activeTab = 'history'" class="border-b-2 px-3 py-2 text-sm font-medium" :class="activeTab === 'history' ? 'border-primary text-primary-dark' : 'border-transparent text-slate-400 hover:text-slate-600'">
+          Riwayat Revisi
+        </button>
+      </div>
+
+      <template v-if="activeTab === 'overview'">
       <div v-if="actionError" class="rounded-xl bg-red-50 p-3 text-sm text-red-600">{{ actionError }}</div>
 
       <!-- ACTIONS -->
@@ -368,6 +418,81 @@ onMounted(loadRun)
           </div>
         </div>
       </div>
+      </template>
+
+      <!-- TAB: Riwayat Revisi — read-only, revisi lama TIDAK BISA diubah dari sini -->
+      <template v-else-if="activeTab === 'history'">
+        <div class="space-y-4">
+          <div>
+            <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Riwayat Revisi ({{ revisionHistory.length }})</p>
+            <div v-if="revisionHistory.length === 0" class="rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-400">Belum ada revisi.</div>
+            <div v-else class="space-y-2">
+              <div v-for="rev in revisionHistory" :key="rev.id" class="overflow-hidden rounded-2xl border border-slate-100 bg-white">
+                <button @click="toggleRevisionExpand(rev.id)" class="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-slate-50/50">
+                  <div class="flex items-center gap-3">
+                    <span class="text-sm font-medium text-slate-800">Revisi ke-{{ rev.revision_number }}</span>
+                    <span v-if="rev.revision_number === run.current_revision" class="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary-dark">Aktif</span>
+                    <span class="text-xs text-slate-400">{{ formatDateTime(rev.calculated_at) }}</span>
+                  </div>
+                  <div class="flex items-center gap-3 text-sm text-slate-500">
+                    <span>{{ rev.payslips.length }} employee</span>
+                    <span class="font-medium text-slate-700">{{ formatCurrency(revisionNetTotal(rev)) }}</span>
+                  </div>
+                </button>
+                <p v-if="rev.note" class="border-t border-slate-50 px-4 py-2 text-xs text-slate-500">Catatan: {{ rev.note }}</p>
+
+                <div v-if="expandedRevisionId === rev.id" class="border-t border-slate-100">
+                  <table class="w-full text-left text-sm">
+                    <thead>
+                      <tr class="border-b border-slate-50 bg-slate-50/60">
+                        <th class="px-4 py-2 font-medium text-slate-500">Employee</th>
+                        <th class="px-4 py-2 text-right font-medium text-slate-500">Gross</th>
+                        <th class="px-4 py-2 text-right font-medium text-slate-500">BPJS (Karyawan)</th>
+                        <th class="px-4 py-2 text-right font-medium text-slate-500">PPh21</th>
+                        <th class="px-4 py-2 text-right font-medium text-slate-500">Net Pay</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="p in rev.payslips" :key="p.id" class="border-b border-slate-50 last:border-0">
+                        <td class="px-4 py-2.5 font-medium text-slate-700">{{ employeeName(p.employee) }}</td>
+                        <td class="px-4 py-2.5 text-right text-slate-600">{{ formatCurrency(p.gross_earning) }}</td>
+                        <td class="px-4 py-2.5 text-right text-slate-600">{{ formatCurrency(p.bpjs_employee_total) }}</td>
+                        <td class="px-4 py-2.5 text-right text-slate-600">{{ formatCurrency(p.tax_amount) }}</td>
+                        <td class="px-4 py-2.5 text-right font-medium text-slate-800">{{ formatCurrency(p.net_pay) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Riwayat Approval ({{ approvalHistory.length }})</p>
+            <div v-if="approvalHistory.length === 0" class="rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-400">Belum pernah diajukan approval.</div>
+            <div v-else class="space-y-2">
+              <div v-for="req in approvalHistory" :key="req.id" class="rounded-2xl border border-slate-100 bg-white p-4">
+                <div class="mb-2 flex items-center justify-between">
+                  <span class="font-medium" :class="{ 'text-emerald-600': req.status === 'approved', 'text-red-600': req.status === 'rejected', 'text-amber-600': req.status === 'pending' }">
+                    {{ approvalRequestStatusLabels[req.status] }}
+                  </span>
+                  <span class="text-xs text-slate-400">
+                    Diajukan {{ formatDateTime(req.requested_at) }}<template v-if="req.decided_at"> — diputuskan {{ formatDateTime(req.decided_at) }}</template>
+                  </span>
+                </div>
+                <div class="space-y-1">
+                  <div v-for="d in req.step_decisions" :key="d.id" class="flex items-center justify-between text-sm">
+                    <span class="text-slate-500">{{ d.approval_step.name ?? `Step ${d.approval_step.sequence}` }}</span>
+                    <span class="font-medium" :class="{ 'text-emerald-600': d.status === 'approved', 'text-red-600': d.status === 'rejected', 'text-slate-400': d.status === 'pending' }">
+                      {{ d.status === 'approved' ? 'Disetujui' : d.status === 'rejected' ? 'Ditolak' : 'Menunggu' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
     </template>
   </div>
 </template>

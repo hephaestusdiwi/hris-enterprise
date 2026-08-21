@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, X } from 'lucide-vue-next'
+import { Plus, X, AlertCircle } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
 
 interface Company { id: number; name: string }
-interface Employee { id: number; first_name: string; last_name: string | null }
+interface Employee { id: number; company_id: number; first_name: string; last_name: string | null }
 
 type RunStatus = 'draft' | 'pending_approval' | 'approved' | 'processed' | 'locked' | 'cancelled'
 
@@ -17,6 +17,8 @@ interface PayrollRunRow {
   status: RunStatus
   current_revision: number
   published_at: string | null
+  participants_count: number
+  total_net_payroll: string | number
 }
 
 const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
@@ -34,8 +36,15 @@ const statusBadgeClass: Record<RunStatus, string> = {
   cancelled: 'bg-red-50 text-red-600',
 }
 
+// Status yang masih butuh tindakan HR — dipakai buat indikator visual doang,
+// TIDAK mengubah state machine apa pun.
+const actionNeededStatuses: RunStatus[] = ['draft', 'processed', 'pending_approval']
+
 function employeeName(e: { first_name: string; last_name: string | null }) {
   return [e.first_name, e.last_name].filter(Boolean).join(' ')
+}
+function formatCurrency(value: string | number) {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Number(value))
 }
 
 const router = useRouter()
@@ -44,12 +53,28 @@ const companies = ref<Company[]>([])
 const employees = ref<Employee[]>([])
 const loading = ref(true)
 const meta = ref({ current_page: 1, last_page: 1, total: 0 })
-const filters = reactive({ company_id: null as number | null, status: null as RunStatus | null, page: 1 })
+
+const currentYear = new Date().getFullYear()
+const yearOptions = Array.from({ length: 6 }, (_, i) => currentYear - i)
+
+const filters = reactive({
+  company_id: null as number | null,
+  status: null as RunStatus | null,
+  period_year: null as number | null,
+  period_month: null as number | null,
+  page: 1,
+})
 
 async function loadRuns() {
   loading.value = true
   const response = await apiClient.get('/api/payroll-runs', {
-    params: { company_id: filters.company_id || undefined, status: filters.status || undefined, page: filters.page },
+    params: {
+      company_id: filters.company_id || undefined,
+      status: filters.status || undefined,
+      period_year: filters.period_year || undefined,
+      period_month: filters.period_month || undefined,
+      page: filters.page,
+    },
   })
   runs.value = response.data.data.data
   meta.value = { current_page: response.data.data.current_page, last_page: response.data.data.last_page, total: response.data.data.total }
@@ -88,6 +113,17 @@ const form = reactive({
   employee_ids: [] as number[],
 })
 
+// Employee cuma boleh berasal dari company yang sama dengan payroll run —
+// backend (StorePayrollRunRequest) yang jadi enforcement utama, filter ini
+// murni UX supaya user gak sempat checklist employee company lain.
+const availableEmployees = computed(() => employees.value.filter((e) => e.company_id === form.company_id))
+
+// Kalau company diganti, employee_ids yang udah keselect dari company lama
+// dibuang — daripada diam-diam ke-submit dan ditolak backend.
+watch(() => form.company_id, () => {
+  form.employee_ids = []
+})
+
 function openCreateModal() {
   form.company_id = companies.value[0]?.id ?? null
   form.period_year = new Date().getFullYear()
@@ -105,7 +141,7 @@ function toggleEmployee(id: number) {
   else form.employee_ids.push(id)
 }
 function selectAllEmployees() {
-  form.employee_ids = employees.value.map((e) => e.id)
+  form.employee_ids = availableEmployees.value.map((e) => e.id)
 }
 
 async function submitForm() {
@@ -156,6 +192,20 @@ onMounted(() => {
           <option v-for="(label, value) in statusLabels" :key="value" :value="value">{{ label }}</option>
         </select>
       </div>
+      <div>
+        <label class="mb-1 block text-xs font-medium text-slate-500">Tahun</label>
+        <select v-model="filters.period_year" class="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+          <option :value="null">Semua Tahun</option>
+          <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="mb-1 block text-xs font-medium text-slate-500">Bulan</label>
+        <select v-model="filters.period_month" class="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+          <option :value="null">Semua Bulan</option>
+          <option v-for="(m, i) in monthNames" :key="i" :value="i + 1">{{ m }}</option>
+        </select>
+      </div>
       <button @click="applyFilters" class="rounded-xl bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900">Terapkan</button>
     </div>
 
@@ -168,6 +218,8 @@ onMounted(() => {
           <tr class="border-b border-slate-100 bg-slate-50/60">
             <th class="px-5 py-3 font-medium text-slate-500">Periode</th>
             <th class="px-5 py-3 font-medium text-slate-500">Company</th>
+            <th class="px-5 py-3 text-center font-medium text-slate-500">Karyawan</th>
+            <th class="px-5 py-3 text-right font-medium text-slate-500">Total Net Payroll</th>
             <th class="px-5 py-3 text-center font-medium text-slate-500">Revisi</th>
             <th class="px-5 py-3 font-medium text-slate-500">Status</th>
             <th class="px-5 py-3 font-medium text-slate-500">Publish</th>
@@ -177,8 +229,17 @@ onMounted(() => {
           <tr v-for="row in runs" :key="row.id" class="cursor-pointer border-b border-slate-50 last:border-0 hover:bg-slate-50/50" @click="router.push(`/payroll-runs/${row.id}`)">
             <td class="px-5 py-3.5 font-medium text-slate-800">{{ monthNames[row.period_month - 1] }} {{ row.period_year }}</td>
             <td class="px-5 py-3.5 text-slate-500">{{ row.company.name }}</td>
-            <td class="px-5 py-3.5 text-center text-slate-500">{{ row.current_revision || '-' }}</td>
-            <td class="px-5 py-3.5"><span class="rounded-full px-2.5 py-1 text-xs font-medium" :class="statusBadgeClass[row.status]">{{ statusLabels[row.status] }}</span></td>
+            <td class="px-5 py-3.5 text-center text-slate-500">{{ row.participants_count }}</td>
+            <td class="px-5 py-3.5 text-right text-slate-600">{{ Number(row.total_net_payroll) > 0 ? formatCurrency(row.total_net_payroll) : '-' }}</td>
+            <td class="px-5 py-3.5 text-center text-slate-500">{{ row.current_revision ? `Revisi ke-${row.current_revision}` : '-' }}</td>
+            <td class="px-5 py-3.5">
+              <div class="flex items-center gap-1.5">
+                <span class="rounded-full px-2.5 py-1 text-xs font-medium" :class="statusBadgeClass[row.status]">{{ statusLabels[row.status] }}</span>
+                <span v-if="actionNeededStatuses.includes(row.status)" title="Perlu tindakan" class="flex items-center gap-1 text-xs font-medium text-amber-600">
+                  <AlertCircle class="h-3.5 w-3.5" :stroke-width="2" />
+                </span>
+              </div>
+            </td>
             <td class="px-5 py-3.5 text-xs text-slate-500">{{ row.published_at ? 'Published' : '-' }}</td>
           </tr>
         </tbody>
@@ -235,8 +296,9 @@ onMounted(() => {
                 <label class="block text-sm font-medium text-slate-700">Pilih Employee ({{ form.employee_ids.length }} terpilih)</label>
                 <button type="button" @click="selectAllEmployees" class="text-xs font-medium text-primary-dark">Pilih Semua</button>
               </div>
+              <p v-if="form.company_id && availableEmployees.length === 0" class="mb-1 text-xs text-amber-600">Company ini belum punya employee.</p>
               <div class="max-h-48 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2">
-                <label v-for="e in employees" :key="e.id" class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-slate-50">
+                <label v-for="e in availableEmployees" :key="e.id" class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-slate-50">
                   <input type="checkbox" :checked="form.employee_ids.includes(e.id)" @change="toggleEmployee(e.id)" class="rounded border-slate-300 text-primary focus:ring-primary" />
                   {{ employeeName(e) }}
                 </label>

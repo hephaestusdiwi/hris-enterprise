@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   ChevronDown, Sparkles, Plus, Search, Bell, LayoutGrid, Menu, LogOut,
-  LayoutDashboard, UserRound, Network, Clock, MoreHorizontal,
+  LayoutDashboard, UserRound, Fingerprint, Megaphone,
 } from 'lucide-vue-next'
 import AppSidebar from '@/components/AppSidebar.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -30,15 +30,16 @@ async function handleLogout() {
   router.push('/login')
 }
 
-function openDrawerWithGroup(groupName: string | null) {
-  sidebarOpen.value = true
-  if (groupName) sidebarRef.value?.expandGroup(groupName)
+// TODO: belum ada route Profile — begitu ada, ganti jadi RouterLink kayak
+// item lain di bottom nav (lihat History/Announcement di template).
+function goToProfile() {
+  console.warn('[BottomNav] Route Profile belum ada.')
 }
 
-const organizationPaths = ['/companies', '/branches', '/departments', '/positions', '/job-levels']
-const attendancePaths = ['/holidays', '/shifts', '/working-schedules', '/attendances', '/attendance-devices', '/attendance-settings']
-const isOrganizationActive = computed(() => organizationPaths.includes(route.path))
-const isAttendanceActive = computed(() => attendancePaths.includes(route.path))
+// TODO: menu Finance, belum ada halamannya. Isi kalau fiturnya udah jadi.
+function openFinanceMenu() {
+  console.info('[BottomNav] Menu Finance belum tersedia.')
+}
 </script>
 
 <template>
@@ -55,7 +56,7 @@ const isAttendanceActive = computed(() => attendancePaths.includes(route.path))
         </button>
 
         <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white">
-          M
+          B
         </div>
         <button class="hidden items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 sm:flex">
           Bakat HRIS
@@ -127,57 +128,59 @@ const isAttendanceActive = computed(() => attendancePaths.includes(route.path))
       </main>
     </div>
 
-    <!-- Bottom nav: mobile only -->
+    <!-- Bottom nav: mobile only. Satu-satunya bottom nav di app — jangan
+         ditambah lagi di view lain (DashboardView dkk), nanti numpuk lagi
+         kayak kemarin. -->
     <nav
-      class="fixed inset-x-0 bottom-0 z-30 flex items-center justify-around border-t border-slate-100 bg-white py-1.5 lg:hidden"
+      class="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-slate-100 bg-white lg:hidden"
       style="padding-bottom: env(safe-area-inset-bottom, 0px)"
     >
       <RouterLink
         to="/"
-        class="flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[11px] font-medium"
+        class="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium"
         :class="route.path === '/' ? 'text-primary-dark' : 'text-slate-400'"
       >
         <LayoutDashboard class="h-5 w-5" :stroke-width="1.75" />
-        Dashboard
+        Home
       </RouterLink>
+
+      <RouterLink
+        to="/my-attendances"
+        class="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium"
+        :class="route.path === '/my-attendances' ? 'text-primary-dark' : 'text-slate-400'"
+      >
+        <Fingerprint class="h-5 w-5" :stroke-width="1.75" />
+        History
+      </RouterLink>
+
+      <!-- Tombol tengah — Finance, placeholder sampai fiturnya jadi -->
+      <div class="flex flex-1 items-start justify-center">
+        <button
+          type="button"
+          @click="openFinanceMenu"
+          class="-mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 ring-4 ring-white transition hover:bg-primary-dark"
+        >
+          <Plus class="h-6 w-6" :stroke-width="2.25" />
+        </button>
+      </div>
 
       <button
         type="button"
-        @click="openDrawerWithGroup('organization')"
-        class="flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[11px] font-medium"
-        :class="isOrganizationActive ? 'text-primary-dark' : 'text-slate-400'"
+        @click="goToProfile"
+        class="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium text-slate-400"
       >
-        <Network class="h-5 w-5" :stroke-width="1.75" />
-        Organization
+        <UserRound class="h-5 w-5" :stroke-width="1.75" />
+        Profile
       </button>
 
       <RouterLink
-        to="/employees"
-        class="flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[11px] font-medium"
-        :class="route.path === '/employees' ? 'text-primary-dark' : 'text-slate-400'"
+        to="/announcements"
+        class="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium"
+        :class="route.path === '/announcements' ? 'text-primary-dark' : 'text-slate-400'"
       >
-        <UserRound class="h-5 w-5" :stroke-width="1.75" />
-        Employees
+        <Megaphone class="h-5 w-5" :stroke-width="1.75" />
+        Announcement
       </RouterLink>
-
-      <button
-        type="button"
-        @click="openDrawerWithGroup('time')"
-        class="flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[11px] font-medium"
-        :class="isAttendanceActive ? 'text-primary-dark' : 'text-slate-400'"
-      >
-        <Clock class="h-5 w-5" :stroke-width="1.75" />
-        Attendance
-      </button>
-
-      <button
-        type="button"
-        @click="openDrawerWithGroup(null)"
-        class="flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[11px] font-medium text-slate-400"
-      >
-        <MoreHorizontal class="h-5 w-5" :stroke-width="1.75" />
-        More
-      </button>
     </nav>
   </div>
 </template>

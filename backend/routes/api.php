@@ -55,17 +55,38 @@ Route::middleware('auth:sanctum')->group(function () {
     require __DIR__.'/../app/Modules/Pph21/Routes/api.php';
     require __DIR__.'/../app/Modules/Payroll/Routes/api.php';
     require __DIR__.'/../app/Modules/HiringRequisition/Routes/api.php';
-    require __DIR__.'/../app/Modules/JobVacancy/Routes/api.php';
     require __DIR__.'/../app/Modules/EmployeeMovement/Routes/api.php';
-    require __DIR__.'/../app/Modules/Candidate/Routes/api.php';
     require __DIR__.'/../app/Modules/Screening/Routes/api.php';
     require __DIR__.'/../app/Modules/Interview/Routes/api.php';
     require __DIR__.'/../app/Modules/Offering/Routes/api.php';
     require __DIR__.'/../app/Modules/NewJoiner/Routes/api.php';
     require __DIR__.'/../app/Modules/ContractProbationSetting/Routes/api.php';
     require __DIR__.'/../app/Modules/Announcement/Routes/api.php';
-    Route::get('/attendance-approvals', [\App\Modules\Attendance\Controllers\AttendanceApprovalController::class, 'index']);
-    Route::post('/attendance-approvals/{decision}/decide', [\App\Modules\Attendance\Controllers\AttendanceApprovalController::class, 'decide']);
+
+    Route::get('/attendance-approvals', [
+        \App\Modules\Attendance\Controllers\AttendanceApprovalController::class,
+        'index',
+    ]);
+
+    Route::post('/attendance-approvals/{decision}/decide', [
+        \App\Modules\Attendance\Controllers\AttendanceApprovalController::class,
+        'decide',
+    ]);
 });
+
+/*
+|--------------------------------------------------------------------------
+| Public Career Site Routes
+|--------------------------------------------------------------------------
+|
+| Job Vacancy dan Candidate punya route internal yang tetap menggunakan
+| auth:sanctum di file module masing-masing.
+|
+| Karena file module di-load DI LUAR authenticated group di atas,
+| route Career Site yang memang public tidak mewarisi auth:sanctum.
+|
+*/
+require __DIR__.'/../app/Modules/JobVacancy/Routes/api.php';
+require __DIR__.'/../app/Modules/Candidate/Routes/api.php';
 
 require __DIR__.'/../app/Modules/Attendance/Routes/device.php';

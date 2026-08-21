@@ -17,6 +17,7 @@
   "dependencies": {
     "@mediapipe/tasks-vision": "^1.0.0",
     "@tailwindcss/vite": "^4.3.2",
+    "@vuepic/vue-datepicker": "^14.0.0",
     "axios": "^1.18.1",
     "lucide-vue-next": "^1.0.0",
     "pinia": "^3.0.4",

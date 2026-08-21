@@ -23,6 +23,7 @@ import AttendanceDeviceListView from '@/views/AttendanceDeviceListView.vue'
 import AttendanceDeviceOfficeQrDisplayView from '@/views/AttendanceDeviceOfficeQrDisplayView.vue'
 import AttendanceApprovalListView from '@/views/AttendanceApprovalListView.vue'
 import MyAttendanceRequestView from '@/views/MyAttendanceRequestView.vue'
+import AttendanceHistoryView from '@/views/AttendanceHistoryView.vue'
 import AttendanceRequestApprovalListView from '@/views/AttendanceRequestApprovalListView.vue'
 import WorkingScheduleAssignmentListView from '@/views/WorkingScheduleAssignmentListView.vue'
 import SchedulerView from '@/views/SchedulerView.vue'
@@ -168,6 +169,12 @@ const router = createRouter({
       path: '/attendances',
       name: 'attendances.index',
       component: AttendanceIndex,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/my-attendances',
+      name: 'my-attendances.list',
+      component: AttendanceHistoryView,
       meta: { requiresAuth: true },
     },
     {

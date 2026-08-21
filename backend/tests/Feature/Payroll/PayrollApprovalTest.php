@@ -107,6 +107,7 @@ class PayrollApprovalTest extends TestCase
             'company_id' => $this->company->id,
             'name' => 'Payroll Lock Approval',
             'code' => 'payroll-lock-'.uniqid(),
+            'approval_type' => 'payroll',
             'is_active' => true,
         ]);
 
@@ -170,6 +171,7 @@ class PayrollApprovalTest extends TestCase
             'job_level_id' => $jobLevel->id,
             'name' => 'Job Level Flow (harus diabaikan Payroll)',
             'code' => 'joblevel-'.uniqid(),
+            'approval_type' => 'payroll',
             'is_active' => true,
         ]);
         ApprovalStep::create([
@@ -198,7 +200,8 @@ class PayrollApprovalTest extends TestCase
         $manager->update(['user_id' => $managerUser->id]);
 
         $flow = ApprovalFlow::create([
-            'company_id' => $this->company->id, 'name' => 'DM Flow', 'code' => 'dm-'.uniqid(), 'is_active' => true,
+            'company_id' => $this->company->id, 'name' => 'DM Flow', 'code' => 'dm-'.uniqid(),
+            'approval_type' => 'payroll', 'is_active' => true,
         ]);
         $step = ApprovalStep::create([
             'approval_flow_id' => $flow->id, 'sequence' => 1, 'name' => 'DM Step',
@@ -247,7 +250,8 @@ class PayrollApprovalTest extends TestCase
         $approverEmployee->update(['user_id' => $approverUser->id]);
 
         $flow = ApprovalFlow::create([
-            'company_id' => $this->company->id, 'name' => 'Specific Employee Flow', 'code' => 'se-'.uniqid(), 'is_active' => true,
+            'company_id' => $this->company->id, 'name' => 'Specific Employee Flow', 'code' => 'se-'.uniqid(),
+            'approval_type' => 'payroll', 'is_active' => true,
         ]);
         ApprovalStep::create([
             'approval_flow_id' => $flow->id, 'sequence' => 1, 'name' => 'Approve by CFO',

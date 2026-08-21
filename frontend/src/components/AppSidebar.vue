@@ -5,8 +5,7 @@ import {
   LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound,
   CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch, CheckCircle2, Layers, CalendarRange, BarChart3,
   Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle, HandCoins, Receipt, BriefcaseBusiness, Megaphone, Landmark,
-  ShieldCheck,
-  WalletCards,
+  ShieldCheck, WalletCards, History,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
@@ -102,6 +101,7 @@ const groups: MenuGroup[] = [
     icon: Clock,
     items: [
       { name: 'attendances', label: 'Attendances', icon: Fingerprint, to: '/attendances', permission: 'view attendances' },
+      { name: 'my-attendances', label: 'Attendance History', icon: History, to: '/my-attendances', permission: null },
       { name: 'attendance-devices', label: 'Attendance Device', icon: Fingerprint, to: '/attendance-devices', permission: 'view attendance devices' },
       { name: 'attendance-settings', label: 'Attendance Setting', icon: Fingerprint, to: '/attendance-settings', permission: 'view attendance settings' },
       { name: 'attendance-face-recognition-test', label: 'Face Recognition Test', icon: ScanFace, to: '/attendance-settings/face-recognition-test', permission: 'view attendance settings', },
