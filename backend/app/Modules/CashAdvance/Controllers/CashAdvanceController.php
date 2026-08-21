@@ -115,8 +115,19 @@ class CashAdvanceController extends Controller
 
     public function store(StoreCashAdvanceRequest $request)
     {
+        // Convention yang sudah dipakai ReimbursementController::store():
+        // service butuh Employee, bukan User -- resolve dulu dari
+        // authenticated user, jangan lempar User mentah ke service.
+        $employee = $request->user()->employee;
+
+        abort_if(
+            ! $employee,
+            422,
+            'User ini tidak terhubung dengan data employee.',
+        );
+
         $result = $this->cashAdvanceService->submit(
-            $request->user(),
+            $employee,
             $request->validated(),
         );
 
@@ -137,9 +148,11 @@ class CashAdvanceController extends Controller
             403,
         );
 
+        // CashAdvanceService::cancel() cuma butuh (request, reason) --
+        // sebelumnya ada argumen $request->user() nyempil di tengah yang
+        // ke-bind ke parameter string $reason (signature mismatch).
         $result = $this->cashAdvanceService->cancel(
             $cashAdvance,
-            $request->user(),
             $request->validated('reason'),
         );
 
@@ -156,8 +169,8 @@ class CashAdvanceController extends Controller
     ) {
         $result = $this->cashAdvanceService->disburse(
             $cashAdvance,
+            $request->validated('disbursement_note'),
             $request->user(),
-            $request->validated(),
         );
 
         return response()->json([

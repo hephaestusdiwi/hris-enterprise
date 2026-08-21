@@ -6,11 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Modules\CashAdvance\Models\CashAdvanceAttachment;
 use App\Modules\CashAdvance\Models\CashAdvanceRequest;
 use App\Modules\CashAdvance\Requests\StoreCashAdvanceAttachmentRequest;
+use App\Modules\CashAdvance\Services\CashAdvanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class CashAdvanceAttachmentController extends Controller
 {
+    public function __construct(
+        private CashAdvanceService $cashAdvanceService,
+    ) {
+    }
+
     public function store(
         StoreCashAdvanceAttachmentRequest $request,
         CashAdvanceRequest $cashAdvance,
@@ -23,24 +29,18 @@ class CashAdvanceAttachmentController extends Controller
             403,
         );
 
-        $file = $request->file('file');
-
-        $path = $file->store(
-            "cash-advance-attachments/{$cashAdvance->employee_id}",
-            'public',
-        );
-
-        $attachment = $cashAdvance->attachments()->create([
-            'file_path' => $path,
-            'file_name' => $file->getClientOriginalName(),
-            'file_size' => $file->getSize(),
-            'mime_type' => $file->getMimeType(),
-        ]);
+        // Contract-nya (lihat StoreCashAdvanceAttachmentRequest) adalah
+        // multi-file lewat key `attachments` (array, min 1 max 5) --
+        // sebelumnya controller salah baca key `file` (singular) yang
+        // memang tidak pernah divalidasi, jadi $file selalu null.
+        $attachments = collect($request->file('attachments'))
+            ->map(fn ($file) => $this->cashAdvanceService->storeAttachment($cashAdvance, $file))
+            ->values();
 
         return response()->json([
             'success' => true,
             'message' => 'Attachment berhasil diupload',
-            'data' => $attachment,
+            'data' => $attachments,
         ], 201);
     }
 

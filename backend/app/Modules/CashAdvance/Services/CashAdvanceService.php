@@ -149,11 +149,16 @@ class CashAdvanceService
         return $request->fresh();
     }
 
-    private function storeAttachment(CashAdvanceRequest $request, UploadedFile $file): void
-    {
-        $path = $file->store("cash-advance-attachments/{$request->employee_id}", 'public');
+    public function storeAttachment(
+        CashAdvanceRequest $request,
+        UploadedFile $file
+    ): CashAdvanceAttachment {
+        $path = $file->store(
+            "cash-advance-attachments/{$request->employee_id}",
+            'public'
+        );
 
-        CashAdvanceAttachment::create([
+        return CashAdvanceAttachment::create([
             'cash_advance_request_id' => $request->id,
             'file_path' => $path,
             'file_name' => $file->getClientOriginalName(),
