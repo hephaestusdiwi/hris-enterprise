@@ -76,6 +76,17 @@ class PayrollRun extends Model
         return $this->hasOne(PayrollApprovalRequest::class)->latestOfMany('id');
     }
 
+    /**
+     * SELURUH approval request (bukan cuma yang terbaru) — dipakai buat
+     * Riwayat Approval di Payroll History. Diurutkan lama->baru. Tidak
+     * menggantikan approvalRequest() (dipakai flow approval aktif, jangan
+     * disentuh) — ini murni tambahan buat kebutuhan tampilan histori.
+     */
+    public function approvalRequests(): HasMany
+    {
+        return $this->hasMany(PayrollApprovalRequest::class)->orderBy('id');
+    }
+
     public function isEditableParticipants(): bool
     {
         return $this->status === PayrollRunStatus::Draft;
