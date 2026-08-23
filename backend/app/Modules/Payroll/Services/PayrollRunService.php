@@ -88,6 +88,17 @@ class PayrollRunService
         }
 
         return DB::transaction(function () use ($run, $actor, $note) {
+            // Row-level lock — cegah race condition dua proceedPayslip() (proses
+            // Draft pertama kali ATAU recalculate) berjalan hampir bersamaan untuk
+            // PayrollRun yang sama: tanpa ini, current_revision dibaca dari objek
+            // $run hasil route-model-binding SEBELUM transaction ini dibuka, jadi
+            // dua request bisa baca nilai lama yang sama dan hitung revisionNumber
+            // yang sama juga (unique constraint akan menolak salah satunya, tapi
+            // dengan HTTP 500 mentah, bukan error yang rapi). lockForUpdate() di
+            // sini bikin request kedua MENUNGGU sampai request pertama commit,
+            // lalu baca current_revision yang sudah ter-update — bukan gagal.
+            $run = PayrollRun::lockForUpdate()->findOrFail($run->id);
+
             if (in_array($run->status, [PayrollRunStatus::PendingApproval, PayrollRunStatus::Approved], true)) {
                 $this->approvalService->cancelApprovalIfAny($run);
             }
@@ -148,16 +159,28 @@ class PayrollRunService
      */
     public function requestApproval(PayrollRun $run): PayrollRun
     {
-        if ($run->status !== PayrollRunStatus::Processed) {
-            throw new PayrollValidationException('Payroll run harus berstatus Processed (sudah ada payslip) sebelum minta approval Lock.');
-        }
+        return DB::transaction(function () use ($run) {
+            // Row-level lock — cegah race condition dua requestApproval() bersamaan
+            // untuk PayrollRun yang sama (pola identik Critical #2 di proceedPayslip()):
+            // tanpa ini, guard status di bawah dibaca dari objek $run hasil
+            // route-model-binding SEBELUM transaction ini dibuka, jadi dua request
+            // bisa sama-sama baca status=Processed dan sama-sama lolos guard,
+            // menghasilkan DUA PayrollApprovalRequest berstatus pending untuk run
+            // yang sama (tidak ada unique constraint yang mencegahnya). lockForUpdate()
+            // di sini bikin request kedua MENUNGGU sampai request pertama commit,
+            // lalu baca status TERBARU (sudah PendingApproval) — guard akan menolaknya
+            // dengan rapi, bukan membuat approval request kedua yang jadi orphan.
+            $run = PayrollRun::lockForUpdate()->findOrFail($run->id);
 
-        DB::transaction(function () use ($run) {
+            if ($run->status !== PayrollRunStatus::Processed) {
+                throw new PayrollValidationException('Payroll run harus berstatus Processed (sudah ada payslip) sebelum minta approval Lock.');
+            }
+
             $run->update(['status' => PayrollRunStatus::PendingApproval->value, 'requested_at' => now()]);
             $this->approvalService->initiate($run);
-        });
 
-        return $run->fresh();
+            return $run->fresh();
+        });
     }
 
     /**

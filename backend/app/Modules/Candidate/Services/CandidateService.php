@@ -195,6 +195,36 @@ class CandidateService
         );
     }
 
+    public function holdManually(Candidate $candidate, User $actor, ?string $notes = null): Candidate
+    {
+        if ($candidate->status === CandidateStatus::Hold) {
+            throw new CandidateValidationException('Candidate ini sudah berada di Talent Pool (Hold).');
+        }
+
+        if ($candidate->status === CandidateStatus::Offering) {
+            throw new CandidateValidationException('Candidate ini memiliki Offering Draft aktif — withdraw Offering terlebih dahulu sebelum di-Hold.');
+        }
+
+        if ($candidate->status === CandidateStatus::Offered) {
+            throw new CandidateValidationException('Candidate ini sudah menerima Offering yang terkirim — tidak bisa di-Hold.');
+        }
+
+        if ($candidate->status === CandidateStatus::Hired) {
+            throw new CandidateValidationException('Candidate ini sudah Hired — tidak bisa di-Hold.');
+        }
+
+        if ($candidate->status === CandidateStatus::Rejected) {
+            throw new CandidateValidationException('Candidate yang sudah Rejected tidak dapat dipindahkan ke Talent Pool.');
+        }
+
+        return $this->transitionStatus(
+            $candidate,
+            CandidateStatus::Hold,
+            $actor->id,
+            $notes ?? 'Dipindahkan ke Talent Pool secara manual.'
+        );
+    }
+
     private function recordStageChange(
         Candidate $candidate,
         ?CandidateStatus $from,

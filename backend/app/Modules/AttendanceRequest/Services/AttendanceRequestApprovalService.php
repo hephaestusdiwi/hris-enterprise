@@ -5,9 +5,11 @@ namespace App\Modules\AttendanceRequest\Services;
 use App\Models\User;
 use App\Modules\ApprovalFlow\Services\ApprovalFlowResolver;
 use App\Modules\Attendance\Contracts\AttendanceCalculationEngineInterface;
+use App\Modules\Attendance\Enums\AttendanceActivityType;
 use App\Modules\Attendance\Enums\AttendanceMethod;
 use App\Modules\Attendance\Models\Attendance;
 use App\Modules\Attendance\Services\ApprovalStepApproverResolver;
+use App\Modules\Attendance\Services\AttendanceActivityService;
 use App\Modules\AttendanceRequest\Enums\AttendanceRequestApprovalRequestStatus;
 use App\Modules\AttendanceRequest\Enums\AttendanceRequestApprovalStepDecisionStatus;
 use App\Modules\AttendanceRequest\Enums\AttendanceRequestStatus;
@@ -22,6 +24,7 @@ class AttendanceRequestApprovalService
         private ApprovalStepApproverResolver $resolver,
         private ApprovalFlowResolver $approvalFlowResolver,
         private AttendanceCalculationEngineInterface $calculationEngine,
+        private AttendanceActivityService $activityService,
     ) {
     }
 
@@ -129,6 +132,14 @@ class AttendanceRequestApprovalService
                 'decided_at' => now(),
             ]);
 
+            $this->activityService->record(
+                employeeId: $request->employee_id,
+                type: AttendanceActivityType::AttendanceRequestRejected,
+                attendanceId: $request->attendanceRequest->attendance_id,
+                actorUserId: $actor->id,
+                metadata: ['notes' => $notes],
+            );
+
             return $request->fresh();
         }
 
@@ -151,6 +162,14 @@ class AttendanceRequestApprovalService
             ]);
 
             $this->applyApproval($request->attendanceRequest);
+
+            $this->activityService->record(
+                employeeId: $request->employee_id,
+                type: AttendanceActivityType::AttendanceRequestApproved,
+                attendanceId: $request->attendanceRequest->attendance_id,
+                actorUserId: $actor->id,
+                metadata: ['notes' => $notes],
+            );
         } else {
             $request->update(['current_step_sequence' => $nextStep->sequence]);
         }

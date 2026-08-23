@@ -35,6 +35,11 @@ class CandidatePolicy
         return $user->can('reconsider candidates');
     }
 
+    public function hold(User $user): bool
+    {
+        return $user->can('hold candidates');
+    }
+
     public function select(User $user): bool
     {
         return $user->can('select candidates');

@@ -3,6 +3,7 @@
 namespace App\Modules\Attendance\Services;
 
 use App\Modules\Attendance\Contracts\HolidayCheckerInterface;
+use App\Modules\Attendance\Contracts\LeaveCheckerInterface;
 use App\Modules\Attendance\Enums\AttendanceStatus;
 use App\Modules\Attendance\Models\Attendance;
 use App\Modules\Employee\Models\Employee;
@@ -18,6 +19,7 @@ class AttendanceReportService
     public function __construct(
         private WorkingScheduleResolverInterface $workingScheduleResolver,
         private HolidayCheckerInterface $holidayChecker,
+        private LeaveCheckerInterface $leaveChecker,
     ) {
     }
 
@@ -78,7 +80,10 @@ class AttendanceReportService
                 'approved_late_minutes' => $attendance?->approved_late_minutes,
                 'detected_overtime_minutes' => $attendance?->detected_overtime_minutes,
                 'approved_overtime_minutes' => $attendance?->approved_overtime_minutes,
-                'status' => $attendance?->status?->value ?? ($expectedShift && ! $isHoliday ? 'absent' : null),
+                'status' => $attendance?->status?->value
+                    ?? ($this->leaveChecker->isOnLeave($employee->id, $date)
+                        ? 'leave'
+                        : ($expectedShift && ! $isHoliday ? 'absent' : null)),
                 'clock_in_method' => $attendance?->clock_in_method,
                 'clock_out_method' => $attendance?->clock_out_method,
                 'approval_requests' => $attendance
@@ -99,25 +104,49 @@ class AttendanceReportService
     private function summarizeEmployee(Employee $employee, Collection $attendances, Carbon $dateFrom, Carbon $dateTo): array
     {
         $expectedShifts = $this->expectedShiftsByDate($employee, $dateFrom, $dateTo);
+        $attendancesByDate = $attendances->keyBy(fn (Attendance $a) => $a->attendance_date->toDateString());
+
         $expectedWorkingDays = 0;
+        $implicitLeaveDays = 0;
+        $implicitAbsentDays = 0;
 
         foreach (CarbonPeriod::create($dateFrom, $dateTo) as $date) {
             $dateString = $date->toDateString();
+            // Holiday check TIDAK berubah -- masih persis panggilan yang sama
+            // seperti sebelumnya (company_id + branch_id + date).
             $isHoliday = $this->holidayChecker->isHoliday($employee->company_id, $employee->branch_id, $date);
 
-            if (isset($expectedShifts[$dateString]) && ! $isHoliday) {
-                $expectedWorkingDays++;
+            if (! isset($expectedShifts[$dateString]) || $isHoliday) {
+                continue;
+            }
+
+            $expectedWorkingDays++;
+
+            if ($attendancesByDate->has($dateString)) {
+                // Ada Attendance record di hari kerja ini -- statusnya sudah
+                // dihitung dari row Attendance itu sendiri di bawah
+                // ($presentDays/$lateDays/dst), bukan dari cabang implicit.
+                continue;
+            }
+
+            // Hari kerja TANPA Attendance record. Sebelum diasumsikan absent,
+            // cek dulu approved leave -- ini bagian yang tadinya hilang
+            // (LeaveCheckerInterface sebelumnya di-bind ke NullLeaveChecker
+            // yang selalu false).
+            if ($this->leaveChecker->isOnLeave($employee->id, $date)) {
+                $implicitLeaveDays++;
+            } else {
+                $implicitAbsentDays++;
             }
         }
 
         $presentDays = $attendances->where('status', AttendanceStatus::Present)->count();
         $lateDays = $attendances->where('status', AttendanceStatus::Late)->count();
-        $leaveDays = $attendances->where('status', AttendanceStatus::Leave)->count();
+        $explicitLeaveDays = $attendances->where('status', AttendanceStatus::Leave)->count();
         $explicitAbsentDays = $attendances->where('status', AttendanceStatus::Absent)->count();
         $otherDays = $attendances->whereIn('status', [AttendanceStatus::HalfDay, AttendanceStatus::Sick, AttendanceStatus::Alpha])->count();
 
-        $daysWithRecord = $attendances->count();
-        $implicitAbsentDays = max(0, $expectedWorkingDays - $daysWithRecord);
+        $leaveDays = $explicitLeaveDays + $implicitLeaveDays;
         $absentDays = $explicitAbsentDays + $implicitAbsentDays;
 
         $overtimeMinutes = $attendances->sum(fn (Attendance $a) => $a->approved_overtime_minutes ?? $a->detected_overtime_minutes ?? 0);

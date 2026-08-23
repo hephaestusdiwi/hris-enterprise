@@ -142,6 +142,9 @@ class RolePermissionSeeder extends Seeder
             'create expense subcategories',
             'edit expense subcategories',
             'delete expense subcategories',
+            'view expense policies',
+            'create expense policies',
+            'edit expense policies',
             'view bpjs settings',
             'create bpjs settings',
             'edit bpjs settings',
@@ -168,7 +171,9 @@ class RolePermissionSeeder extends Seeder
             'cancel job vacancies',
             'archive job vacancies',
             'view candidates',
+            'hold candidates',
             'select candidates',
+            'hold candidates',
             'view offerings',
             'create offerings',
             'edit offerings',
@@ -235,8 +240,6 @@ class RolePermissionSeeder extends Seeder
             'cancel reimbursements',
             'disburse reimbursements',
             'manage reimbursement policies',
-            // Cash Advance: HR/Finance kelola policy+category, proses
-            // approval-visibility, disbursement, dan verifikasi settlement.
             'view cash advance policies',
             'create cash advance policies',
             'edit cash advance policies',
@@ -247,9 +250,6 @@ class RolePermissionSeeder extends Seeder
             'view cash advances',
             'cancel cash advances',
             'disburse cash advances',
-            // Expense Management Phase 1 Step 1: HR/Finance kelola master
-            // Category+Subcategory -- sama seperti kewenangan mereka atas
-            // Cash Advance categories di atas.
             'view expense categories',
             'create expense categories',
             'edit expense categories',
@@ -258,6 +258,9 @@ class RolePermissionSeeder extends Seeder
             'create expense subcategories',
             'edit expense subcategories',
             'delete expense subcategories',
+            'view expense policies',
+            'create expense policies',
+            'edit expense policies',
             'view payroll runs',
             'create payroll runs',
             'request payroll approval',

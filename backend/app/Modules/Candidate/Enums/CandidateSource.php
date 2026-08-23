@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Modules\Candidate\Enums;
 
 enum CandidateSource: string
@@ -9,5 +10,6 @@ enum CandidateSource: string
     case Referral = 'referral';
     case Import = 'import';
     case TalentPool = 'talent_pool';
+    case Internal = 'internal';
     case Other = 'other';
 }

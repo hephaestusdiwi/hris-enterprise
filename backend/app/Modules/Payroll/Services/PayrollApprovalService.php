@@ -77,12 +77,30 @@ class PayrollApprovalService
         $this->applyApproval($payrollRun);
     }
 
+    /**
+     * Dipanggil saat payroll direcalculate (proceedPayslip) atau dibatalkan
+     * (cancel) SAAT ada approval request yang masih pending. Request itu jadi
+     * OBSOLETE — bukan cuma decided_at yang diisi, tapi status-nya benar2
+     * dipindah ke Superseded (dan seluruh step decision yang masih pending
+     * ikut di-superseded juga), supaya decide() tidak lagi menerima
+     * keputusan terhadap decision yang sudah ketinggalan revisi. Sebelum fix
+     * ini, status request/decision TETAP 'pending' selamanya — approver bisa
+     * "approve" decision dari revisi lama dan itu ke-apply ke PayrollRun yang
+     * current_revision-nya sudah beda (lihat AUDIT PAYROLL REVISION Critical #1).
+     */
     public function cancelApprovalIfAny(PayrollRun $payrollRun): void
     {
         $request = $payrollRun->approvalRequest;
 
         if ($request && $request->status === PayrollApprovalRequestStatus::Pending) {
-            $request->update(['decided_at' => now()]);
+            $request->update([
+                'status' => PayrollApprovalRequestStatus::Superseded->value,
+                'decided_at' => now(),
+            ]);
+
+            $request->stepDecisions()
+                ->where('status', PayrollApprovalStepDecisionStatus::Pending->value)
+                ->update(['status' => PayrollApprovalStepDecisionStatus::Superseded->value]);
         }
     }
 
@@ -106,12 +124,20 @@ class PayrollApprovalService
             throw new PayrollApprovalException('Payroll run ini sudah tidak pending.');
         }
 
+        if ($request->status === PayrollApprovalRequestStatus::Superseded) {
+            throw new PayrollApprovalException('Approval request ini sudah usang — payroll run sudah direvisi ulang (recalculate) sebelum ini diputuskan. Request approval yang berlaku sekarang ada di revisi terbaru.');
+        }
+
         if ($request->status !== PayrollApprovalRequestStatus::Pending) {
             throw new PayrollApprovalException('Request ini sudah tidak pending.');
         }
 
         if ($decision->sequence !== $request->current_step_sequence) {
             throw new PayrollApprovalException('Bukan giliran step ini untuk diputuskan.');
+        }
+
+        if ($decision->status === PayrollApprovalStepDecisionStatus::Superseded) {
+            throw new PayrollApprovalException('Approval request ini sudah usang — payroll run sudah direvisi ulang (recalculate) sebelum ini diputuskan. Request approval yang berlaku sekarang ada di revisi terbaru.');
         }
 
         if ($decision->status !== PayrollApprovalStepDecisionStatus::Pending) {

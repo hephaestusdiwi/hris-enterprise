@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Candidate\Models\Candidate;
 use App\Modules\Candidate\Requests\ReconsiderCandidateRequest;
 use App\Modules\Candidate\Services\CandidateService;
+use App\Modules\Candidate\Exceptions\CandidateValidationException;
 use App\Modules\NewJoiner\Services\NewJoinerService;
 use App\Modules\JobVacancy\Models\JobVacancy;
 use Illuminate\Http\JsonResponse;
@@ -72,6 +73,31 @@ class CandidateController extends Controller
             'message' => 'Candidate berhasil di reconsider',
             'data' => $newCandidate,
         ], 201);
+    }
+
+    public function hold(Candidate $candidate, Request $request): JsonResponse
+    {
+        $this->authorize('hold', Candidate::class);
+
+        try {
+            $candidate = $this->service->holdManually(
+                $candidate,
+                $request->user(),
+                $request->input('notes')
+            );
+        } catch (CandidateValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null,
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Candidate berhasil dipindahkan ke Talent Pool.',
+            'data' => $candidate,
+        ]);
     }
 
     public function show(Candidate $candidate): JsonResponse

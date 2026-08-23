@@ -5,6 +5,7 @@ namespace App\Modules\Attendance\Services;
 use App\Models\User;
 use App\Modules\ApprovalFlow\Services\ApprovalFlowResolver;
 use App\Modules\Attendance\Enums\ApprovalMode;
+use App\Modules\Attendance\Enums\AttendanceActivityType;
 use App\Modules\Attendance\Enums\AttendanceApprovalRequestStatus;
 use App\Modules\Attendance\Enums\AttendanceApprovalRequestType;
 use App\Modules\Attendance\Enums\AttendanceApprovalStepDecisionStatus;
@@ -20,6 +21,7 @@ class AttendanceApprovalService
     public function __construct(
         private ApprovalStepApproverResolver $resolver,
         private ApprovalFlowResolver $approvalFlowResolver,
+        private AttendanceActivityService $activityService,
     ) {
     }
 
@@ -36,6 +38,16 @@ class AttendanceApprovalService
     private function handleDetection(Attendance $attendance, AttendanceApprovalRequestType $type, int $detectedValue): void
     {
         $employee = $attendance->employee;
+
+        $this->activityService->record(
+            employeeId: $employee->id,
+            type: $type === AttendanceApprovalRequestType::Late
+                ? AttendanceActivityType::LateDetected
+                : AttendanceActivityType::OvertimeDetected,
+            attendanceId: $attendance->id,
+            metadata: ['detected_value' => $detectedValue],
+        );
+
         $mode = $this->resolveApprovalMode($employee);
 
         if ($mode === ApprovalMode::Disabled) {
@@ -89,6 +101,15 @@ class AttendanceApprovalService
                 'status' => AttendanceApprovalStepDecisionStatus::Pending->value,
             ]);
         }
+
+        $this->activityService->record(
+            employeeId: $employee->id,
+            type: $type === AttendanceApprovalRequestType::Late
+                ? AttendanceActivityType::LateApprovalSubmitted
+                : AttendanceActivityType::OvertimeApprovalSubmitted,
+            attendanceId: $attendance->id,
+            metadata: ['detected_value' => $detectedValue, 'approval_flow_id' => $approvalFlow->id],
+        );
     }
 
     public function decide(
@@ -131,6 +152,16 @@ class AttendanceApprovalService
                 'decided_at' => now(),
             ]);
 
+            $this->activityService->record(
+                employeeId: $request->employee_id,
+                type: $request->type === AttendanceApprovalRequestType::Late
+                    ? AttendanceActivityType::LateRejected
+                    : AttendanceActivityType::OvertimeRejected,
+                attendanceId: $request->attendance_id,
+                actorUserId: $actor->id,
+                metadata: ['notes' => $notes],
+            );
+
             return $request->fresh();
         }
 
@@ -158,6 +189,16 @@ class AttendanceApprovalService
             ]);
 
             $this->applyApprovedValue($request->attendance, $request->type, $newWorkingValue);
+
+            $this->activityService->record(
+                employeeId: $request->employee_id,
+                type: $request->type === AttendanceApprovalRequestType::Late
+                    ? AttendanceActivityType::LateApproved
+                    : AttendanceActivityType::OvertimeApproved,
+                attendanceId: $request->attendance_id,
+                actorUserId: $actor->id,
+                metadata: ['approved_value' => $newWorkingValue, 'adjusted_value' => $adjustedValue, 'notes' => $notes],
+            );
         } else {
             $request->update([
                 'working_value' => $newWorkingValue,

@@ -51,6 +51,8 @@ import ReimbursementApprovalListView from '@/views/ReimbursementApprovalListView
 import CashAdvancePolicyListView from '@/views/CashAdvancePolicyListView.vue'
 import CashAdvanceListView from '@/views/CashAdvanceListView.vue'
 import MyCashAdvanceView from '@/views/MyCashAdvanceView.vue'
+import ExpensePolicyListView from '@/views/ExpensePolicyListView.vue'
+import ExpensePolicyAssignmentListView from '@/views/ExpensePolicyAssignmentListView.vue'
 import CashAdvanceApprovalListView from '@/views/CashAdvanceApprovalListView.vue'
 import BpjsSettingView from '@/views/BpjsSettingView.vue'
 import EmployeeBpjsListView from '@/views/EmployeeBpjsListView.vue'
@@ -62,8 +64,12 @@ import JobVacancyListView from '@/views/recruitment/JobVacancyListView.vue'
 import JobVacancyDetailView from '@/views/recruitment/JobVacancyDetailView.vue'
 import HiringRequisitionListView from '@/views/recruitment/HiringRequisitionListView.vue'
 import HiringRequisitionDetailView from '@/views/recruitment/HiringRequisitionDetailView.vue'
+import InternalJobVacancyListView from '@/views/recruitment/InternalJobVacancyListView.vue'
+import InternalJobDetailView from '@/views/recruitment/InternalJobDetailView.vue'
 import CandidateListView from '@/views/recruitment/CandidateListView.vue'
+import CandidateDetailView from '@/views/recruitment/CandidateDetailView.vue'
 import NewJoinerListView from '@/views/recruitment/NewJoinerListView.vue'
+import TalentPoolListView from '@/views/recruitment/TalentPoolListView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -363,6 +369,18 @@ const router = createRouter({
       component: CashAdvanceApprovalListView,
       meta: { requiresAuth: true },
     },
+        {
+      path: '/expense-policies',
+      name: 'expense-policies.list',
+      component: ExpensePolicyListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/expense-policy-assignments',
+      name: 'expense-policy-assignments.list',
+      component: ExpensePolicyAssignmentListView,
+      meta: { requiresAuth: true },
+    },
     {
       path: '/bpjs/settings',
       name: 'bpjs-settings',
@@ -448,10 +466,52 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/internal-job-vacancies',
+      name: 'internal-job-vacancies.index',
+      component: InternalJobVacancyListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/internal-job-vacancies/:slug',
+      name: 'internal-job-vacancies.show',
+      component: InternalJobDetailView,
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/candidates',
       name: 'candidates.index',
       component: CandidateListView,
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/candidates/:id',
+      name: 'candidates.show',
+      component: CandidateDetailView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/talent-pool',
+      name: 'talent-pool.index',
+      component: TalentPoolListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/careers',
+      name: 'careers.index',
+      component: () => import('@/views/careers/CareerListingView.vue'),
+      meta: { requiresAuth: false },
+    },
+    {
+      path: '/careers/:slug',
+      name: 'careers.show',
+      component: () => import('@/views/careers/CareerDetailView.vue'),
+      meta: { requiresAuth: false },
+    },
+    {
+      path: '/careers/:slug/apply',
+      name: 'careers.apply',
+      component: () => import('@/views/careers/CareerApplyView.vue'),
+      meta: { requiresAuth: false },
     },
     {
       path: '/new-joiners',

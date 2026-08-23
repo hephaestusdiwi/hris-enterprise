@@ -6,6 +6,7 @@ use App\Modules\Company\Models\Company;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -36,5 +37,12 @@ class ExpenseCategory extends Model
     public function subcategories(): HasMany
     {
         return $this->hasMany(ExpenseSubcategory::class);
+    }
+
+    // Inverse dari ExpensePolicy::categories() -- konsisten dengan
+    // CashAdvanceCategory::policies().
+    public function policies(): BelongsToMany
+    {
+        return $this->belongsToMany(ExpensePolicy::class, 'expense_policy_category');
     }
 }

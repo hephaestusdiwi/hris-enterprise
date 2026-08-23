@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Attendance\Controllers\AttendanceActivityController;
 use App\Modules\Attendance\Controllers\AttendanceController;
 use App\Modules\Attendance\Controllers\AttendanceDeviceController;
 use App\Modules\Attendance\Controllers\AttendanceReportController;
@@ -46,4 +47,11 @@ Route::middleware('permission:view attendances')->group(function () {
     Route::get('/attendance-report', [AttendanceReportController::class, 'index']);
     Route::get('/attendance-report/employees/{employee}/daily', [AttendanceReportController::class, 'daily']);
     Route::get('/attendance-report/export', [AttendanceReportController::class, 'export']);
+});
+
+// Attendance Activity (audit/event trail) -- reuse permission 'view attendances'
+// yang sama seperti AttendanceController::index, tidak bikin permission baru.
+Route::middleware('permission:view attendances')->group(function () {
+    Route::get('/attendance-activities', [AttendanceActivityController::class, 'index']);
+    Route::get('/attendance-activities/{activity}', [AttendanceActivityController::class, 'show']);
 });

@@ -12,8 +12,10 @@ use App\Modules\JobLevel\Models\JobLevel;
 use App\Modules\Payroll\Contracts\PayrollCalculationEngineInterface;
 use App\Modules\Payroll\DataTransferObjects\EmployeePayslipDraft;
 use App\Modules\Payroll\Enums\PayrollApprovalRequestStatus;
+use App\Modules\Payroll\Enums\PayrollApprovalStepDecisionStatus;
 use App\Modules\Payroll\Enums\PayrollRunStatus;
 use App\Modules\Payroll\Models\PayrollApprovalRequest;
+use App\Modules\Payroll\Models\PayrollApprovalStepDecision;
 use App\Modules\Payroll\Models\PayrollRun;
 use App\Modules\Payroll\Services\PayrollApprovalService;
 use App\Modules\Payroll\Services\PayrollRunService;
@@ -151,6 +153,36 @@ class PayrollApprovalTest extends TestCase
 
         $run->refresh();
         $this->assertEquals(PayrollRunStatus::PendingApproval, $run->status);
+    }
+
+    // AUDIT PAYROLL REVISION — Critical #3 fix: dua requestApproval() untuk run
+    // yang sama tidak boleh menghasilkan dua PayrollApprovalRequest pending.
+    // Test sequential ini TIDAK membuktikan concurrency secara empiris (butuh 2
+    // koneksi DB paralel buat itu), tapi mengunci business rule-nya: maksimal
+    // satu pending approval request aktif per run. Correctness locking-nya
+    // sendiri berasal dari lockForUpdate() di dalam transaction requestApproval().
+    public function test_second_sequential_request_approval_is_rejected_while_first_still_pending(): void
+    {
+        $run = $this->createDraftRun();
+        $this->proceed($run);
+        $this->makeSpecificRoleFlow();
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/payroll-runs/{$run->id}/request-approval")
+            ->assertOk();
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/payroll-runs/{$run->id}/request-approval")
+            ->assertStatus(422);
+
+        $run->refresh();
+        $this->assertEquals(PayrollRunStatus::PendingApproval, $run->status);
+        $this->assertEquals(
+            1,
+            PayrollApprovalRequest::where('payroll_run_id', $run->id)
+                ->where('status', PayrollApprovalRequestStatus::Pending->value)
+                ->count()
+        );
     }
 
     // 3. Payroll approval menggunakan PayrollRun scope, BUKAN scope employee mana pun.
@@ -548,5 +580,204 @@ class PayrollApprovalTest extends TestCase
         $this->actingAs($user)
             ->postJson("/api/payroll-runs/{$run->id}/request-approval")
             ->assertForbidden();
+    }
+
+    // ==========================================================================
+    // AUDIT PAYROLL REVISION — Critical #1 fix: stale approval decision dari
+    // revisi lama tidak boleh lagi bisa mengubah status PayrollRun current.
+    // ==========================================================================
+
+    // 18. Regression test WAJIB dari audit — inti dari Critical #1.
+    public function test_stale_approval_decision_from_previous_revision_cannot_approve_current_revision(): void
+    {
+        [, , $role] = $this->makeSpecificRoleFlow();
+        $approverUser = User::factory()->create();
+        $approverUser->assignRole($role);
+
+        // Revision #1: hitung, request approval, TETAP PENDING (belum diputuskan siapa pun).
+        $run = $this->createDraftRun();
+        $this->proceed($run);
+        $this->actingAs($this->admin)->postJson("/api/payroll-runs/{$run->id}/request-approval")->assertOk();
+
+        $staleRequest = $run->approvalRequest;
+        $staleDecision = $staleRequest->stepDecisions()->first();
+        $this->assertEquals(PayrollApprovalRequestStatus::Pending, $staleRequest->status);
+        $this->assertEquals(PayrollApprovalStepDecisionStatus::Pending, $staleDecision->status);
+
+        // Recalculate SAAT masih pending -> Revision #2. Request #1 harus jadi Superseded.
+        $this->proceed($run);
+        $run->refresh();
+        $this->assertEquals(2, $run->current_revision);
+        $this->assertEquals(PayrollRunStatus::Processed, $run->status);
+
+        $staleRequest->refresh();
+        $staleDecision->refresh();
+        $this->assertEquals(PayrollApprovalRequestStatus::Superseded, $staleRequest->status, 'Request lama harus Superseded, bukan tetap Pending.');
+        $this->assertEquals(PayrollApprovalStepDecisionStatus::Superseded, $staleDecision->status, 'Decision lama harus ikut Superseded.');
+        $this->assertNotNull($staleRequest->decided_at);
+
+        // Request approval BARU untuk revisi #2.
+        $this->actingAs($this->admin)->postJson("/api/payroll-runs/{$run->id}/request-approval")->assertOk();
+        $newRequest = $run->fresh()->approvalRequest;
+        $this->assertNotEquals($staleRequest->id, $newRequest->id);
+        $this->assertEquals(PayrollApprovalRequestStatus::Pending, $newRequest->status);
+
+        // >>> ATTEMPT: approver coba decide() pakai decision LAMA dari request #1 — HARUS DITOLAK.
+        $this->actingAs($approverUser)
+            ->postJson("/api/payroll-approvals/{$staleDecision->id}/decide", ['action' => 'approve'])
+            ->assertStatus(422);
+
+        // PayrollRun TIDAK BOLEH menjadi Approved gara-gara decision lama.
+        $run->refresh();
+        $this->assertEquals(PayrollRunStatus::PendingApproval, $run->status, 'Run tidak boleh ter-approve oleh decision dari revisi lama.');
+
+        // Request #2 tetap genuinely pending, decision-nya belum tersentuh.
+        $newRequest->refresh();
+        $this->assertEquals(PayrollApprovalRequestStatus::Pending, $newRequest->status);
+        $newDecision = $newRequest->stepDecisions()->first();
+        $this->assertEquals(PayrollApprovalStepDecisionStatus::Pending, $newDecision->status);
+
+        // Decision lama tidak bisa dipakai lagi WALAUPUN dicoba kedua kalinya.
+        $this->actingAs($approverUser)
+            ->postJson("/api/payroll-approvals/{$staleDecision->id}/decide", ['action' => 'approve'])
+            ->assertStatus(422);
+
+        // Flow approval NORMAL untuk request #2 (revisi current) tetap bisa approve.
+        $this->actingAs($approverUser)
+            ->postJson("/api/payroll-approvals/{$newDecision->id}/decide", ['action' => 'approve'])
+            ->assertOk();
+
+        $run->refresh();
+        $this->assertEquals(PayrollRunStatus::Approved, $run->status);
+    }
+
+    // 19. Regresi: approval normal (tanpa recalculate di tengah) masih PASS.
+    public function test_normal_approval_flow_still_works_after_fix(): void
+    {
+        [, , $role] = $this->makeSpecificRoleFlow();
+        $approverUser = User::factory()->create();
+        $approverUser->assignRole($role);
+
+        $run = $this->createDraftRun();
+        $this->proceed($run);
+        $this->actingAs($this->admin)->postJson("/api/payroll-runs/{$run->id}/request-approval")->assertOk();
+        $decision = $run->approvalRequest->stepDecisions()->first();
+
+        $this->actingAs($approverUser)
+            ->postJson("/api/payroll-approvals/{$decision->id}/decide", ['action' => 'approve'])
+            ->assertOk();
+
+        $run->refresh();
+        $this->assertEquals(PayrollRunStatus::Approved, $run->status);
+        $this->assertEquals(PayrollApprovalRequestStatus::Approved, $run->approvalRequest->fresh()->status);
+    }
+
+    // 20. Regresi: reject masih PASS.
+    public function test_reject_flow_still_works_after_fix(): void
+    {
+        [, , $role] = $this->makeSpecificRoleFlow();
+        $approverUser = User::factory()->create();
+        $approverUser->assignRole($role);
+
+        $run = $this->createDraftRun();
+        $this->proceed($run);
+        $this->actingAs($this->admin)->postJson("/api/payroll-runs/{$run->id}/request-approval")->assertOk();
+        $decision = $run->approvalRequest->stepDecisions()->first();
+
+        $this->actingAs($approverUser)
+            ->postJson("/api/payroll-approvals/{$decision->id}/decide", ['action' => 'reject'])
+            ->assertOk();
+
+        $run->refresh();
+        $this->assertEquals(PayrollRunStatus::Processed, $run->status);
+        $this->assertEquals(PayrollApprovalRequestStatus::Rejected, $run->approvalRequest->fresh()->status);
+    }
+
+    // 21. Regresi: recalculate payroll yang SUDAH Approved masih PASS (request lama
+    // sekarang Superseded, bukan cuma "tetap ada di DB" seperti sebelumnya).
+    public function test_recalculate_approved_payroll_still_works_after_fix(): void
+    {
+        [, , $role] = $this->makeSpecificRoleFlow();
+        $approverUser = User::factory()->create();
+        $approverUser->assignRole($role);
+
+        $run = $this->createDraftRun();
+        $this->proceed($run);
+        $this->actingAs($this->admin)->postJson("/api/payroll-runs/{$run->id}/request-approval")->assertOk();
+        $decision = $run->approvalRequest->stepDecisions()->first();
+        $this->actingAs($approverUser)->postJson("/api/payroll-approvals/{$decision->id}/decide", ['action' => 'approve'])->assertOk();
+
+        $approvedRequestId = $run->approvalRequest->fresh()->id;
+
+        $this->proceed($run); // recalculate saat Approved
+
+        $run->refresh();
+        $this->assertEquals(PayrollRunStatus::Processed, $run->status);
+        $this->assertEquals(2, $run->current_revision);
+
+        // Request yang SUDAH Approved (bukan Pending) tidak disentuh cancelApprovalIfAny —
+        // statusnya tetap Approved (bukan di-superseded), karena approval-nya memang
+        // valid untuk aksinya sendiri (masuk Lock), cuma revisinya yang sekarang usang.
+        $this->assertEquals(PayrollApprovalRequestStatus::Approved, PayrollApprovalRequest::find($approvedRequestId)->status);
+        $this->assertDatabaseHas('payroll_approval_requests', ['id' => $approvedRequestId]);
+    }
+
+    // 22. Regresi: approval history tetap tersimpan (request lama, termasuk yang
+    // sekarang Superseded, tidak pernah dihapus dari DB).
+    public function test_approval_history_preserved_including_superseded_requests(): void
+    {
+        $this->makeSpecificRoleFlow();
+
+        $run = $this->createDraftRun();
+        $this->proceed($run);
+        $this->actingAs($this->admin)->postJson("/api/payroll-runs/{$run->id}/request-approval")->assertOk();
+        $firstRequestId = $run->approvalRequest->id;
+
+        $this->proceed($run); // recalculate saat masih pending -> request #1 jadi Superseded
+
+        $this->assertDatabaseHas('payroll_approval_requests', [
+            'id' => $firstRequestId,
+            'status' => PayrollApprovalRequestStatus::Superseded->value,
+        ]);
+
+        // Request approval lagi buat revisi #2 -> jadi request #2 di riwayat.
+        $this->actingAs($this->admin)->postJson("/api/payroll-runs/{$run->id}/request-approval")->assertOk();
+
+        $data = $this->actingAs($this->admin)->getJson("/api/payroll-runs/{$run->id}")->assertOk()->json('data');
+        $this->assertCount(2, $data['approval_requests'], 'Riwayat approval harus tetap nampilin request lama yang superseded.');
+    }
+
+    // 23. Regresi: Lock cuma bisa dilakukan setelah approval REVISI CURRENT beres
+    // (bukan lewat decision lama yang superseded).
+    public function test_lock_only_possible_after_current_revision_approved(): void
+    {
+        [, , $role] = $this->makeSpecificRoleFlow();
+        $approverUser = User::factory()->create();
+        $approverUser->assignRole($role);
+
+        $run = $this->createDraftRun();
+        $this->proceed($run);
+        $this->actingAs($this->admin)->postJson("/api/payroll-runs/{$run->id}/request-approval")->assertOk();
+        $staleDecision = $run->approvalRequest->stepDecisions()->first();
+
+        $this->proceed($run); // recalculate -> stale
+        $this->actingAs($this->admin)->postJson("/api/payroll-runs/{$run->id}/request-approval")->assertOk();
+
+        // Lock harus gagal selama belum ada approval valid buat revisi current.
+        $this->actingAs($this->admin)->postJson("/api/payroll-runs/{$run->id}/lock")->assertStatus(422);
+
+        // Decision lama (superseded) tidak bisa dipakai buat "jalan pintas" approve.
+        $this->actingAs($approverUser)
+            ->postJson("/api/payroll-approvals/{$staleDecision->id}/decide", ['action' => 'approve'])
+            ->assertStatus(422);
+        $this->actingAs($this->admin)->postJson("/api/payroll-runs/{$run->id}/lock")->assertStatus(422);
+
+        // Cuma approval revisi current (request baru) yang bisa bikin Lock jalan.
+        $newDecision = $run->fresh()->approvalRequest->stepDecisions()->first();
+        $this->actingAs($approverUser)->postJson("/api/payroll-approvals/{$newDecision->id}/decide", ['action' => 'approve'])->assertOk();
+        $this->actingAs($this->admin)->postJson("/api/payroll-runs/{$run->id}/lock")->assertOk();
+
+        $run->refresh();
+        $this->assertEquals(PayrollRunStatus::Locked, $run->status);
     }
 }

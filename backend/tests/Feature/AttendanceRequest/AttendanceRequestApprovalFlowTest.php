@@ -64,13 +64,24 @@ class AttendanceRequestApprovalFlowTest extends TestCase
     /**
      * Approval flow company-wide 1 step, approver = specific employee.
      * Persis pola yang dipakai EmployeeMovementFlowTest.
+     *
+     * approval_type WAJIB diisi sejak migration
+     * 2026_08_20_233226_add_approval_type_to_approval_flows_table (kolom
+     * NOT NULL) -- default 'attendance_request' karena mayoritas test di
+     * file ini menguji jalur submit/approve AttendanceRequest (yang
+     * resolve approval_type='attendance_request' via
+     * AttendanceRequestApprovalService::initiate()). Satu test di bawah
+     * (mekanisme Late/OT existing) menguji jalur berbeda yang resolve
+     * approval_type='attendance' via AttendanceApprovalService, dan
+     * eksplisit override parameter ini.
      */
-    private function makeApprovalFlow(Company $company, Employee $approver): ApprovalFlow
+    private function makeApprovalFlow(Company $company, Employee $approver, string $approvalType = 'attendance_request'): ApprovalFlow
     {
         $flow = ApprovalFlow::create([
             'company_id' => $company->id,
             'name' => 'Default Flow',
             'code' => 'DEFAULT-'.$company->id,
+            'approval_type' => $approvalType,
             'is_active' => true,
         ]);
 
@@ -361,7 +372,11 @@ class AttendanceRequestApprovalFlowTest extends TestCase
 
         $employee = $this->makeEmployeeWithShift($company, $date);
         $approver = Employee::factory()->create(['company_id' => $company->id]);
-        $this->makeApprovalFlow($company, $approver);
+        // Beda dari 7 test lain di file ini: test ini menguji mekanisme
+        // Late/OT EXISTING (AttendanceApprovalService), bukan jalur
+        // AttendanceRequest -- jadi approval_type-nya harus 'attendance',
+        // bukan default 'attendance_request'.
+        $this->makeApprovalFlow($company, $approver, 'attendance');
 
         $shift = Shift::where('company_id', $company->id)->firstOrFail();
 

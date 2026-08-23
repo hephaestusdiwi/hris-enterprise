@@ -2,7 +2,9 @@
 
 namespace App\Modules\AttendanceRequest\Services;
 
+use App\Modules\Attendance\Enums\AttendanceActivityType;
 use App\Modules\Attendance\Models\Attendance;
+use App\Modules\Attendance\Services\AttendanceActivityService;
 use App\Modules\AttendanceRequest\Enums\AttendanceRequestStatus;
 use App\Modules\AttendanceRequest\Exceptions\AttendanceRequestValidationException;
 use App\Modules\AttendanceRequest\Models\AttendanceRequest;
@@ -19,6 +21,7 @@ class AttendanceRequestService
     public function __construct(
         private WorkingScheduleResolverInterface $workingScheduleResolver,
         private AttendanceRequestApprovalService $approvalService,
+        private AttendanceActivityService $activityService,
     ) {
     }
 
@@ -72,6 +75,19 @@ class AttendanceRequestService
             }
         }
 
+        $this->activityService->record(
+            employeeId: $employee->id,
+            type: AttendanceActivityType::AttendanceRequestSubmitted,
+            attendanceId: $attendanceRequest->attendance_id,
+            actorUserId: $employee->user_id,
+            metadata: [
+                'attendance_date' => $attendanceRequest->attendance_date->toDateString(),
+                'requested_clock_in' => $data['requested_clock_in'] ?? null,
+                'requested_clock_out' => $data['requested_clock_out'] ?? null,
+                'reason' => $data['reason'],
+            ],
+        );
+
         $this->approvalService->initiate($attendanceRequest);
 
         return $attendanceRequest->fresh(['attachments', 'shift', 'attendance']);
@@ -89,6 +105,13 @@ class AttendanceRequestService
         ]);
 
         $this->approvalService->cancelApprovalIfAny($attendanceRequest);
+
+        $this->activityService->record(
+            employeeId: $attendanceRequest->employee_id,
+            type: AttendanceActivityType::AttendanceRequestCancelled,
+            attendanceId: $attendanceRequest->attendance_id,
+            actorUserId: $attendanceRequest->employee->user_id,
+        );
 
         return $attendanceRequest->fresh();
     }

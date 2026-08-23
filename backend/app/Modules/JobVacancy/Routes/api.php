@@ -1,8 +1,15 @@
 <?php
 
+use App\Modules\JobVacancy\Controllers\JobVacancySelfServiceController;
 use App\Modules\JobVacancy\Controllers\JobVacancyController;
 use App\Modules\JobVacancy\Controllers\JobVacancyPublicController;
 use Illuminate\Support\Facades\Route;
+
+Route::middleware('auth:sanctum')->prefix('job-vacancies/self-service')->group(function () {
+    Route::get('/', [JobVacancySelfServiceController::class, 'index']);
+    Route::get('/{slug}', [JobVacancySelfServiceController::class, 'show']);
+    Route::post('/{slug}/apply', [JobVacancySelfServiceController::class, 'apply']);
+});
 
 Route::middleware('auth:sanctum')->prefix('job-vacancies')->group(function () {
     Route::get('/', [JobVacancyController::class, 'index']);

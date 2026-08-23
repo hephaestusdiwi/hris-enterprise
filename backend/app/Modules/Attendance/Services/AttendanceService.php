@@ -15,6 +15,7 @@ use App\Modules\Employee\Models\Employee;
 use App\Modules\Shift\Models\Shift;
 use App\Modules\WorkingSchedule\Models\WorkingScheduleDetail;
 use App\Modules\Attendance\Contracts\AttendanceCalculationEngineInterface;
+use App\Modules\Attendance\Enums\AttendanceActivityType;
 use App\Modules\Attendance\Services\AttendanceApprovalService;
 use App\Modules\WorkingSchedule\Contracts\WorkingScheduleResolverInterface;
 use App\Modules\FaceRecognition\Contracts\FaceRecognitionServiceInterface;
@@ -31,6 +32,7 @@ class AttendanceService
         private AttendanceApprovalService $approvalService,
         private WorkingScheduleResolverInterface $workingScheduleResolver,
         private FaceRecognitionServiceInterface $faceRecognitionService,
+        private AttendanceActivityService $activityService,
     ) {
     }
 
@@ -45,7 +47,7 @@ class AttendanceService
 
         $photoPath = $this->resolveAndSavePhoto($employee, $photoBase64, 'in');
 
-        return $this->doClockIn($employee, $latitude, $longitude, $distance, $method, $device, $photoPath);
+        return $this->doClockIn($employee, $latitude, $longitude, $distance, $method, $device, $photoPath, $user->id);
     }
 
     public function clockOut(User $user, ?float $latitude = null, ?float $longitude = null, ?string $officeQrToken = null, ?string $photoBase64 = null): Attendance
@@ -59,7 +61,7 @@ class AttendanceService
 
         $photoPath = $this->resolveAndSavePhoto($employee, $photoBase64, 'out');
 
-        return $this->doClockOut($employee, $latitude, $longitude, $distance, $method, $device, $photoPath);
+        return $this->doClockOut($employee, $latitude, $longitude, $distance, $method, $device, $photoPath, $user->id);
     }
 
     public function today(User $user): array
@@ -155,6 +157,7 @@ class AttendanceService
         AttendanceMethod $method,
         ?AttendanceDevice $device,
         ?string $photoPath = null,
+        ?int $actorUserId = null,
     ): Attendance {
         $attendance = $this->getTodayAttendance($employee);
         $shift = $this->resolveShiftForToday($employee);
@@ -188,6 +191,18 @@ class AttendanceService
         $attendance->status = $calculation->status;
         $attendance->save();
 
+        $this->activityService->record(
+            employeeId: $employee->id,
+            type: AttendanceActivityType::ClockIn,
+            attendanceId: $attendance->id,
+            actorUserId: $actorUserId,
+            metadata: [
+                'method' => $method->value,
+                'late_minutes' => $calculation->lateMinutes,
+                'status' => $calculation->status->value,
+            ],
+        );
+
         if ($calculation->status === AttendanceStatus::Late && $calculation->lateMinutes !== null) {
             $this->approvalService->handleLateDetected($attendance, $calculation->lateMinutes);
         }
@@ -203,6 +218,7 @@ class AttendanceService
         AttendanceMethod $method,
         ?AttendanceDevice $device,
         ?string $photoPath = null,
+        ?int $actorUserId = null,
     ): Attendance {
         $attendance = $this->getTodayAttendance($employee);
 
@@ -229,6 +245,17 @@ class AttendanceService
         $attendance->clock_out_company_id = $device?->company_id;
         $attendance->detected_overtime_minutes = $overtime->detectedOvertimeMinutes;
         $attendance->save();
+
+        $this->activityService->record(
+            employeeId: $employee->id,
+            type: AttendanceActivityType::ClockOut,
+            attendanceId: $attendance->id,
+            actorUserId: $actorUserId,
+            metadata: [
+                'method' => $method->value,
+                'detected_overtime_minutes' => $overtime->detectedOvertimeMinutes,
+            ],
+        );
 
         if ($overtime->detectedOvertimeMinutes !== null) {
             $this->approvalService->handleOvertimeDetected($attendance, $overtime->detectedOvertimeMinutes);

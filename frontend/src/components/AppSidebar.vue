@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound,
   CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch, CheckCircle2, Layers, CalendarRange, BarChart3,
   Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle, HandCoins, Receipt, BriefcaseBusiness, Megaphone, Landmark,
-  ShieldCheck, WalletCards, History,
+  ShieldCheck, WalletCards, History, FileText,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
@@ -133,6 +133,8 @@ const groups: MenuGroup[] = [
       { name: 'cash-advances', label: 'Cash Advance', icon: Landmark, to: '/cash-advances', permission: 'view cash advances' },
       { name: 'my-cash-advances', label: 'My Cash Advance', icon: Landmark, to: '/my-cash-advances', permission: null },
       { name: 'cash-advance-approvals', label: 'Cash Advance Approval', icon: ClipboardCheck, to: '/cash-advance-approvals', permission: null },
+      { name: 'expense-policies', label: 'Expense Policy', icon: FileText, to: '/expense-policies', permission: 'view expense policies' },
+      { name: 'expense-policy-assignments', label: 'Expense Policy Assignment', icon: FileText, to: '/expense-policy-assignments', permission: 'view expense policies' },
     ],
   },
   {
@@ -153,9 +155,11 @@ const groups: MenuGroup[] = [
     icon: BriefcaseBusiness,
     items: [
       { name: 'job-vacancies', label: 'Job Vacancies', icon: BriefcaseBusiness, to: '/job-vacancies', permission: 'view job vacancies' },
-      { name: 'job-vacancies', label: 'Hiring Requisitions', icon: BriefcaseBusiness, to: '/hiring-requisitions', permission: 'view hiring requisitions' },
+      { name: 'hiring-requisitions', label: 'Hiring Requisitions', icon: BriefcaseBusiness, to: '/hiring-requisitions', permission: 'view hiring requisitions' },
+      { name: 'internal-job-vacancies', label: 'Lowongan Internal', icon: BriefcaseBusiness, to: '/internal-job-vacancies', permission: null },
       { name: 'candidates', label: 'Candidates', icon: BriefcaseBusiness, to: '/candidates', permission: 'view candidates' },
       { name: 'new-joiners', label: 'New Joiner', icon: BriefcaseBusiness, to: '/new-joiners', permission: 'view new joiners' },
+      { name: 'talent-pool', label: 'Talent Pool', icon: BriefcaseBusiness, to: '/talent-pool', permission: 'view candidates' },
     ],
   },
   {

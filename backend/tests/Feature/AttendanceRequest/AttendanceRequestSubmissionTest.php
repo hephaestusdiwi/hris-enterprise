@@ -3,6 +3,8 @@
 namespace Tests\Feature\AttendanceRequest;
 
 use App\Models\User;
+use App\Modules\ApprovalFlow\Enums\ApproverType;
+use App\Modules\ApprovalFlow\Models\ApprovalFlow;
 use App\Modules\Attendance\Models\Attendance;
 use App\Modules\AttendanceRequest\Models\AttendanceRequest;
 use App\Modules\Company\Models\Company;
@@ -64,6 +66,15 @@ class AttendanceRequestSubmissionTest extends TestCase
         return $employee->fresh();
     }
 
+    /**
+     * Tanpa ApprovalFlow untuk approval_type='attendance_request',
+     * AttendanceRequestApprovalService::initiate() auto-approve request
+     * seketika (lihat applyApproval()) -- ini production behavior yang
+     * memang intended (bukan bug), jadi assertion di sini disinkronkan ke
+     * status akhir yang benar: 'approved', dengan Attendance baru langsung
+     * dibuat & attendance_id ter-set (bukan null seperti asumsi lama saat
+     * status masih 'pending').
+     */
     public function test_employee_can_submit_clock_in_only_request(): void
     {
         $this->seed(RolePermissionSeeder::class);
@@ -79,13 +90,17 @@ class AttendanceRequestSubmissionTest extends TestCase
         ]);
 
         $response->assertStatus(201);
-        $response->assertJsonPath('data.status', 'pending');
+        $response->assertJsonPath('data.status', 'approved');
 
         $this->assertDatabaseCount('attendance_requests', 1);
-        $this->assertDatabaseHas('attendance_requests', [
-            'employee_id' => $employee->id,
-            'attendance_id' => null,
-        ]);
+        $attendanceRequest = AttendanceRequest::first();
+        $this->assertNotNull($attendanceRequest->attendance_id);
+
+        $attendance = Attendance::find($attendanceRequest->attendance_id);
+        $this->assertNotNull($attendance);
+        $this->assertSame($employee->id, $attendance->employee_id);
+        $this->assertSame('08:00:00', $attendance->clock_in->format('H:i:s'));
+        $this->assertSame('attendance_request', $attendance->clock_in_method);
     }
 
     public function test_employee_can_submit_clock_out_only_request_when_attendance_already_exists(): void
@@ -181,6 +196,17 @@ class AttendanceRequestSubmissionTest extends TestCase
         $this->assertDatabaseCount('attendance_requests', 0);
     }
 
+    /**
+     * Business rule "duplicate pending request ditolak" cuma bisa
+     * diverifikasi kalau request PERTAMA beneran berstatus pending saat
+     * request KEDUA masuk. Tanpa ApprovalFlow, request pertama auto-approve
+     * seketika (bukan pending lagi), jadi guard-nya otomatis tidak
+     * ketrigger -- itu bukan berarti rule-nya hilang, cuma skenario test
+     * tanpa flow tidak representatif buat rule ini. Guard aslinya
+     * (assertNoPendingDuplicate di AttendanceRequestService) TIDAK disentuh
+     * sama sekali di sini, cuma fixture-nya dilengkapi ApprovalFlow supaya
+     * skenario "ada pending duplicate" beneran ke-exercise.
+     */
     public function test_duplicate_pending_request_for_same_date_is_blocked(): void
     {
         $this->seed(RolePermissionSeeder::class);
@@ -189,13 +215,29 @@ class AttendanceRequestSubmissionTest extends TestCase
         $employee = $this->makeEmployeeWithShift($date);
         $employee->user->assignRole('employee');
 
+        $approver = Employee::factory()->create(['company_id' => $employee->company_id]);
+        ApprovalFlow::create([
+            'company_id' => $employee->company_id,
+            'name' => 'Default Flow',
+            'code' => 'DEFAULT-'.$employee->company_id,
+            'approval_type' => 'attendance_request',
+            'is_active' => true,
+        ])->steps()->create([
+            'sequence' => 1,
+            'approver_type' => ApproverType::SpecificEmployee->value,
+            'approver_employee_id' => $approver->id,
+            'is_active' => true,
+        ]);
+
         $payload = [
             'attendance_date' => $date->toDateString(),
             'requested_clock_in' => $date->copy()->setTime(8, 0)->toDateTimeString(),
             'reason' => 'Percobaan pertama',
         ];
 
-        $this->actingAs($employee->user)->postJson('/api/attendance-requests', $payload)->assertStatus(201);
+        $first = $this->actingAs($employee->user)->postJson('/api/attendance-requests', $payload);
+        $first->assertStatus(201);
+        $this->assertSame('pending', $first->json('data.status')); // ada approval flow -> tetap pending, bukan auto-approve
 
         $second = $this->actingAs($employee->user)->postJson('/api/attendance-requests', $payload + ['reason' => 'Percobaan kedua']);
 
