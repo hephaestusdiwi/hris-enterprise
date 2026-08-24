@@ -51,26 +51,30 @@ class CandidateController extends Controller
         ]);
     }
 
-    public function reconsider(
-        Candidate $candidate,
-        ReconsiderCandidateRequest $request
-    ): JsonResponse {
+    public function reconsider(Candidate $candidate, ReconsiderCandidateRequest $request): JsonResponse
+    {
         $this->authorize('reconsider', $candidate);
 
-        $targetVacancy = JobVacancy::findOrFail(
-            $request->validated('job_vacancy_id')
-        );
+        $targetVacancy = JobVacancy::findOrFail($request->validated('job_vacancy_id'));
 
-        $newCandidate = $this->service->reconsider(
-            $candidate,
-            $targetVacancy,
-            $request->user(),
-            $request->validated('notes')
-        );
+        try {
+            $newCandidate = $this->service->reconsider(
+                $candidate,
+                $targetVacancy,
+                $request->user(),
+                $request->validated('notes'),
+            );
+        } catch (CandidateValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null,
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'Candidate berhasil di reconsider',
+            'message' => 'Candidate berhasil direconsider.',
             'data' => $newCandidate,
         ], 201);
     }

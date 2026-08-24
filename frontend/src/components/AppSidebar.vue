@@ -135,6 +135,7 @@ const groups: MenuGroup[] = [
       { name: 'cash-advance-approvals', label: 'Cash Advance Approval', icon: ClipboardCheck, to: '/cash-advance-approvals', permission: null },
       { name: 'expense-policies', label: 'Expense Policy', icon: FileText, to: '/expense-policies', permission: 'view expense policies' },
       { name: 'expense-policy-assignments', label: 'Expense Policy Assignment', icon: FileText, to: '/expense-policy-assignments', permission: 'view expense policies' },
+      { name: 'my-expense-claims', label: 'My Expense Claims', icon: Receipt, to: '/my-expense-claims', permission: null },
     ],
   },
   {

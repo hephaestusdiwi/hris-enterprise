@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Carbon\Carbon;
 
 class ExpensePolicy extends Model
 {
@@ -52,19 +53,19 @@ class ExpensePolicy extends Model
         return $this->belongsTo(User::class, 'created_by_user_id');
     }
 
-    public function isCurrentlyEffective(): bool
+    public function isCurrentlyEffective(?Carbon $referenceDate = null): bool
     {
         if (! $this->is_active) {
             return false;
         }
 
-        $today = now()->toDateString();
+        $reference = ($referenceDate ?? now())->toDateString();
 
-        if ($this->effective_date && $this->effective_date->toDateString() > $today) {
+        if ($this->effective_date && $this->effective_date->toDateString() > $reference) {
             return false;
         }
 
-        if ($this->expiration_date && $this->expiration_date->toDateString() < $today) {
+        if ($this->expiration_date && $this->expiration_date->toDateString() < $reference) {
             return false;
         }
 

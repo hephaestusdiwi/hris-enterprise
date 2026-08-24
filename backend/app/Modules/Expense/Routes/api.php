@@ -1,6 +1,8 @@
 <?php
 
 use App\Modules\Expense\Controllers\ExpenseCategoryController;
+use App\Modules\Expense\Controllers\ExpenseClaimAttachmentController;
+use App\Modules\Expense\Controllers\ExpenseClaimController;
 use App\Modules\Expense\Controllers\ExpensePolicyAssignmentController;
 use App\Modules\Expense\Controllers\ExpensePolicyController;
 use App\Modules\Expense\Controllers\ExpenseSubcategoryController;
@@ -47,3 +49,25 @@ Route::middleware('permission:view expense policies')->group(function () {
 });
 Route::middleware('permission:create expense policies')->post('/expense-policy-assignments', [ExpensePolicyAssignmentController::class, 'store']);
 Route::middleware('permission:edit expense policies')->put('/expense-policy-assignments/{expensePolicyAssignment}', [ExpensePolicyAssignmentController::class, 'update']);
+
+// ---- Expense Claim (STEP 4A) ----
+// Self-service (employee, pola my-reimbursements/my-cash-advances).
+Route::get('/my-expense-claims', [ExpenseClaimController::class, 'myClaims']);
+Route::get('/my-expense-claims/{expenseClaim}', [ExpenseClaimController::class, 'myClaimShow']);
+Route::middleware('permission:create expense claims')->post('/my-expense-claims', [ExpenseClaimController::class, 'store']);
+
+// HR/Admin management.
+Route::middleware('permission:view expense claims')->group(function () {
+    Route::get('/expense-claims', [ExpenseClaimController::class, 'index']);
+    Route::get('/expense-claims/{expenseClaim}', [ExpenseClaimController::class, 'show']);
+});
+
+// Cancel: tanpa permission middleware -- ownership check (employee cancel
+// punya sendiri) ATAU permission 'cancel expense claims' (hr) dicek di
+// dalam controller, pola persis CashAdvanceController::cancel().
+Route::post('/expense-claims/{expenseClaim}/cancel', [ExpenseClaimController::class, 'cancel']);
+
+// Attachment: sama, ownership-or-permission dicek di controller.
+Route::post('/expense-claims/{expenseClaim}/attachments', [ExpenseClaimAttachmentController::class, 'store']);
+
+// Approval decide layer BELUM dibuat di STEP 4A (STEP 4C).

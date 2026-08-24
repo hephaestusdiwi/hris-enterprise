@@ -101,6 +101,64 @@ class AttendanceReportService
         return $rows;
     }
 
+    /**
+     * Cross-employee absence list buat halaman review HR (Absence Deduction).
+     * Reuse persis logic "implicit absent" yang sudah ada di
+     * summarizeEmployee() -- expectedShiftsByDate() + holidayChecker +
+     * leaveChecker + cek ada/tidaknya Attendance record -- cuma di sini
+     * hasilnya dikumpulkan sebagai baris (employee, date), bukan dihitung
+     * jadi angka summary. Tidak ada algoritma working-day baru.
+     *
+     * @param Collection<int, Employee> $employees
+     * @return array<int, array{employee: array, date: string, status: string}>
+     */
+    public function listAbsences(Collection $employees, Carbon $dateFrom, Carbon $dateTo): array
+    {
+        $employeeIds = $employees->pluck('id')->all();
+
+        $attendancesByEmployee = Attendance::whereIn('employee_id', $employeeIds)
+            ->whereBetween('attendance_date', [$dateFrom->toDateString(), $dateTo->toDateString()])
+            ->get()
+            ->groupBy('employee_id');
+
+        $rows = [];
+
+        foreach ($employees as $employee) {
+            $expectedShifts = $this->expectedShiftsByDate($employee, $dateFrom, $dateTo);
+            $attendancesByDate = $attendancesByEmployee->get($employee->id, collect())
+                ->keyBy(fn (Attendance $a) => $a->attendance_date->toDateString());
+
+            foreach (CarbonPeriod::create($dateFrom, $dateTo) as $date) {
+                $dateString = $date->toDateString();
+                $isHoliday = $this->holidayChecker->isHoliday($employee->company_id, $employee->branch_id, $date);
+
+                if (! isset($expectedShifts[$dateString]) || $isHoliday) {
+                    continue;
+                }
+
+                if ($attendancesByDate->has($dateString)) {
+                    continue;
+                }
+
+                if ($this->leaveChecker->isOnLeave($employee->id, $date)) {
+                    continue;
+                }
+
+                $rows[] = [
+                    'employee' => [
+                        'id' => $employee->id,
+                        'employee_number' => $employee->employee_number,
+                        'name' => trim("{$employee->first_name} {$employee->last_name}"),
+                    ],
+                    'date' => $dateString,
+                    'status' => 'absent',
+                ];
+            }
+        }
+
+        return $rows;
+    }
+
     private function summarizeEmployee(Employee $employee, Collection $attendances, Carbon $dateFrom, Carbon $dateTo): array
     {
         $expectedShifts = $this->expectedShiftsByDate($employee, $dateFrom, $dateTo);

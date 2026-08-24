@@ -24,6 +24,7 @@ import AttendanceDeviceOfficeQrDisplayView from '@/views/AttendanceDeviceOfficeQ
 import AttendanceApprovalListView from '@/views/AttendanceApprovalListView.vue'
 import MyAttendanceRequestView from '@/views/MyAttendanceRequestView.vue'
 import AttendanceHistoryView from '@/views/AttendanceHistoryView.vue'
+import AttendanceAbsenceDeductionView from '@/views/AttendanceAbsenceDeductionView.vue'
 import AttendanceRequestApprovalListView from '@/views/AttendanceRequestApprovalListView.vue'
 import WorkingScheduleAssignmentListView from '@/views/WorkingScheduleAssignmentListView.vue'
 import SchedulerView from '@/views/SchedulerView.vue'
@@ -53,6 +54,7 @@ import CashAdvanceListView from '@/views/CashAdvanceListView.vue'
 import MyCashAdvanceView from '@/views/MyCashAdvanceView.vue'
 import ExpensePolicyListView from '@/views/ExpensePolicyListView.vue'
 import ExpensePolicyAssignmentListView from '@/views/ExpensePolicyAssignmentListView.vue'
+import MyExpenseClaimView from '@/views/MyExpenseClaimView.vue'
 import CashAdvanceApprovalListView from '@/views/CashAdvanceApprovalListView.vue'
 import BpjsSettingView from '@/views/BpjsSettingView.vue'
 import EmployeeBpjsListView from '@/views/EmployeeBpjsListView.vue'
@@ -379,6 +381,12 @@ const router = createRouter({
       path: '/expense-policy-assignments',
       name: 'expense-policy-assignments.list',
       component: ExpensePolicyAssignmentListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/my-expense-claims',
+      name: 'my-expense-claims.list',
+      component: MyExpenseClaimView,
       meta: { requiresAuth: true },
     },
     {

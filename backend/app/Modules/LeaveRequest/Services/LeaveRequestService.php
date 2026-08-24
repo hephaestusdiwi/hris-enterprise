@@ -121,7 +121,14 @@ class LeaveRequestService
         return $leaveRequest->fresh();
     }
 
-    private function assertNoOverlap(Employee $employee, Carbon $startDate, Carbon $endDate): void
+    /**
+     * Reuse boundary buat AbsenceDeductionService (Attendance module) --
+     * sengaja DIBUAT PUBLIC (bukan copy-paste ke tempat lain) supaya
+     * AbsenceDeductionService pakai guard yang SAMA PERSIS secara semantik
+     * dengan submission normal (overlap check tetap 1 sumber kebenaran).
+     * Logic di dalam TIDAK berubah sama sekali, cuma visibility.
+     */
+    public function assertNoOverlap(Employee $employee, Carbon $startDate, Carbon $endDate): void
     {
         $overlap = LeaveRequest::where('employee_id', $employee->id)
             ->whereIn('status', [LeaveRequestStatus::Pending->value, LeaveRequestStatus::Approved->value])
@@ -224,7 +231,11 @@ class LeaveRequestService
         return LeaveBalanceMath::mul('1', $fraction);
     }
 
-    private function findBalance(Employee $employee, LeaveType $leaveType, Carbon $referenceDate): ?LeaveBalance
+    /**
+     * Reuse boundary buat AbsenceDeductionService -- lihat catatan di
+     * assertNoOverlap(). Logic identik, cuma visibility.
+     */
+    public function findBalance(Employee $employee, LeaveType $leaveType, Carbon $referenceDate): ?LeaveBalance
     {
         return LeaveBalance::where('employee_id', $employee->id)
             ->where('leave_type_id', $leaveType->id)
@@ -233,7 +244,11 @@ class LeaveRequestService
             ->first();
     }
 
-    private function assertSufficientBalance(LeaveBalance $leaveBalance, string $totalDays): void
+    /**
+     * Reuse boundary buat AbsenceDeductionService -- lihat catatan di
+     * assertNoOverlap(). Logic identik, cuma visibility.
+     */
+    public function assertSufficientBalance(LeaveBalance $leaveBalance, string $totalDays): void
     {
         $pendingSum = LeaveRequest::where('leave_balance_id', $leaveBalance->id)
             ->where('status', LeaveRequestStatus::Pending->value)

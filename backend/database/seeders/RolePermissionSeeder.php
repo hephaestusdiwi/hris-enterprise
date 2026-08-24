@@ -88,6 +88,7 @@ class RolePermissionSeeder extends Seeder
             'delete attendance devices',
             'view attendance requests',
             'create attendance requests',
+            'manage absence deductions',
             'view leave types',
             'create leave types',
             'edit leave types',
@@ -145,6 +146,9 @@ class RolePermissionSeeder extends Seeder
             'view expense policies',
             'create expense policies',
             'edit expense policies',
+            'view expense claims',
+            'create expense claims',
+            'cancel expense claims',
             'view bpjs settings',
             'create bpjs settings',
             'edit bpjs settings',
@@ -211,8 +215,6 @@ class RolePermissionSeeder extends Seeder
             'view departments',
             'view positions',
             'view employment types',
-
-            // Employee core: HR bisa kelola data karyawan sehari-hari.
             'view employees',
             'create employees',
             'edit employees',
@@ -230,6 +232,7 @@ class RolePermissionSeeder extends Seeder
             'create job vacancies',
             'view attendance requests',
             'create attendance requests',
+            'manage absence deductions',
             'view loans',
             'create loans',
             'edit loans',
@@ -261,6 +264,8 @@ class RolePermissionSeeder extends Seeder
             'view expense policies',
             'create expense policies',
             'edit expense policies',
+            'view expense claims',
+            'cancel expense claims',
             'view payroll runs',
             'create payroll runs',
             'request payroll approval',
@@ -280,6 +285,9 @@ class RolePermissionSeeder extends Seeder
             'create attendance requests',
             'create reimbursements',
             'create cash advances',
+            'create expense claims',
+            'view expense categories',
+            'view expense subcategories',
         ]);
     }
 }

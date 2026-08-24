@@ -5,6 +5,7 @@ namespace App\Modules\LeaveRequest\Models;
 use App\Modules\Employee\Models\Employee;
 use App\Modules\LeaveBalance\Models\LeaveBalance;
 use App\Modules\LeaveRequest\Enums\HalfDaySession;
+use App\Modules\LeaveRequest\Enums\LeaveRequestSource;
 use App\Modules\LeaveRequest\Enums\LeaveRequestStatus;
 use App\Modules\LeaveType\Models\LeaveType;
 use Illuminate\Database\Eloquent\Model;
@@ -30,6 +31,7 @@ class LeaveRequest extends Model
         'reason',
         'attachment_path',
         'status',
+        'source',
         'requested_at',
         'decided_at',
     ];
@@ -43,6 +45,7 @@ class LeaveRequest extends Model
             'half_day_session' => HalfDaySession::class,
             'total_days' => 'decimal:2',
             'status' => LeaveRequestStatus::class,
+            'source' => LeaveRequestSource::class,
             'requested_at' => 'datetime',
             'decided_at' => 'datetime',
         ];

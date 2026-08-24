@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Attendance\Controllers\AttendanceActivityController;
+use App\Modules\Attendance\Controllers\AttendanceAbsenceDeductionController;
 use App\Modules\Attendance\Controllers\AttendanceController;
 use App\Modules\Attendance\Controllers\AttendanceDeviceController;
 use App\Modules\Attendance\Controllers\AttendanceReportController;
@@ -54,4 +55,10 @@ Route::middleware('permission:view attendances')->group(function () {
 Route::middleware('permission:view attendances')->group(function () {
     Route::get('/attendance-activities', [AttendanceActivityController::class, 'index']);
     Route::get('/attendance-activities/{activity}', [AttendanceActivityController::class, 'show']);
+});
+
+// Absence Deduction (STEP B Fase 2) -- permission baru khusus, HR/Admin only.
+Route::middleware('permission:manage absence deductions')->group(function () {
+    Route::get('/attendance-report/absences', [AttendanceAbsenceDeductionController::class, 'index']);
+    Route::post('/attendance-report/absences/mark-as-time-off', [AttendanceAbsenceDeductionController::class, 'markAsTimeOff']);
 });
