@@ -2,11 +2,14 @@
 
 namespace App\Modules\Attendance\Services;
 
+use App\Models\User;
 use App\Modules\Attendance\Contracts\HolidayCheckerInterface;
 use App\Modules\Attendance\Contracts\LeaveCheckerInterface;
 use App\Modules\Attendance\Models\Attendance;
 use App\Modules\Employee\Models\Employee;
+use App\Modules\LeaveBalance\Models\LeaveBalance;
 use App\Modules\LeaveBalance\Services\LeaveBalanceEligibilityService;
+use App\Modules\LeaveBalance\Support\LeaveBalanceMath;
 use App\Modules\LeaveRequest\Enums\LeaveRequestSource;
 use App\Modules\LeaveRequest\Enums\LeaveRequestStatus;
 use App\Modules\LeaveRequest\Exceptions\LeaveRequestValidationException;
@@ -46,6 +49,26 @@ class AbsenceDeductionService
     public function listAbsences(Collection $employees, Carbon $dateFrom, Carbon $dateTo): array
     {
         return $this->reportService->listAbsences($employees, $dateFrom, $dateTo);
+    }
+
+    /**
+     * "Time-Off / Deduction History" -- daftar LeaveRequest hasil Absence
+     * Deduction (approved MAUPUN reversed, biar HR bisa lihat histori
+     * lengkap, bukan cuma yang masih aktif). Dibutuhkan supaya HR punya
+     * cara balik lihat & reverse deduction yang sudah dibuat -- listAbsences()
+     * di atas SENGAJA gak bisa dipakai buat ini karena begitu tanggal jadi
+     * leave, dia otomatis hilang dari situ (absence = computed, bukan row).
+     *
+     * @param Collection<int, Employee> $employees
+     */
+    public function listDeductions(Collection $employees, Carbon $dateFrom, Carbon $dateTo): Collection
+    {
+        return LeaveRequest::with(['employee', 'leaveType'])
+            ->where('source', LeaveRequestSource::AbsenceDeduction->value)
+            ->whereIn('employee_id', $employees->pluck('id'))
+            ->whereBetween('start_date', [$dateFrom->toDateString(), $dateTo->toDateString()])
+            ->latest('id')
+            ->get();
     }
 
     public function markAsTimeOff(Employee $employee, LeaveType $leaveType, Carbon $date): LeaveRequest
@@ -131,6 +154,66 @@ class AbsenceDeductionService
             $this->leaveApprovalService->autoApprove($leaveRequest);
 
             return $leaveRequest->fresh(['leaveType', 'leaveBalance']);
+        });
+    }
+
+    /**
+     * Reversal/"Correction/Clear" ala Talenta -- SENGAJA cuma berlaku buat
+     * source=absence_deduction (bukan generic Leave cancellation). Guard +
+     * mutation SEMUA terjadi di dalam satu transaction, di atas instance
+     * yang di-lockForUpdate() -- supaya 2 reversal request yang datang
+     * nyaris bersamaan untuk LeaveRequest yang sama, cuma SATU yang bisa
+     * berhasil (yang kedua akan nemuin status udah bukan Approved lagi,
+     * bukan double-subtract used_days).
+     */
+    public function reverse(LeaveRequest $leaveRequest, User $actor, ?string $reason = null): LeaveRequest
+    {
+        return DB::transaction(function () use ($leaveRequest, $actor, $reason) {
+            // Re-fetch + lock instance SEGAR di dalam transaction -- jangan
+            // percaya attribute dari $leaveRequest yang di-pass masuk (bisa
+            // stale kalau ada request lain yang barusan ubah row ini).
+            $locked = LeaveRequest::where('id', $leaveRequest->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->source !== LeaveRequestSource::AbsenceDeduction) {
+                throw new LeaveRequestValidationException('Hanya LeaveRequest hasil Absence Deduction yang bisa di-reverse lewat endpoint ini.');
+            }
+
+            if ($locked->status !== LeaveRequestStatus::Approved) {
+                throw new LeaveRequestValidationException('Hanya LeaveRequest berstatus approved yang bisa di-reverse.');
+            }
+
+            if ($locked->leave_balance_id) {
+                $balance = LeaveBalance::where('id', $locked->leave_balance_id)->lockForUpdate()->firstOrFail();
+
+                // Balance safety -- jangan pernah menghasilkan used_days
+                // negatif. gte() sudah ada di LeaveBalanceMath, direuse
+                // apa adanya.
+                if (! LeaveBalanceMath::gte((string) $balance->used_days, (string) $locked->total_days)) {
+                    throw new LeaveRequestValidationException('Balance tidak konsisten -- used_days lebih kecil dari total_days yang mau dikembalikan.');
+                }
+
+                $balance->update([
+                    'used_days' => LeaveBalanceMath::sub((string) $balance->used_days, (string) $locked->total_days),
+                ]);
+            }
+            // leave_balance_id null (requires_balance=false saat deduction
+            // dibuat) -> SENGAJA tidak cari balance baru, tidak mutasi
+            // apapun, cuma reverse status LeaveRequest-nya.
+
+            $locked->update([
+                'status' => LeaveRequestStatus::Reversed->value,
+                'reversed_by_user_id' => $actor->id,
+                'reversed_at' => now(),
+                'reversal_reason' => $reason,
+            ]);
+
+            // LeaveRequest TIDAK dihapus (soft delete pun tidak dipakai) --
+            // history tetap utuh, source tetap 'absence_deduction'. Begitu
+            // status != approved, DatabaseLeaveChecker::isOnLeave() otomatis
+            // return false untuk tanggal ini lagi -> AttendanceReportService
+            // otomatis anggap tanggal ini absent lagi, TANPA perlu menyentuh
+            // Attendance row apapun (absence tetap computed result).
+            return $locked->fresh(['leaveType', 'leaveBalance']);
         });
     }
 }

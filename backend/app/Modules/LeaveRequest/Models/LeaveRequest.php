@@ -34,6 +34,9 @@ class LeaveRequest extends Model
         'source',
         'requested_at',
         'decided_at',
+        'reversed_by_user_id',
+        'reversed_at',
+        'reversal_reason',
     ];
 
     protected function casts(): array
@@ -48,6 +51,7 @@ class LeaveRequest extends Model
             'source' => LeaveRequestSource::class,
             'requested_at' => 'datetime',
             'decided_at' => 'datetime',
+            'reversed_at' => 'datetime',
         ];
     }
 
@@ -69,5 +73,10 @@ class LeaveRequest extends Model
     public function approvalRequest(): HasOne
     {
         return $this->hasOne(LeaveApprovalRequest::class);
+    }
+
+    public function reversedBy(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'reversed_by_user_id');
     }
 }

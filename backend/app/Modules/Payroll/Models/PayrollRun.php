@@ -91,4 +91,14 @@ class PayrollRun extends Model
     {
         return $this->status === PayrollRunStatus::Draft;
     }
+
+    /**
+     * Riwayat batch disbursement (bank transfer file) — banyak batch per run
+     * dimungkinkan (misal generate ulang setelah recalculate), diurutkan
+     * terbaru dulu.
+     */
+    public function disbursementBatches(): HasMany
+    {
+        return $this->hasMany(PayrollDisbursementBatch::class)->orderByDesc('id');
+    }
 }

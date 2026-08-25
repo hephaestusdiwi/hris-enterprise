@@ -163,6 +163,7 @@ class RolePermissionSeeder extends Seeder
             'publish payroll runs',
             'request payroll approval',
             'edit payroll settings',
+            'manage payroll disbursements',
             'view hiring requisitions',
             'create hiring requisitions',
             'edit hiring requisitions',
@@ -215,6 +216,8 @@ class RolePermissionSeeder extends Seeder
             'view departments',
             'view positions',
             'view employment types',
+
+            // Employee core: HR bisa kelola data karyawan sehari-hari.
             'view employees',
             'create employees',
             'edit employees',
@@ -233,6 +236,10 @@ class RolePermissionSeeder extends Seeder
             'view attendance requests',
             'create attendance requests',
             'manage absence deductions',
+            'view attendances',
+            'view leave types',
+            'view leave balances',
+            'view leave requests',
             'view loans',
             'create loans',
             'edit loans',
@@ -243,6 +250,8 @@ class RolePermissionSeeder extends Seeder
             'cancel reimbursements',
             'disburse reimbursements',
             'manage reimbursement policies',
+            // Cash Advance: HR/Finance kelola policy+category, proses
+            // approval-visibility, disbursement, dan verifikasi settlement.
             'view cash advance policies',
             'create cash advance policies',
             'edit cash advance policies',
@@ -257,7 +266,7 @@ class RolePermissionSeeder extends Seeder
             'create expense categories',
             'edit expense categories',
             'delete expense categories',
-            'view expense subcategories',
+            'view expense categories',
             'create expense subcategories',
             'edit expense subcategories',
             'delete expense subcategories',
@@ -272,6 +281,7 @@ class RolePermissionSeeder extends Seeder
             'lock payroll runs',
             'publish payroll runs',
             'edit payroll settings',
+            'manage payroll disbursements',
             'view new joiners',
             'manage new joiners',
             'proceed as employee',

@@ -57,8 +57,10 @@ Route::middleware('permission:view attendances')->group(function () {
     Route::get('/attendance-activities/{activity}', [AttendanceActivityController::class, 'show']);
 });
 
-// Absence Deduction (STEP B Fase 2) -- permission baru khusus, HR/Admin only.
+// Absence Deduction (STEP B Fase 2 + 2b) -- permission baru khusus, HR/Admin only.
 Route::middleware('permission:manage absence deductions')->group(function () {
     Route::get('/attendance-report/absences', [AttendanceAbsenceDeductionController::class, 'index']);
+    Route::get('/attendance-report/absences/deductions', [AttendanceAbsenceDeductionController::class, 'deductions']);
     Route::post('/attendance-report/absences/mark-as-time-off', [AttendanceAbsenceDeductionController::class, 'markAsTimeOff']);
+    Route::post('/attendance-report/absences/{leaveRequest}/reverse', [AttendanceAbsenceDeductionController::class, 'reverse']);
 });

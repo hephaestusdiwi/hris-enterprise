@@ -124,14 +124,24 @@ class CandidateController extends Controller
     ): JsonResponse {
         $this->authorize('select', Candidate::class);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Candidate berhasil ditandai Selected.',
-            'data' => $this->service->select(
+        try {
+            $candidate = $this->service->select(
                 $candidate,
                 $request->user(),
                 $request->input('notes')
-            ),
+            );
+        } catch (CandidateValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null,
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Candidate berhasil ditandai Selected.',
+            'data' => $candidate,
         ]);
     }
 
@@ -141,14 +151,24 @@ class CandidateController extends Controller
     ): JsonResponse {
         $this->authorize('hire', Candidate::class);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Candidate berhasil di-Hired.',
-            'data' => $this->service->hire(
+        try {
+            $candidate = $this->service->hire(
                 $candidate,
                 $request->user(),
                 $request->input('notes')
-            ),
+            );
+        } catch (CandidateValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null,
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Candidate berhasil di-Hired.',
+            'data' => $candidate,
         ]);
     }
 }

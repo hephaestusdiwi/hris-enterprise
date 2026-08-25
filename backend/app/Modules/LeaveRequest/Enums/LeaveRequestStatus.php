@@ -8,4 +8,5 @@ enum LeaveRequestStatus: string
     case Approved = 'approved';
     case Rejected = 'rejected';
     case Cancelled = 'cancelled';
+    case Reversed = 'reversed';
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Expense\Controllers\ExpenseCategoryController;
+use App\Modules\Expense\Controllers\ExpenseClaimApprovalController;
 use App\Modules\Expense\Controllers\ExpenseClaimAttachmentController;
 use App\Modules\Expense\Controllers\ExpenseClaimController;
 use App\Modules\Expense\Controllers\ExpensePolicyAssignmentController;
@@ -70,4 +71,9 @@ Route::post('/expense-claims/{expenseClaim}/cancel', [ExpenseClaimController::cl
 // Attachment: sama, ownership-or-permission dicek di controller.
 Route::post('/expense-claims/{expenseClaim}/attachments', [ExpenseClaimAttachmentController::class, 'store']);
 
-// Approval decide layer BELUM dibuat di STEP 4A (STEP 4C).
+// ---- Expense Claim Approval (STEP 4C) ----
+// Tanpa permission middleware -- eligibility approver dicek di dalam
+// service lewat ApprovalStepApproverResolver, persis pola
+// cash-advance-approvals / reimbursement approval routes.
+Route::get('/expense-claim-approvals', [ExpenseClaimApprovalController::class, 'index']);
+Route::post('/expense-claim-approvals/{decision}/decide', [ExpenseClaimApprovalController::class, 'decide']);

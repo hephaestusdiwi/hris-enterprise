@@ -255,6 +255,17 @@ class AttendanceReportService
         $result = [];
 
         foreach (CarbonPeriod::create($dateFrom, $dateTo) as $date) {
+            // Karyawan cuma "diharapkan kerja" di rentang employment-nya --
+            // sebelum join_date atau setelah resign_date bukan hari kerja
+            // buat dia, meski hari itu ada di WorkingScheduleDetail.
+            if ($employee->join_date && $date->lt($employee->join_date)) {
+                continue;
+            }
+
+            if ($employee->resign_date && $date->gt($employee->resign_date)) {
+                continue;
+            }
+
             $detail = $detailsByDayOfWeek->get($date->dayOfWeekIso);
 
             if ($detail?->shift) {
