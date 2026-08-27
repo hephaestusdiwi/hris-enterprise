@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Send, RotateCcw, Play, Lock, Eye, EyeOff, Ban, X } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
 
 type RunStatus = 'draft' | 'pending_approval' | 'approved' | 'processed' | 'locked' | 'cancelled'
 
-interface Employee { id: number; first_name: string; last_name: string | null }
+interface Employee { id: number; first_name: string; last_name: string | null; bank_name?: string | null; bank_account_number?: string | null; bank_account_holder_name?: string | null }
 interface PayslipLine { id: number; type: string; source: string; label: string; amount: string }
 interface Payslip {
   id: number
@@ -36,6 +36,18 @@ interface ApprovalRequestEntry {
   requested_at: string
   decided_at: string | null
   step_decisions: StepDecision[]
+}
+type DisbursementStatus = 'generated' | 'sent' | 'confirmed' | 'failed'
+interface DisbursementBatch {
+  id: number
+  status: DisbursementStatus
+  total_amount: string
+  total_employee_count: number
+  generated_at: string
+  sent_at: string | null
+  decided_at: string | null
+  failure_reason: string | null
+  revision: { revision_number: number }
 }
 interface RunDetail {
   id: number
@@ -75,6 +87,15 @@ const lineTypeLabels: Record<string, string> = {
 const approvalRequestStatusLabels: Record<string, string> = {
   pending: 'Menunggu', approved: 'Disetujui', rejected: 'Ditolak',
 }
+const disbursementStatusLabels: Record<DisbursementStatus, string> = {
+  generated: 'Digenerate', sent: 'Sudah Dikirim ke Bank', confirmed: 'Terkonfirmasi', failed: 'Gagal',
+}
+const disbursementStatusBadgeClass: Record<DisbursementStatus, string> = {
+  generated: 'bg-slate-100 text-slate-500',
+  sent: 'bg-amber-50 text-amber-600',
+  confirmed: 'bg-emerald-50 text-emerald-600',
+  failed: 'bg-red-50 text-red-600',
+}
 
 function employeeName(e: { first_name: string; last_name: string | null }) {
   return [e.first_name, e.last_name].filter(Boolean).join(' ')
@@ -100,16 +121,104 @@ const actionProcessing = ref(false)
 const viewMode = ref<'overview' | 'detail'>('overview')
 const selectedPayslip = ref<Payslip | null>(null)
 
-// Tab level atas: Overview (revisi aktif, default) vs Riwayat Revisi
-// (seluruh revisi + approval request lama, read-only murni buat lihat histori).
-const activeTab = ref<'overview' | 'history'>('overview')
+// Tab level atas: Overview (revisi aktif, default), Riwayat Revisi, dan
+// Disbursement (bank transfer file) — cuma relevan setelah Locked.
+const activeTab = ref<'overview' | 'history' | 'disbursement'>('overview')
 const expandedRevisionId = ref<number | null>(null)
 function toggleRevisionExpand(id: number) {
   expandedRevisionId.value = expandedRevisionId.value === id ? null : id
 }
 
+const disbursementBatches = ref<DisbursementBatch[]>([])
+const disbursementLoading = ref(false)
+const disbursementError = ref('')
+const disbursementProcessing = ref(false)
+const showFailForm = ref<number | null>(null)
+const failReason = ref('')
+
+async function loadDisbursements() {
+  disbursementLoading.value = true
+  try {
+    const response = await apiClient.get(`/api/payroll-runs/${runId}/disbursements`)
+    disbursementBatches.value = response.data.data
+  } finally {
+    disbursementLoading.value = false
+  }
+}
+
+async function generateDisbursement() {
+  if (!confirm('Generate file disbursement dari revisi aktif saat ini?')) return
+  disbursementProcessing.value = true
+  disbursementError.value = ''
+  try {
+    await apiClient.post(`/api/payroll-runs/${runId}/disbursements`)
+    await loadDisbursements()
+  } catch (err: any) {
+    disbursementError.value = err.response?.data?.message || 'Gagal generate disbursement.'
+  } finally {
+    disbursementProcessing.value = false
+  }
+}
+
+function downloadDisbursement(batchId: number) {
+  window.open(`/api/disbursements/${batchId}/download`, '_blank')
+}
+
+async function markSent(batchId: number) {
+  disbursementProcessing.value = true
+  disbursementError.value = ''
+  try {
+    await apiClient.post(`/api/disbursements/${batchId}/mark-sent`)
+    await loadDisbursements()
+  } catch (err: any) {
+    disbursementError.value = err.response?.data?.message || 'Gagal update status.'
+  } finally {
+    disbursementProcessing.value = false
+  }
+}
+
+async function markConfirmed(batchId: number) {
+  disbursementProcessing.value = true
+  disbursementError.value = ''
+  try {
+    await apiClient.post(`/api/disbursements/${batchId}/mark-confirmed`)
+    await loadDisbursements()
+  } catch (err: any) {
+    disbursementError.value = err.response?.data?.message || 'Gagal update status.'
+  } finally {
+    disbursementProcessing.value = false
+  }
+}
+
+async function submitMarkFailed(batchId: number) {
+  if (!failReason.value.trim()) return
+  disbursementProcessing.value = true
+  disbursementError.value = ''
+  try {
+    await apiClient.post(`/api/disbursements/${batchId}/mark-failed`, { reason: failReason.value })
+    showFailForm.value = null
+    failReason.value = ''
+    await loadDisbursements()
+  } catch (err: any) {
+    disbursementError.value = err.response?.data?.message || 'Gagal update status.'
+  } finally {
+    disbursementProcessing.value = false
+  }
+}
+
+watch(activeTab, (tab) => {
+  if (tab === 'disbursement' && disbursementBatches.value.length === 0) loadDisbursements()
+})
+
 const payslips = computed(() => run.value?.current_revision_data?.payslips ?? [])
 const totalNetPay = computed(() => payslips.value.reduce((sum, p) => sum + Number(p.net_pay), 0))
+// Dicek dari data participants yang udah ke-load di response show() — murni
+// client-side, gak butuh endpoint baru. Dipakai buat warning di tab
+// Disbursement SEBELUM generate, bukan cuma nunggu gagal generate baru tau
+// siapa yang belum lengkap datanya.
+const employeesMissingBankData = computed(() =>
+  (run.value?.participants ?? []).filter((e) => !e.bank_account_number || !e.bank_name || !e.bank_account_holder_name)
+)
 // Terbaru dulu — konsisten sama pola "log", revisi paling baru paling atas.
 const revisionHistory = computed(() => [...(run.value?.revisions ?? [])].sort((a, b) => b.revision_number - a.revision_number))
 const approvalHistory = computed(() => [...(run.value?.approval_requests ?? [])].sort((a, b) => b.id - a.id))
@@ -274,6 +383,9 @@ onMounted(loadRun)
         </button>
         <button @click="activeTab = 'history'" class="border-b-2 px-3 py-2 text-sm font-medium" :class="activeTab === 'history' ? 'border-primary text-primary-dark' : 'border-transparent text-slate-400 hover:text-slate-600'">
           Riwayat Revisi
+        </button>
+        <button @click="activeTab = 'disbursement'" class="border-b-2 px-3 py-2 text-sm font-medium" :class="activeTab === 'disbursement' ? 'border-primary text-primary-dark' : 'border-transparent text-slate-400 hover:text-slate-600'">
+          Disbursement
         </button>
       </div>
 
@@ -491,6 +603,61 @@ onMounted(loadRun)
               </div>
             </div>
           </div>
+        </div>
+      </template>
+
+      <!-- TAB: Disbursement — generate file bank transfer, tracking status -->
+      <template v-else-if="activeTab === 'disbursement'">
+        <div class="space-y-4">
+          <div v-if="disbursementError" class="rounded-xl bg-red-50 p-3 text-sm text-red-600">{{ disbursementError }}</div>
+
+          <div v-if="run.status !== 'locked'" class="rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-400">
+            Disbursement cuma bisa digenerate setelah payroll run ini Locked.
+          </div>
+          <template v-else>
+            <div v-if="employeesMissingBankData.length > 0" class="rounded-xl bg-amber-50 p-4 text-sm text-amber-700">
+              <p class="font-medium">{{ employeesMissingBankData.length }} employee belum lengkap data rekening banknya — generate akan ditolak sampai ini dilengkapi:</p>
+              <ul class="mt-2 list-disc space-y-0.5 pl-5">
+                <li v-for="e in employeesMissingBankData" :key="e.id">{{ employeeName(e) }}</li>
+              </ul>
+            </div>
+
+            <button @click="generateDisbursement" :disabled="disbursementProcessing || employeesMissingBankData.length > 0" class="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed">
+              Generate File Disbursement
+            </button>
+
+            <div v-if="disbursementLoading" class="text-sm text-slate-400">Memuat...</div>
+            <div v-else-if="disbursementBatches.length === 0" class="rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-400">
+              Belum ada disbursement digenerate.
+            </div>
+            <div v-else class="space-y-2">
+              <div v-for="batch in disbursementBatches" :key="batch.id" class="rounded-2xl border border-slate-100 bg-white p-4">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <span class="rounded-full px-2.5 py-1 text-xs font-medium" :class="disbursementStatusBadgeClass[batch.status]">{{ disbursementStatusLabels[batch.status] }}</span>
+                    <span class="text-xs text-slate-400">Revisi ke-{{ batch.revision.revision_number }} · {{ formatDateTime(batch.generated_at) }}</span>
+                  </div>
+                  <div class="flex items-center gap-3 text-sm">
+                    <span class="text-slate-500">{{ batch.total_employee_count }} employee</span>
+                    <span class="font-medium text-slate-800">{{ formatCurrency(batch.total_amount) }}</span>
+                  </div>
+                </div>
+                <p v-if="batch.status === 'failed' && batch.failure_reason" class="mt-2 text-xs text-red-600">Alasan gagal: {{ batch.failure_reason }}</p>
+
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <button @click="downloadDisbursement(batch.id)" class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">Download CSV</button>
+                  <button v-if="batch.status === 'generated'" @click="markSent(batch.id)" :disabled="disbursementProcessing" class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">Tandai Sudah Dikirim</button>
+                  <button v-if="batch.status === 'sent'" @click="markConfirmed(batch.id)" :disabled="disbursementProcessing" class="rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50">Tandai Terkonfirmasi</button>
+                  <button v-if="batch.status === 'sent'" @click="showFailForm = showFailForm === batch.id ? null : batch.id" class="rounded-xl border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50">Tandai Gagal</button>
+                </div>
+
+                <div v-if="showFailForm === batch.id" class="mt-3 space-y-2 border-t border-slate-100 pt-3">
+                  <textarea v-model="failReason" rows="2" placeholder="Alasan gagal (wajib)" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"></textarea>
+                  <button @click="submitMarkFailed(batch.id)" :disabled="!failReason.trim() || disbursementProcessing" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">Konfirmasi Gagal</button>
+                </div>
+              </div>
+            </div>
+          </template>
         </div>
       </template>
     </template>

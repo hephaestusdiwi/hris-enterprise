@@ -9,6 +9,7 @@ use App\Modules\NewJoiner\Requests\SendNewJoinerRequest;
 use App\Modules\NewJoiner\Requests\ConvertNewJoinerRequest;
 use App\Modules\NewJoiner\Services\NewJoinerService;
 use App\Modules\NewJoiner\Services\NewJoinerConversionService;
+use App\Modules\NewJoiner\Exceptions\NewJoinerValidationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -54,18 +55,36 @@ class NewJoinerController extends Controller
     {
         $this->authorize('proceedAsEmployee', NewJoiner::class);
 
+        try {
+            $newJoiner = $this->service->markReadyForEmployee($newJoiner);
+        } catch (NewJoinerValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null,
+            ], 422);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'New Joiner siap diproses sebagai Employee (lanjut di Phase 7C).',
-            'data' => $this->service->markReadyForEmployee($newJoiner),
+            'data' => $newJoiner,
         ]);
     }
 
     public function convertToEmployee(NewJoiner $newJoiner, ConvertNewJoinerRequest $request): JsonResponse
     {
-        $this->authorize('proceedAsEmployee', NewJoiner::class); // reuse permission Phase 7B, tidak bikin baru
+        $this->authorize('proceedAsEmployee', NewJoiner::class);
 
-        $employee = $this->conversionService->convertToEmployee($newJoiner, $request->validated());
+        try {
+            $employee = $this->conversionService->convertToEmployee($newJoiner, $request->validated());
+        } catch (NewJoinerValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null,
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, X, AlertCircle } from 'lucide-vue-next'
+import { Plus, X, AlertCircle, Landmark } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
 
 interface Company { id: number; name: string }
@@ -163,6 +163,54 @@ onMounted(() => {
   loadCompanies()
   loadEmployees()
 })
+
+// ---------- PENGATURAN BANK ----------
+const showBankModal = ref(false)
+const bankSaving = ref(false)
+const bankError = ref('')
+const bankForm = reactive({
+  company_id: null as number | null,
+  bank_name: '',
+  account_number: '',
+  account_holder_name: '',
+})
+
+async function openBankModal() {
+  bankForm.company_id = companies.value[0]?.id ?? null
+  bankError.value = ''
+  showBankModal.value = true
+  await loadBankSetting()
+}
+
+watch(() => bankForm.company_id, loadBankSetting)
+
+async function loadBankSetting() {
+  if (!bankForm.company_id) return
+  try {
+    const response = await apiClient.get('/api/payroll-bank-setting', { params: { company_id: bankForm.company_id } })
+    const data = response.data.data
+    bankForm.bank_name = data?.bank_name ?? ''
+    bankForm.account_number = data?.account_number ?? ''
+    bankForm.account_holder_name = data?.account_holder_name ?? ''
+  } catch {
+    bankForm.bank_name = ''
+    bankForm.account_number = ''
+    bankForm.account_holder_name = ''
+  }
+}
+
+async function submitBankForm() {
+  bankSaving.value = true
+  bankError.value = ''
+  try {
+    await apiClient.put('/api/payroll-bank-setting', bankForm)
+    showBankModal.value = false
+  } catch (err: any) {
+    bankError.value = err.response?.data?.message || 'Gagal menyimpan rekening.'
+  } finally {
+    bankSaving.value = false
+  }
+}
 </script>
 
 <template>
@@ -172,9 +220,14 @@ onMounted(() => {
         <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Payroll History</h1>
         <p class="mt-1 text-sm text-slate-500">Run Payroll per periode — kalkulasi, approval, lock, publish.</p>
       </div>
-      <button @click="openCreateModal" class="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-dark">
-        <Plus class="h-4 w-4" :stroke-width="2" /> Run Payroll Baru
-      </button>
+      <div class="flex items-center gap-2">
+        <button @click="openBankModal" class="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+          <Landmark class="h-4 w-4" :stroke-width="1.75" /> Pengaturan Bank
+        </button>
+        <button @click="openCreateModal" class="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-dark">
+          <Plus class="h-4 w-4" :stroke-width="2" /> Run Payroll Baru
+        </button>
+      </div>
     </div>
 
     <div class="flex flex-wrap items-end gap-3 rounded-2xl border border-slate-100 bg-white p-4">
@@ -313,6 +366,45 @@ onMounted(() => {
               {{ saving ? 'Menyimpan...' : 'Simpan sebagai Draft' }}
             </button>
           </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div v-if="showBankModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 px-4 py-8">
+        <div class="w-full max-w-md rounded-2xl bg-white shadow-xl">
+          <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+            <h2 class="text-lg font-semibold text-slate-900">Pengaturan Rekening Bank</h2>
+            <button @click="showBankModal = false" class="rounded-lg p-1 text-slate-400 hover:bg-slate-50"><X class="h-5 w-5" /></button>
+          </div>
+
+          <form @submit.prevent="submitBankForm" class="space-y-4 px-6 py-5">
+            <p class="text-xs text-slate-500">Rekening sumber pengirim gaji per company — dipakai buat generate file disbursement bank transfer.</p>
+            <div>
+              <label class="mb-1 block text-sm font-medium text-slate-700">Company</label>
+              <select v-model.number="bankForm.company_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                <option v-for="c in companies" :key="c.id" :value="c.id">{{ c.name }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm font-medium text-slate-700">Nama Bank</label>
+              <input v-model="bankForm.bank_name" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" placeholder="mis. Bank Central Asia" />
+            </div>
+            <div>
+              <label class="mb-1 block text-sm font-medium text-slate-700">Nomor Rekening</label>
+              <input v-model="bankForm.account_number" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
+            </div>
+            <div>
+              <label class="mb-1 block text-sm font-medium text-slate-700">Nama Pemilik Rekening</label>
+              <input v-model="bankForm.account_holder_name" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
+            </div>
+
+            <p v-if="bankError" class="text-sm text-red-600">{{ bankError }}</p>
+
+            <button type="submit" :disabled="bankSaving" class="w-full rounded-xl bg-primary py-2.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-50">
+              {{ bankSaving ? 'Menyimpan...' : 'Simpan' }}
+            </button>
+          </form>
         </div>
       </div>
     </Teleport>

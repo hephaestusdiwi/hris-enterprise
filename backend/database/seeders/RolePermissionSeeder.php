@@ -100,6 +100,7 @@ class RolePermissionSeeder extends Seeder
             'edit salary components',
             'delete salary components',
             'view salary structures',
+            'create salary structures',
             'edit salary structures',
             'delete salary structures',
             'view employee salaries',

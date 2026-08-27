@@ -10,6 +10,7 @@ use App\Modules\Screening\Models\Screening;
 use App\Modules\Screening\Requests\DecideScreeningRequest;
 use App\Modules\Screening\Requests\StoreScreeningRequest;
 use App\Modules\Screening\Services\ScreeningService;
+use App\Modules\Screening\Exceptions\ScreeningValidationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -70,7 +71,16 @@ class ScreeningController extends Controller
         $this->authorize('decide', $screening);
 
         $result = ScreeningResult::from($request->validated('result'));
-        $screening = $this->service->decide($screening, $result, $request->user(), $request->validated('notes'));
+
+        try {
+            $screening = $this->service->decide($screening, $result, $request->user(), $request->validated('notes'));
+        } catch (ScreeningValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null,
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,
