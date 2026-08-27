@@ -40,6 +40,7 @@ Route::middleware('auth:sanctum')->group(function () {
     require __DIR__.'/../app/Modules/ApprovalFlow/Routes/api.php';
     require __DIR__.'/../app/Modules/Attendance/Routes/api.php';
     require __DIR__.'/../app/Modules/AttendanceRequest/Routes/api.php';
+    require __DIR__.'/../app/Modules/OvertimeRequest/Routes/api.php';
     require __DIR__.'/../app/Modules/LeaveType/Routes/api.php';
     require __DIR__.'/../app/Modules/LeaveBalance/Routes/api.php';
     require __DIR__.'/../app/Modules/LeaveRequest/Routes/api.php';
@@ -60,7 +61,6 @@ Route::middleware('auth:sanctum')->group(function () {
     require __DIR__.'/../app/Modules/Screening/Routes/api.php';
     require __DIR__.'/../app/Modules/Interview/Routes/api.php';
     require __DIR__.'/../app/Modules/Offering/Routes/api.php';
-    require __DIR__.'/../app/Modules/NewJoiner/Routes/api.php';
     require __DIR__.'/../app/Modules/ContractProbationSetting/Routes/api.php';
     require __DIR__.'/../app/Modules/Announcement/Routes/api.php';
 
@@ -89,5 +89,6 @@ Route::middleware('auth:sanctum')->group(function () {
 */
 require __DIR__.'/../app/Modules/JobVacancy/Routes/api.php';
 require __DIR__.'/../app/Modules/Candidate/Routes/api.php';
+require __DIR__.'/../app/Modules/NewJoiner/Routes/api.php';
 
 require __DIR__.'/../app/Modules/Attendance/Routes/device.php';

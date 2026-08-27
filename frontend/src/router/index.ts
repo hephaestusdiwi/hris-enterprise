@@ -23,9 +23,11 @@ import AttendanceDeviceListView from '@/views/AttendanceDeviceListView.vue'
 import AttendanceDeviceOfficeQrDisplayView from '@/views/AttendanceDeviceOfficeQrDisplayView.vue'
 import AttendanceApprovalListView from '@/views/AttendanceApprovalListView.vue'
 import MyAttendanceRequestView from '@/views/MyAttendanceRequestView.vue'
+import MyOvertimeRequestView from '@/views/MyOvertimeRequestView.vue'
 import AttendanceHistoryView from '@/views/AttendanceHistoryView.vue'
 import AttendanceAbsenceDeductionView from '@/views/AttendanceAbsenceDeductionView.vue'
 import AttendanceRequestApprovalListView from '@/views/AttendanceRequestApprovalListView.vue'
+import OvertimeRequestApprovalListView from '@/views/OvertimeRequestApprovalListView.vue'
 import WorkingScheduleAssignmentListView from '@/views/WorkingScheduleAssignmentListView.vue'
 import SchedulerView from '@/views/SchedulerView.vue'
 import AttendanceReportView from '@/views/AttendanceReportView.vue'
@@ -264,9 +266,21 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/my-overtime-requests',
+      name: 'my-overtime-requests.list',
+      component: MyOvertimeRequestView,
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/attendance-request-approvals',
       name: 'attendance-request-approvals.list',
       component: AttendanceRequestApprovalListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/overtime-request-approvals',
+      name: 'overtime-request-approvals.list',
+      component: OvertimeRequestApprovalListView,
       meta: { requiresAuth: true },
     },
     {
@@ -526,6 +540,12 @@ const router = createRouter({
       name: 'new-joiners.index',
       component: NewJoinerListView,
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/new-joiner-form/:token',
+      name: 'new-joiner-form.show',
+      component: () => import('@/views/recruitment/NewJoinerFormView.vue'),
+      meta: { requiresAuth: false },
     },
     {
       path: '/login',

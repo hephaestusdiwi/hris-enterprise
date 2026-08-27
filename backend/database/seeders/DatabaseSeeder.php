@@ -52,5 +52,18 @@ class DatabaseSeeder extends Seeder
                 $status
             );
         }
+
+        $interviewStages = [
+            ['name' => 'HRD Interview', 'code' => 'HRD', 'sequence' => 1],
+            ['name' => 'User Interview', 'code' => 'USER', 'sequence' => 2],
+            ['name' => 'Final Interview', 'code' => 'FINAL', 'sequence' => 3],
+        ];
+
+        foreach ($interviewStages as $stage) {
+            \App\Modules\Interview\Models\InterviewStage::firstOrCreate(
+                ['code' => $stage['code']],
+                [...$stage, 'is_active' => true],
+            );
+        }
     }
 }

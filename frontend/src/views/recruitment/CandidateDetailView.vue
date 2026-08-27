@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import apiClient from '@/lib/axios'
 import { useAuthStore } from '@/stores/auth'
 import BaseModal from '@/components/ui/BaseModal.vue'
-import { ArrowLeft } from 'lucide-vue-next'
+import { ArrowLeft, FileText } from 'lucide-vue-next'
 
 interface EmployeeOption {
   id: number
@@ -27,6 +27,7 @@ interface StageHistory {
   from_status: string | null
   to_status: string
   notes: string | null
+  cv_path: string | null
   changed_at: string
   changed_by: { name: string } | null
 }
@@ -99,6 +100,34 @@ const loading = ref(true)
 const errorMessage = ref('')
 const actionError = ref('')
 const successMessage = ref('')
+
+// ---- New Joiner Form link modal ----
+const showNewJoinerLinkModal = ref(false)
+const newJoinerFormLink = ref('')
+const newJoinerLinkCopied = ref(false)
+
+async function copyNewJoinerLink() {
+  try {
+    await navigator.clipboard.writeText(newJoinerFormLink.value)
+    newJoinerLinkCopied.value = true
+    setTimeout(() => (newJoinerLinkCopied.value = false), 2000)
+  } catch {
+    alert('Gagal menyalin link, silakan copy manual.')
+  }
+}
+
+async function getNewJoinerLink(newJoinerId: number) {
+  actionError.value = ''
+  try {
+    const response = await apiClient.get(`/api/new-joiners/${newJoinerId}`)
+    const token = response.data.data.token
+    newJoinerFormLink.value = `${window.location.origin}/new-joiner-form/${token}`
+    newJoinerLinkCopied.value = false
+    showNewJoinerLinkModal.value = true
+  } catch (err: any) {
+    actionError.value = err.response?.data?.message || 'Gagal mengambil link form.'
+  }
+}
 
 function employeeName(e: EmployeeOption | null): string {
   if (!e) return '-'
@@ -196,6 +225,12 @@ async function runAction(fn: () => Promise<any>) {
   }
 }
 
+
+function downloadCv() {
+  const baseUrl = apiClient.defaults.baseURL ?? ''
+  window.open(`${baseUrl}/api/candidates/${candidate.value?.id}/cv`, '_blank')
+}
+
 // ---- Select / Hire ----
 function selectCandidate() {
   runAction(() =>
@@ -222,9 +257,14 @@ async function sendNewJoinerForm() {
   successMessage.value = ''
 
   try {
-    await apiClient.post('/api/new-joiners', {
+    const response = await apiClient.post('/api/new-joiners', {
       candidate_id: candidateId.value,
     })
+
+    const token = response.data.data.token
+    newJoinerFormLink.value = `${window.location.origin}/new-joiner-form/${token}`
+    newJoinerLinkCopied.value = false
+    showNewJoinerLinkModal.value = true
 
     successMessage.value = 'New Joiner form berhasil dikirim.'
     await loadAll()
@@ -612,6 +652,18 @@ onMounted(async () => {
               {{ candidate.score }}
             </dd>
           </div>
+        <div v-if="candidate.cv_path">
+          <dd class="mt-1">
+            <button
+              type="button"
+              class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-800"
+              @click="downloadCv"
+            >
+              <FileText class="h-3.5 w-3.5" />
+              Lihat Resume
+            </button>
+          </dd>
+        </div>
         </dl>
 
         <!-- Action bar -->
@@ -700,12 +752,26 @@ onMounted(async () => {
           <span
             v-else-if="
               candidate.status === 'hired' &&
-              newJoiners.length > 0
+              newJoiners.length > 0 &&
+              newJoiners[0].status !== 'sent'
             "
             class="rounded-xl bg-slate-50 px-3 py-1.5 text-sm text-slate-400"
           >
             New Joiner form sudah dikirim
           </span>
+
+          <button
+            v-else-if="
+              candidate.status === 'hired' &&
+              newJoiners.length > 0 &&
+              newJoiners[0].status === 'sent' &&
+              authStore.permissions.includes('manage new joiners')
+            "
+            class="rounded-xl border border-slate-200 px-3 py-1.5 text-sm hover:bg-slate-50"
+            @click="getNewJoinerLink(newJoiners[0].id)"
+          >
+            Lihat Link Form
+          </button>
         </div>
       </div>
 
@@ -950,6 +1016,29 @@ onMounted(async () => {
 
     <!-- Modals -->
     <Teleport to="body">
+      <!-- New Joiner Form Link -->
+      <BaseModal
+        v-if="showNewJoinerLinkModal"
+        title="Link New Joiner Form"
+        @close="showNewJoinerLinkModal = false"
+      >
+        <div class="space-y-4">
+          <div class="flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-xs text-amber-700">
+            Kirim link ini ke kandidat lewat email/WA secara manual — sistem belum mengirim otomatis.
+          </div>
+
+          <div class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+            <code class="flex-1 break-all font-mono text-xs text-slate-700">{{ newJoinerFormLink }}</code>
+            <button
+              class="shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-100"
+              @click="copyNewJoinerLink"
+            >
+              {{ newJoinerLinkCopied ? 'Tersalin' : 'Copy' }}
+            </button>
+          </div>
+        </div>
+      </BaseModal>
+
       <!-- Start Screening -->
       <BaseModal
         v-if="showScreeningModal"

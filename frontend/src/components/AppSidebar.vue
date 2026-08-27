@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound,
   CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch, CheckCircle2, Layers, CalendarRange, BarChart3,
   Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle, HandCoins, Receipt, BriefcaseBusiness, Megaphone, Landmark,
-  ShieldCheck, WalletCards, History, FileText,
+  ShieldCheck, WalletCards, History, FileText, Clock3,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
@@ -108,7 +108,9 @@ const groups: MenuGroup[] = [
       { name: 'attendance-face-checkin', label: 'Face Check In', icon: ScanFace, to: '/attendance/face-checkin', permission: null },
       { name: 'attendance-approvals', label: 'Approval Attendance', icon: CheckCircle2, to: '/attendance-approvals', permission: null },
       { name: 'my-attendance-requests', label: 'Attendance Request', icon: Send, to: '/my-attendance-requests', permission: 'create attendance requests' },
+      { name: 'my-overtime-requests', label: 'Overtime Request', icon: Clock3, to: '/my-overtime-requests', permission: 'create overtime requests' },
       { name: 'attendance-request-approvals', label: 'Approval Attendance Request', icon: ClipboardCheck, to: '/attendance-request-approvals', permission: null },
+      { name: 'overtime-request-approvals', label: 'Approval Overtime Request', icon: ClipboardCheck, to: '/overtime-request-approvals', permission: null },
       { name: 'attendance-report', label: 'Attendance Report', icon: BarChart3, to: '/attendance-report', permission: 'view attendances' },
     ],
   },

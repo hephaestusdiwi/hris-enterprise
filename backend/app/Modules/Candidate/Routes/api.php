@@ -10,6 +10,7 @@ Route::middleware('auth:sanctum')->prefix('candidates')->group(function () {
     Route::post('/{candidate}/hold', [CandidateController::class, 'hold']);
     Route::post('/{candidate}/select', [CandidateController::class, 'select']);  
     Route::post('/{candidate}/hire', [CandidateController::class, 'hire']);     
+    Route::get('/{candidate}/cv', [CandidateController::class, 'downloadCv']);
 });
 
 // Career site — publik, gabung throttle group yang sama dengan JobVacancy

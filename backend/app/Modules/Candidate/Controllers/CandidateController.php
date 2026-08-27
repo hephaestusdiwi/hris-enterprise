@@ -11,6 +11,7 @@ use App\Modules\NewJoiner\Services\NewJoinerService;
 use App\Modules\JobVacancy\Models\JobVacancy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class CandidateController extends Controller
 {
@@ -170,5 +171,16 @@ class CandidateController extends Controller
             'message' => 'Candidate berhasil di-Hired.',
             'data' => $candidate,
         ]);
+    }
+
+    public function downloadCv(Candidate $candidate)
+    {
+        $this->authorize('view', $candidate);
+
+        if (! $candidate->cv_path || ! Storage::disk('private')->exists($candidate->cv_path)) {
+            abort(404, 'Dokumen CV tidak ditemukan.');
+        }
+
+        return Storage::disk('private')->response($candidate->cv_path);
     }
 }
