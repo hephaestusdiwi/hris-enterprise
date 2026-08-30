@@ -71,6 +71,10 @@ Route::post('/expense-claims/{expenseClaim}/cancel', [ExpenseClaimController::cl
 // Attachment: sama, ownership-or-permission dicek di controller.
 Route::post('/expense-claims/{expenseClaim}/attachments', [ExpenseClaimAttachmentController::class, 'store']);
 
+// Payment (STEP 4D): permission khusus, tidak ada ownership bypass --
+// hanya HR/Finance yang boleh menandai claim sudah dibayar.
+Route::middleware('permission:pay expense claims')->post('/expense-claims/{expenseClaim}/pay', [ExpenseClaimController::class, 'pay']);
+
 // ---- Expense Claim Approval (STEP 4C) ----
 // Tanpa permission middleware -- eligibility approver dicek di dalam
 // service lewat ApprovalStepApproverResolver, persis pola

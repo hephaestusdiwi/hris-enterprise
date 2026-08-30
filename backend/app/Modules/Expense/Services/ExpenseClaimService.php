@@ -2,6 +2,7 @@
 
 namespace App\Modules\Expense\Services;
 
+use App\Models\User;
 use App\Modules\Employee\Models\Employee;
 use App\Modules\Expense\Enums\ExpenseClaimStatus;
 use App\Modules\Expense\Exceptions\ExpenseClaimValidationException;
@@ -51,18 +52,13 @@ class ExpenseClaimService
 
         $policy = $assignment->policy;
 
-        // Effectiveness policy harus dievaluasi terhadap expense_date,
-        // bukan tanggal submit / hari ini.
         if (! $policy->isCurrentlyEffective($expenseDate)) {
             throw new ExpenseClaimValidationException(
                 'Expense Policy yang berlaku sudah tidak aktif atau kedaluwarsa pada tanggal tersebut.'
             );
         }
 
-        $category = $policy->categories->firstWhere(
-            'id',
-            $data['expense_category_id']
-        );
+        $category = $policy->categories->firstWhere('id', $data['expense_category_id']);
 
         if (! $category) {
             throw new ExpenseClaimValidationException(
@@ -75,10 +71,7 @@ class ExpenseClaimService
         if ($subcategoryId) {
             $subcategory = ExpenseSubcategory::find($subcategoryId);
 
-            if (
-                ! $subcategory
-                || (int) $subcategory->expense_category_id !== (int) $category->id
-            ) {
+            if (! $subcategory || (int) $subcategory->expense_category_id !== (int) $category->id) {
                 throw new ExpenseClaimValidationException(
                     'Subcategory yang dipilih tidak termasuk dalam kategori ini.'
                 );
@@ -91,24 +84,13 @@ class ExpenseClaimService
         // limit_amount NULL = unlimited. Semantic-nya MAXIMUM PER CLAIM
         // (bukan aggregate) -- keputusan terkunci STEP 4A, tidak ada
         // ledger/running-balance yang dicek di sini.
-        if (
-            $limitAmount !== null
-            && ! ExpenseClaimMath::gte((string) $limitAmount, $amount)
-        ) {
+        if ($limitAmount !== null && ! ExpenseClaimMath::gte((string) $limitAmount, $amount)) {
             throw new ExpenseClaimValidationException(
                 'Amount melebihi limit kategori ini pada Expense Policy yang berlaku.'
             );
         }
 
-        return DB::transaction(function () use (
-            $employee,
-            $assignment,
-            $category,
-            $subcategoryId,
-            $expenseDate,
-            $amount,
-            $data
-        ) {
+        return DB::transaction(function () use ($employee, $assignment, $category, $subcategoryId, $expenseDate, $amount, $data) {
             $claim = ExpenseClaim::create([
                 'employee_id' => $employee->id,
                 'expense_policy_assignment_id' => $assignment->id,
@@ -128,26 +110,13 @@ class ExpenseClaimService
 
             $this->approvalService->initiate($claim);
 
-            return $claim->fresh([
-                'category',
-                'subcategory',
-                'attachments',
-            ]);
+            return $claim->fresh(['category', 'subcategory', 'attachments']);
         });
     }
 
     public function cancel(ExpenseClaim $claim, string $reason): ExpenseClaim
     {
-        if (
-            ! in_array(
-                $claim->status,
-                [
-                    ExpenseClaimStatus::Pending,
-                    ExpenseClaimStatus::Approved,
-                ],
-                true
-            )
-        ) {
+        if (! in_array($claim->status, [ExpenseClaimStatus::Pending, ExpenseClaimStatus::Approved], true)) {
             throw new ExpenseClaimValidationException(
                 'Claim berstatus ini tidak bisa dibatalkan.'
             );
@@ -173,18 +142,42 @@ class ExpenseClaimService
     }
 
     /**
+     * STEP 4D. Status enum TIDAK punya case Paid (keputusan terkunci
+     * STEP 4A) -- pembayaran cuma ditandai lewat kolom paid_at/
+     * paid_by_user_id/payment_note, status Claim tetap Approved. Pola
+     * persis CashAdvanceService::disburse() minus perubahan status.
+     */
+    public function markAsPaid(ExpenseClaim $claim, ?string $note, ?User $actor): ExpenseClaim
+    {
+        if ($claim->status !== ExpenseClaimStatus::Approved) {
+            throw new ExpenseClaimValidationException(
+                'Hanya claim berstatus Approved yang bisa ditandai sudah dibayar.'
+            );
+        }
+
+        if ($claim->paid_at) {
+            throw new ExpenseClaimValidationException(
+                'Claim ini sudah pernah ditandai dibayar sebelumnya.'
+            );
+        }
+
+        $claim->update([
+            'paid_at' => now(),
+            'paid_by_user_id' => $actor?->id,
+            'payment_note' => $note,
+        ]);
+
+        return $claim->fresh();
+    }
+
+    /**
      * Public karena juga dipakai ExpenseClaimAttachmentController untuk
      * menambah attachment ke claim yang sudah ada -- satu tempat
      * penyimpanan logic, tidak diduplikasi (pola CashAdvanceService).
      */
-    public function storeAttachment(
-        ExpenseClaim $claim,
-        UploadedFile $file
-    ): ExpenseClaimAttachment {
-        $path = $file->store(
-            "expense-claim-attachments/{$claim->employee_id}",
-            'public'
-        );
+    public function storeAttachment(ExpenseClaim $claim, UploadedFile $file): ExpenseClaimAttachment
+    {
+        $path = $file->store("expense-claim-attachments/{$claim->employee_id}", 'public');
 
         return ExpenseClaimAttachment::create([
             'expense_claim_id' => $claim->id,

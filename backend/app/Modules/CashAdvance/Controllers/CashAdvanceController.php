@@ -169,8 +169,8 @@ class CashAdvanceController extends Controller
     ) {
         $result = $this->cashAdvanceService->disburse(
             $cashAdvance,
-            $request->validated('disbursement_note'),
             $request->user(),
+            $request->validated(),
         );
 
         return response()->json([

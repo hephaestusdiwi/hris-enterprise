@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Expense\Exceptions\ExpenseClaimValidationException;
 use App\Modules\Expense\Models\ExpenseClaim;
 use App\Modules\Expense\Requests\CancelExpenseClaimRequest;
+use App\Modules\Expense\Requests\PayExpenseClaimRequest;
 use App\Modules\Expense\Requests\StoreExpenseClaimRequest;
 use App\Modules\Expense\Services\ExpenseClaimService;
 use Illuminate\Http\Request;
@@ -132,6 +133,29 @@ class ExpenseClaimController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Expense Claim berhasil dibatalkan',
+                'data' => $claim,
+            ]);
+        } catch (ExpenseClaimValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null,
+            ], 422);
+        }
+    }
+
+    public function pay(PayExpenseClaimRequest $request, ExpenseClaim $expenseClaim)
+    {
+        try {
+            $claim = $this->expenseClaimService->markAsPaid(
+                $expenseClaim,
+                $request->validated('payment_note'),
+                $request->user(),
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Expense Claim berhasil ditandai sudah dibayar',
                 'data' => $claim,
             ]);
         } catch (ExpenseClaimValidationException $e) {
