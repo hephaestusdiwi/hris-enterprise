@@ -26,6 +26,15 @@ enum AttendanceActivityType: string
     case AttendanceRequestRejected = 'attendance_request_rejected';
     case AttendanceCreated = 'attendance_created';
     case AttendanceCorrected = 'attendance_corrected';
+    case OvertimeRequestSubmitted = 'overtime_request_submitted';
+    case OvertimeRequestCancelled = 'overtime_request_cancelled';
+    case OvertimeRequestApproved = 'overtime_request_approved';
+    case OvertimeRequestRejected = 'overtime_request_rejected';
+    case OvertimeRequestClaimed = 'overtime_request_claimed';
+    case ChangeShiftRequestSubmitted = 'change_shift_request_submitted';
+    case ChangeShiftRequestCancelled = 'change_shift_request_cancelled';
+    case ChangeShiftRequestApproved = 'change_shift_request_approved';
+    case ChangeShiftRequestRejected = 'change_shift_request_rejected';
 
     public function label(): string
     {
@@ -46,6 +55,15 @@ enum AttendanceActivityType: string
             self::AttendanceRequestRejected => 'Attendance Request Rejected',
             self::AttendanceCreated => 'Attendance Created',
             self::AttendanceCorrected => 'Attendance Corrected',
+            self::OvertimeRequestSubmitted => 'Overtime Request Submitted',
+            self::OvertimeRequestCancelled => 'Overtime Request Cancelled',
+            self::OvertimeRequestApproved => 'Overtime Request Approved',
+            self::OvertimeRequestRejected => 'Overtime Request Rejected',
+            self::OvertimeRequestClaimed => 'Overtime Request Claimed',
+            self::ChangeShiftRequestSubmitted => 'Change Shift Request Submitted',
+            self::ChangeShiftRequestCancelled => 'Change Shift Request Cancelled',
+            self::ChangeShiftRequestApproved => 'Change Shift Request Approved',
+            self::ChangeShiftRequestRejected => 'Change Shift Request Rejected',
         };
     }
 }

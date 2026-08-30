@@ -9,7 +9,7 @@ class InterviewPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('view interviews');
+        return $user->can('view interviews') || (bool) $user->employee;
     }
 
     public function view(User $user, Interview $interview): bool

@@ -18,6 +18,8 @@ class ConvertNewJoinerRequest extends FormRequest
             'working_schedule_id' => ['nullable', 'integer', 'exists:working_schedules,id'],
             'employment_status_id' => ['nullable', 'integer', 'exists:employment_statuses,id'],
             'manager_employee_id' => ['nullable', 'integer', 'exists:employees,id'],
+            'contract_start_date' => ['nullable', 'date'],
+            'contract_end_date' => ['nullable', 'date', 'after_or_equal:contract_start_date'],
         ];
     }
 }

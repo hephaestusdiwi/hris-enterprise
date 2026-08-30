@@ -24,10 +24,12 @@ import AttendanceDeviceOfficeQrDisplayView from '@/views/AttendanceDeviceOfficeQ
 import AttendanceApprovalListView from '@/views/AttendanceApprovalListView.vue'
 import MyAttendanceRequestView from '@/views/MyAttendanceRequestView.vue'
 import MyOvertimeRequestView from '@/views/MyOvertimeRequestView.vue'
+import MyChangeShiftRequestView from '@/views/MyChangeShiftRequestView.vue'
 import AttendanceHistoryView from '@/views/AttendanceHistoryView.vue'
 import AttendanceAbsenceDeductionView from '@/views/AttendanceAbsenceDeductionView.vue'
 import AttendanceRequestApprovalListView from '@/views/AttendanceRequestApprovalListView.vue'
 import OvertimeRequestApprovalListView from '@/views/OvertimeRequestApprovalListView.vue'
+import ChangeShiftRequestApprovalListView from '@/views/ChangeShiftRequestApprovalListView.vue'
 import WorkingScheduleAssignmentListView from '@/views/WorkingScheduleAssignmentListView.vue'
 import SchedulerView from '@/views/SchedulerView.vue'
 import AttendanceReportView from '@/views/AttendanceReportView.vue'
@@ -57,6 +59,8 @@ import MyCashAdvanceView from '@/views/MyCashAdvanceView.vue'
 import ExpensePolicyListView from '@/views/ExpensePolicyListView.vue'
 import ExpensePolicyAssignmentListView from '@/views/ExpensePolicyAssignmentListView.vue'
 import MyExpenseClaimView from '@/views/MyExpenseClaimView.vue'
+import ExpenseClaimListView from '@/views/ExpenseClaimListView.vue'
+import ExpenseClaimApprovalListView from '@/views/ExpenseClaimApprovalListView.vue'
 import CashAdvanceApprovalListView from '@/views/CashAdvanceApprovalListView.vue'
 import BpjsSettingView from '@/views/BpjsSettingView.vue'
 import EmployeeBpjsListView from '@/views/EmployeeBpjsListView.vue'
@@ -64,6 +68,7 @@ import TaxSettingsView from '@/views/TaxSettingsView.vue'
 import EmployeeTaxListView from '@/views/EmployeeTaxListView.vue'
 import PayrollRunListView from '@/views/PayrollRunListView.vue'
 import PayrollRunDetailView from '@/views/PayrollRunDetailView.vue'
+import PayrollSalaryReportView from '@/views/PayrollSalaryReportView.vue'
 import JobVacancyListView from '@/views/recruitment/JobVacancyListView.vue'
 import JobVacancyDetailView from '@/views/recruitment/JobVacancyDetailView.vue'
 import HiringRequisitionListView from '@/views/recruitment/HiringRequisitionListView.vue'
@@ -72,6 +77,7 @@ import InternalJobVacancyListView from '@/views/recruitment/InternalJobVacancyLi
 import InternalJobDetailView from '@/views/recruitment/InternalJobDetailView.vue'
 import CandidateListView from '@/views/recruitment/CandidateListView.vue'
 import CandidateDetailView from '@/views/recruitment/CandidateDetailView.vue'
+import InterviewScheduleView from '@/views/recruitment/InterviewScheduleView.vue'
 import NewJoinerListView from '@/views/recruitment/NewJoinerListView.vue'
 import TalentPoolListView from '@/views/recruitment/TalentPoolListView.vue'
 
@@ -271,6 +277,12 @@ const router = createRouter({
       component: MyOvertimeRequestView,
       meta: { requiresAuth: true },
     },
+    { 
+      path: '/my-change-shift-requests',
+      name: 'my-change-shift-requests.list',
+      component: MyChangeShiftRequestView,
+      meta: { requiresAuth: true },
+    },
     {
       path: '/attendance-request-approvals',
       name: 'attendance-request-approvals.list',
@@ -281,6 +293,12 @@ const router = createRouter({
       path: '/overtime-request-approvals',
       name: 'overtime-request-approvals.list',
       component: OvertimeRequestApprovalListView,
+      meta: { requiresAuth: true },
+    },
+    { 
+      path: '/change-shift-request-approvals',
+      name: 'change-shift-request-approvals.list',
+      component: ChangeShiftRequestApprovalListView,
       meta: { requiresAuth: true },
     },
     {
@@ -404,6 +422,18 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/expense-claims',
+      name: 'expense-claims.list',
+      component: ExpenseClaimListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/expense-claim-approvals',
+      name: 'expense-claim-approvals.list',
+      component: ExpenseClaimApprovalListView,
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/bpjs/settings',
       name: 'bpjs-settings',
       component: BpjsSettingView,
@@ -437,6 +467,12 @@ const router = createRouter({
       path: '/payroll-runs/:id',
       name: 'payroll-run-detail',
       component: PayrollRunDetailView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/payroll-reports/salary',
+      name: 'payroll-report-salary',
+      component: PayrollSalaryReportView,
       meta: { requiresAuth: true },
     },
     {
@@ -539,6 +575,18 @@ const router = createRouter({
       path: '/new-joiners',
       name: 'new-joiners.index',
       component: NewJoinerListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/recruitment-overview',
+      name: 'recruitment-overview.index',
+      component: () => import('@/views/recruitment/RecruitmentOverviewView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/interviews',
+      name: 'interviews.index',
+      component: () => import('@/views/recruitment/InterviewScheduleView.vue'),
       meta: { requiresAuth: true },
     },
     {

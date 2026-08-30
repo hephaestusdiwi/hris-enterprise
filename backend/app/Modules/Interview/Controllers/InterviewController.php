@@ -27,12 +27,22 @@ class InterviewController extends Controller
     {
         $this->authorize('viewAny', Interview::class);
 
+        $user = $request->user();
+
         $interviews = Interview::query()
             ->when($request->integer('candidate_id'), fn ($q, $v) => $q->where('candidate_id', $v))
             ->when($request->integer('job_vacancy_id'), fn ($q, $v) => $q->where('job_vacancy_id', $v))
             ->when($request->integer('interview_stage_id'), fn ($q, $v) => $q->where('interview_stage_id', $v))
             ->when($request->string('status')->toString(), fn ($q, $v) => $q->where('status', $v))
-            ->with(['candidate', 'stage', 'interviewer'])
+            ->when(
+                // Interviewer biasa (tanpa permission 'view interviews') CUMA boleh lihat
+                // interview miliknya sendiri — abaikan interviewer_employee_id dari query
+                // apapun yang dikirim, supaya tidak bisa dipakai buat intip jadwal orang lain.
+                ! $user->can('view interviews'),
+                fn ($q) => $q->where('interviewer_employee_id', $user->employee?->id ?? 0),
+                fn ($q) => $q->when($request->integer('interviewer_employee_id'), fn ($q2, $v) => $q2->where('interviewer_employee_id', $v)),
+            )
+            ->with(['candidate', 'jobVacancy', 'stage', 'interviewer'])
             ->latest('scheduled_at')
             ->paginate();
 

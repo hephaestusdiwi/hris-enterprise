@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AccountActivationController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\RecruitmentOverviewController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -14,6 +15,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'me']);
 
     Route::middleware('permission:view dashboard')->get('/dashboard', [DashboardController::class, 'index']);
+    Route::middleware('permission:view candidates|view job vacancies|view hiring requisitions')
+        ->get('/recruitment-overview', [RecruitmentOverviewController::class, 'index']);
 
     Route::middleware('permission:view users')->group(function () {
         Route::get('/users', [UserController::class, 'index']);
@@ -41,6 +44,7 @@ Route::middleware('auth:sanctum')->group(function () {
     require __DIR__.'/../app/Modules/Attendance/Routes/api.php';
     require __DIR__.'/../app/Modules/AttendanceRequest/Routes/api.php';
     require __DIR__.'/../app/Modules/OvertimeRequest/Routes/api.php';
+    require __DIR__.'/../app/Modules/ChangeShiftRequest/Routes/api.php';
     require __DIR__.'/../app/Modules/LeaveType/Routes/api.php';
     require __DIR__.'/../app/Modules/LeaveBalance/Routes/api.php';
     require __DIR__.'/../app/Modules/LeaveRequest/Routes/api.php';

@@ -4,6 +4,7 @@ use App\Modules\Payroll\Controllers\CompanyBankSettingController;
 use App\Modules\Payroll\Controllers\CompanyPayrollAttendanceSettingController;
 use App\Modules\Payroll\Controllers\PayrollApprovalController;
 use App\Modules\Payroll\Controllers\PayrollDisbursementController;
+use App\Modules\Payroll\Controllers\PayrollReportController;
 use App\Modules\Payroll\Controllers\PayrollRunController;
 use App\Modules\Payroll\Controllers\PayslipController;
 use Illuminate\Support\Facades\Route;
@@ -16,6 +17,16 @@ Route::middleware('permission:view payroll runs')->group(function () {
     Route::get('/payroll-runs/{payrollRun}', [PayrollRunController::class, 'show']);
     Route::get('/payslips/{payslip}', [PayslipController::class, 'show']);
     Route::get('/payroll-attendance-setting', [CompanyPayrollAttendanceSettingController::class, 'show']);
+
+    // Payroll Reports STEP 1 — Salary Reports. Reuse permission 'view payroll
+    // runs' yang sudah ada (laporan ini murni membaca data payroll yang
+    // sudah digating izin itu) — sengaja tidak bikin permission baru.
+    Route::get('/payroll-reports/salary/detail', [PayrollReportController::class, 'salaryDetail']);
+    Route::get('/payroll-reports/salary/summary', [PayrollReportController::class, 'salarySummary']);
+    Route::get('/payroll-reports/salary/detail/export/excel', [PayrollReportController::class, 'exportSalaryDetailExcel']);
+    Route::get('/payroll-reports/salary/summary/export/excel', [PayrollReportController::class, 'exportSalarySummaryExcel']);
+    Route::get('/payroll-reports/salary/detail/export/pdf', [PayrollReportController::class, 'exportSalaryDetailPdf']);
+    Route::get('/payroll-reports/salary/summary/export/pdf', [PayrollReportController::class, 'exportSalarySummaryPdf']);
 });
 
 Route::middleware('permission:create payroll runs')->group(function () {

@@ -25,7 +25,9 @@ class NewJoinerConversionService
      *     job_level_id?: ?int,
      *     working_schedule_id?: ?int,
      *     employment_status_id?: ?int,
-     *     manager_employee_id?: ?int
+     *     manager_employee_id?: ?int,
+     *     contract_start_date?: ?string,
+     *     contract_end_date?: ?string
      * } $organizationOverrides
      *
      * Field organisasi yang memang belum bisa diisi dari Recruitment —
@@ -64,6 +66,8 @@ class NewJoinerConversionService
             'employment_status_id' => $organizationOverrides['employment_status_id'] ?? null,
             'employment_type_id' => $vacancy->employment_type_id,
             'manager_employee_id' => $organizationOverrides['manager_employee_id'] ?? null,
+            'contract_start_date' => $organizationOverrides['contract_start_date'] ?? null,
+            'contract_end_date' => $organizationOverrides['contract_end_date'] ?? null,
 
             'new_user' => [
                 'email' => $candidate->email,

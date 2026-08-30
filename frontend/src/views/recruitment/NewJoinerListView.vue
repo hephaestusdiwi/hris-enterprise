@@ -102,6 +102,8 @@ const convertForm = ref({
   working_schedule_id: '' as number | '',
   employment_status_id: '' as number | '',
   manager_employee_id: '' as number | '',
+  contract_start_date: '',
+  contract_end_date: '',
 })
 
 const jobLevels = ref<RefOption[]>([])
@@ -131,7 +133,7 @@ async function loadConvertReferenceData() {
 
 async function openConvertModal(row: NewJoinerRow) {
   convertingRow.value = row
-  convertForm.value = { job_level_id: '', working_schedule_id: '', employment_status_id: '', manager_employee_id: '' }
+  convertForm.value = { job_level_id: '', working_schedule_id: '', employment_status_id: '', manager_employee_id: '', contract_start_date: '', contract_end_date: '' }
   showConvertModal.value = true
   await loadConvertReferenceData()
 }
@@ -146,6 +148,8 @@ async function submitConvert() {
       working_schedule_id: convertForm.value.working_schedule_id || null,
       employment_status_id: convertForm.value.employment_status_id || null,
       manager_employee_id: convertForm.value.manager_employee_id || null,
+      contract_start_date: convertForm.value.contract_start_date || null,
+      contract_end_date: convertForm.value.contract_end_date || null,
     })
     showConvertModal.value = false
     await loadNewJoiners(currentPage.value)
@@ -272,6 +276,19 @@ onMounted(() => loadNewJoiners())
               <option v-for="e in employees" :key="e.id" :value="e.id">{{ employeeName(e) }}</option>
             </select>
           </div>
+          <div class="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
+            <div>
+              <label class="text-xs font-medium text-slate-500">Contract Start Date</label>
+              <input v-model="convertForm.contract_start_date" type="date" class="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm" />
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-500">Contract End Date</label>
+              <input v-model="convertForm.contract_end_date" type="date" class="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm" />
+            </div>
+          </div>
+          <p class="text-xs text-slate-400">
+            Wajib diisi kalau Employment Type kandidat ini "Contract" — kosongkan kalau bukan.
+          </p>
           <div class="flex justify-end gap-2 pt-2">
             <button type="button" class="rounded-xl border border-slate-200 px-4 py-2 text-sm" @click="showConvertModal = false">Batal</button>
             <button type="submit" :disabled="convertSaving" class="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50">

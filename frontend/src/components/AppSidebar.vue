@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound,
   CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch, CheckCircle2, Layers, CalendarRange, BarChart3,
   Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle, HandCoins, Receipt, BriefcaseBusiness, Megaphone, Landmark,
-  ShieldCheck, WalletCards, History, FileText, Clock3,
+  ShieldCheck, WalletCards, History, FileText, Clock3, Repeat,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
@@ -20,7 +20,7 @@ interface MenuItem {
   label: string
   icon: any
   to: string
-  permission: string | null
+  permission: string | string[] | null
 }
 
 interface MenuGroup {
@@ -109,8 +109,10 @@ const groups: MenuGroup[] = [
       { name: 'attendance-approvals', label: 'Approval Attendance', icon: CheckCircle2, to: '/attendance-approvals', permission: null },
       { name: 'my-attendance-requests', label: 'Attendance Request', icon: Send, to: '/my-attendance-requests', permission: 'create attendance requests' },
       { name: 'my-overtime-requests', label: 'Overtime Request', icon: Clock3, to: '/my-overtime-requests', permission: 'create overtime requests' },
+      { name: 'my-change-shift-requests', label: 'Change Shift Request', icon: Repeat, to: '/my-change-shift-requests', permission: 'create change shift requests' },
       { name: 'attendance-request-approvals', label: 'Approval Attendance Request', icon: ClipboardCheck, to: '/attendance-request-approvals', permission: null },
       { name: 'overtime-request-approvals', label: 'Approval Overtime Request', icon: ClipboardCheck, to: '/overtime-request-approvals', permission: null },
+      { name: 'change-shift-request-approvals', label: 'Approval Change Shift Request', icon: ClipboardCheck, to: '/change-shift-request-approvals', permission: null },
       { name: 'attendance-report', label: 'Attendance Report', icon: BarChart3, to: '/attendance-report', permission: 'view attendances' },
     ],
   },
@@ -138,6 +140,8 @@ const groups: MenuGroup[] = [
       { name: 'expense-policies', label: 'Expense Policy', icon: FileText, to: '/expense-policies', permission: 'view expense policies' },
       { name: 'expense-policy-assignments', label: 'Expense Policy Assignment', icon: FileText, to: '/expense-policy-assignments', permission: 'view expense policies' },
       { name: 'my-expense-claims', label: 'My Expense Claims', icon: Receipt, to: '/my-expense-claims', permission: null },
+      { name: 'expense-claims', label: 'Expense Claims', icon: Receipt, to: '/expense-claims', permission: 'view expense claims' },
+      { name: 'expense-claim-approvals', label: 'Expense Claim Approval', icon: ClipboardCheck, to: '/expense-claim-approvals', permission: null },
     ],
   },
   {
@@ -150,6 +154,7 @@ const groups: MenuGroup[] = [
       { name: 'tax-settings', label: 'Tax Settings', icon: ShieldCheck, to: '/tax-settings', permission: 'view tax settings' },
       { name: 'employee-tax', label: 'Employee Tax', icon: ShieldCheck, to: '/employee-tax', permission: 'view tax settings' },
       { name: 'payroll-history', label: 'Payroll History', icon: WalletCards, to: '/payroll', permission: 'view payroll runs' },
+      { name: 'payroll-report-salary', label: 'Salary Reports', icon: BarChart3, to: '/payroll-reports/salary', permission: 'view payroll runs' },
     ],
   },
   {
@@ -160,7 +165,9 @@ const groups: MenuGroup[] = [
       { name: 'job-vacancies', label: 'Job Vacancies', icon: BriefcaseBusiness, to: '/job-vacancies', permission: 'view job vacancies' },
       { name: 'hiring-requisitions', label: 'Hiring Requisitions', icon: BriefcaseBusiness, to: '/hiring-requisitions', permission: 'view hiring requisitions' },
       { name: 'internal-job-vacancies', label: 'Lowongan Internal', icon: BriefcaseBusiness, to: '/internal-job-vacancies', permission: null },
+      { name: 'recruitment-overview', label: 'Overview', icon: BarChart3, to: '/recruitment-overview', permission: ['view candidates', 'view job vacancies', 'view hiring requisitions'] },
       { name: 'candidates', label: 'Candidates', icon: BriefcaseBusiness, to: '/candidates', permission: 'view candidates' },
+      { name: 'interviews', label: 'Interview Schedule', icon: BriefcaseBusiness, to: '/interviews', permission: null },
       { name: 'new-joiners', label: 'New Joiner', icon: BriefcaseBusiness, to: '/new-joiners', permission: 'view new joiners' },
       { name: 'talent-pool', label: 'Talent Pool', icon: BriefcaseBusiness, to: '/talent-pool', permission: 'view candidates' },
     ],
@@ -176,8 +183,13 @@ const groups: MenuGroup[] = [
   },
 ]
 
-function canAccess(permission: string | null) {
+function canAccess(permission: string | string[] | null) {
   if (!permission) return true
+
+  if (Array.isArray(permission)) {
+    return permission.some((p) => authStore.permissions.includes(p))
+  }
+
   return authStore.permissions.includes(permission)
 }
 
