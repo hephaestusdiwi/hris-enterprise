@@ -62,7 +62,7 @@ class PayrollReportService
                 'payslips.net_pay',
             ])
             ->selectSub(
-                fn ($q) => $q->selectRaw('COALESCE(SUM(amount), 0)')
+                fn ($q) => $q->selectRaw('COALESCE(SUM(amount), 0.00)')
                     ->from('payslip_lines')
                     ->whereColumn('payslip_lines.payslip_id', 'payslips.id')
                     ->where('payslip_lines.source', PayslipLineSource::SalaryStructure->value)
@@ -70,7 +70,7 @@ class PayrollReportService
                 'basic_salary'
             )
             ->selectSub(
-                fn ($q) => $q->selectRaw('COALESCE(SUM(amount), 0)')
+                fn ($q) => $q->selectRaw('COALESCE(SUM(amount), 0.00)')
                     ->from('payslip_lines')
                     ->whereColumn('payslip_lines.payslip_id', 'payslips.id')
                     ->where('payslip_lines.source', PayslipLineSource::Allowance->value)

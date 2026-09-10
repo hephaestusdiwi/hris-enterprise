@@ -56,12 +56,12 @@ import ReimbursementApprovalListView from '@/views/ReimbursementApprovalListView
 import CashAdvancePolicyListView from '@/views/CashAdvancePolicyListView.vue'
 import CashAdvanceListView from '@/views/CashAdvanceListView.vue'
 import MyCashAdvanceView from '@/views/MyCashAdvanceView.vue'
+import CashAdvanceApprovalListView from '@/views/CashAdvanceApprovalListView.vue'
 import ExpensePolicyListView from '@/views/ExpensePolicyListView.vue'
 import ExpensePolicyAssignmentListView from '@/views/ExpensePolicyAssignmentListView.vue'
 import MyExpenseClaimView from '@/views/MyExpenseClaimView.vue'
 import ExpenseClaimListView from '@/views/ExpenseClaimListView.vue'
 import ExpenseClaimApprovalListView from '@/views/ExpenseClaimApprovalListView.vue'
-import CashAdvanceApprovalListView from '@/views/CashAdvanceApprovalListView.vue'
 import BpjsSettingView from '@/views/BpjsSettingView.vue'
 import EmployeeBpjsListView from '@/views/EmployeeBpjsListView.vue'
 import TaxSettingsView from '@/views/TaxSettingsView.vue'
@@ -77,7 +77,6 @@ import InternalJobVacancyListView from '@/views/recruitment/InternalJobVacancyLi
 import InternalJobDetailView from '@/views/recruitment/InternalJobDetailView.vue'
 import CandidateListView from '@/views/recruitment/CandidateListView.vue'
 import CandidateDetailView from '@/views/recruitment/CandidateDetailView.vue'
-import InterviewScheduleView from '@/views/recruitment/InterviewScheduleView.vue'
 import NewJoinerListView from '@/views/recruitment/NewJoinerListView.vue'
 import TalentPoolListView from '@/views/recruitment/TalentPoolListView.vue'
 
@@ -379,7 +378,7 @@ const router = createRouter({
       component: ReimbursementApprovalListView,
       meta: { requiresAuth: true },
     },
-    {
+        {
       path: '/cash-advance-policies',
       name: 'cash-advance-policies.list',
       component: CashAdvancePolicyListView,
@@ -403,7 +402,7 @@ const router = createRouter({
       component: CashAdvanceApprovalListView,
       meta: { requiresAuth: true },
     },
-        {
+    {
       path: '/expense-policies',
       name: 'expense-policies.list',
       component: ExpensePolicyListView,

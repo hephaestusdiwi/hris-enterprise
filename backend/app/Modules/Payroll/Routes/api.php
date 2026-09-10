@@ -3,6 +3,7 @@
 use App\Modules\Payroll\Controllers\CompanyBankSettingController;
 use App\Modules\Payroll\Controllers\CompanyPayrollAttendanceSettingController;
 use App\Modules\Payroll\Controllers\PayrollApprovalController;
+use App\Modules\Payroll\Controllers\PayrollBpjsReportController;
 use App\Modules\Payroll\Controllers\PayrollDisbursementController;
 use App\Modules\Payroll\Controllers\PayrollReportController;
 use App\Modules\Payroll\Controllers\PayrollRunController;
@@ -27,6 +28,15 @@ Route::middleware('permission:view payroll runs')->group(function () {
     Route::get('/payroll-reports/salary/summary/export/excel', [PayrollReportController::class, 'exportSalarySummaryExcel']);
     Route::get('/payroll-reports/salary/detail/export/pdf', [PayrollReportController::class, 'exportSalaryDetailPdf']);
     Route::get('/payroll-reports/salary/summary/export/pdf', [PayrollReportController::class, 'exportSalarySummaryPdf']);
+
+    // Payroll Reports STEP 2 — BPJS Reports. Sama-sama reuse permission
+    // 'view payroll runs', konsisten sama STEP 1.
+    Route::get('/payroll-reports/bpjs/detail', [PayrollBpjsReportController::class, 'bpjsDetail']);
+    Route::get('/payroll-reports/bpjs/summary', [PayrollBpjsReportController::class, 'bpjsSummary']);
+    Route::get('/payroll-reports/bpjs/detail/export/excel', [PayrollBpjsReportController::class, 'exportBpjsDetailExcel']);
+    Route::get('/payroll-reports/bpjs/summary/export/excel', [PayrollBpjsReportController::class, 'exportBpjsSummaryExcel']);
+    Route::get('/payroll-reports/bpjs/detail/export/pdf', [PayrollBpjsReportController::class, 'exportBpjsDetailPdf']);
+    Route::get('/payroll-reports/bpjs/summary/export/pdf', [PayrollBpjsReportController::class, 'exportBpjsSummaryPdf']);
 });
 
 Route::middleware('permission:create payroll runs')->group(function () {

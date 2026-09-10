@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, reactive } from 'vue'
 import { X, Loader2, AlertTriangle, Wallet, Paperclip, Filter } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
 

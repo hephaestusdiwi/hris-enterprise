@@ -112,6 +112,7 @@ class RolePermissionSeeder extends Seeder
             'delete employee salaries',
             'view employee allowances',
             'create employee allowances',
+            'edit employee allowances',
             'delete employee allowances',
             'view employee deductions',
             'edit employee deductions',
