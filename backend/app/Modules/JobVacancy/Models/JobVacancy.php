@@ -11,6 +11,7 @@ use App\Modules\HiringRequisition\Models\HiringRequisition;
 use App\Modules\JobVacancy\Enums\JobVacancyStatus;
 use App\Modules\JobVacancy\Enums\VacancyVisibility;
 use App\Modules\JobVacancy\Enums\ApplicationMethod;
+use App\Modules\JobVacancy\Enums\WorkingType;
 use App\Modules\Position\Models\Position;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -34,6 +35,10 @@ class JobVacancy extends Model
         'description',
         'requirements',
         'employment_type_id',
+        'working_type',
+        'salary_min',
+        'salary_max',
+        'show_salary',
         'visibility',
         'status',
         'application_deadline',
@@ -53,6 +58,10 @@ class JobVacancy extends Model
             'visibility' => VacancyVisibility::class,
             'status' => JobVacancyStatus::class,
             'application_method' => ApplicationMethod::class,
+            'working_type' => WorkingType::class,
+            'salary_min' => 'decimal:2',
+            'salary_max' => 'decimal:2',
+            'show_salary' => 'boolean',
             'application_deadline' => 'date',
             'published_at' => 'datetime',
             'paused_at' => 'datetime',
