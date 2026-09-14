@@ -1,7 +1,7 @@
 <?php
- 
+
 namespace App\Modules\Employee\Imports;
- 
+
 use App\Modules\Branch\Models\Branch;
 use App\Modules\Company\Models\Company;
 use App\Modules\Department\Models\Department;
@@ -14,7 +14,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
- 
+
 /**
  * "Bulk Update Data" -- update employee yang SUDAH ADA, dicocokkan lewat
  * employee_number. Template-nya = hasil EmployeeExport (kolom sama persis),
@@ -62,7 +62,7 @@ class EmployeeBulkUpdateImport implements ToCollection, WithHeadingRow
         $employeeNumber = trim((string) ($row['employee_number'] ?? ''));
 
         if ($employeeNumber === '') {
-            $this->errors[] = "Baris {$rowNumber}: employee_number wajib diisi";
+            $this->errors[] = "Baris {$rowNumber}: employee_number wajib diisi.";
 
             return;
         }
@@ -71,7 +71,7 @@ class EmployeeBulkUpdateImport implements ToCollection, WithHeadingRow
 
         if (! $employee) {
             $this->errors[] = "Baris {$rowNumber}: employee_number '{$employeeNumber}' tidak ditemukan.";
- 
+
             return;
         }
 
@@ -95,7 +95,7 @@ class EmployeeBulkUpdateImport implements ToCollection, WithHeadingRow
         }
 
         $employee->update($updateData);
-        $this->update[] = $employeeNumber;
+        $this->updated[] = $employeeNumber;
     }
 
     /**
@@ -110,7 +110,7 @@ class EmployeeBulkUpdateImport implements ToCollection, WithHeadingRow
         $companyCode = trim((string) ($row['company_code'] ?? ''));
         $company = $companyCode !== '' ? Company::where('code', $companyCode)->first() : null;
         $companyId = $company?->id ?? $employee->company_id;
- 
+
         return [
             'company_id' => $companyId,
             'branch_id' => $this->resolveCodeOrKeepCurrent(Branch::class, $row['branch_code'] ?? null, $companyId, $employee->branch_id),
@@ -141,7 +141,7 @@ class EmployeeBulkUpdateImport implements ToCollection, WithHeadingRow
         return $query->first()?->id ?? $currentId;
     }
 
-    private function resolveManagerOrKeepCurrent(?string $managerEmployeeNumber, Employee $employee): ?int 
+    private function resolveManagerOrKeepCurrent(?string $managerEmployeeNumber, Employee $employee): ?int
     {
         $managerEmployeeNumber = trim((string) $managerEmployeeNumber);
 
@@ -169,7 +169,7 @@ class EmployeeBulkUpdateImport implements ToCollection, WithHeadingRow
             'first_name', 'last_name', 'gender', 'birth_place', 'birth_date', 'marital_status',
             'phone', 'personal_email', 'address', 'emergency_contact_name', 'emergency_contact_phone',
             'national_id_number', 'tax_number', 'bank_name', 'bank_account_number', 'bank_account_holder_name',
-            'contact_start_date', 'contract_end_date', 'probation_end_date';
+            'contract_start_date', 'contract_end_date', 'probation_end_date',
         ];
 
         $data = [];

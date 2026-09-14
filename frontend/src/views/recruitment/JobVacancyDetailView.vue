@@ -31,6 +31,10 @@ interface JobVacancyDetail {
   hiring_manager: EmployeeOption | null
   recruiter: EmployeeOption | null
   employment_type: RefOption | null
+  working_type: string | null
+  salary_min: string | null
+  salary_max: string | null
+  show_salary: boolean
 }
 
 const route = useRoute()
@@ -47,6 +51,20 @@ function employeeName(e: EmployeeOption | null): string {
   if (!e) return '-'
   return [e.first_name, e.last_name].filter(Boolean).join(' ')
 }
+
+const WORKING_TYPE_LABEL: Record<string, string> = { onsite: 'Onsite', remote: 'Remote', hybrid: 'Hybrid' }
+
+function formatCurrency(value: string | number) {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Number(value))
+}
+
+const salaryRangeLabel = computed(() => {
+  if (!vacancy.value?.salary_min && !vacancy.value?.salary_max) return null
+  if (vacancy.value.salary_min && vacancy.value.salary_max) {
+    return `${formatCurrency(vacancy.value.salary_min)} - ${formatCurrency(vacancy.value.salary_max)}`
+  }
+  return formatCurrency(vacancy.value.salary_min || vacancy.value.salary_max || 0)
+})
 
 async function loadVacancy() {
   loading.value = true
@@ -121,6 +139,15 @@ onMounted(loadVacancy)
             <h1 class="text-lg font-semibold text-slate-800">{{ vacancy.title }}</h1>
             <p class="text-sm text-slate-400">
               {{ vacancy.position?.name || '-' }} · {{ vacancy.department?.name || '-' }} · {{ vacancy.employment_type?.name || '-' }}
+            </p>
+            <p v-if="vacancy.working_type || salaryRangeLabel" class="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+              <span v-if="vacancy.working_type" class="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600">
+                {{ WORKING_TYPE_LABEL[vacancy.working_type] || vacancy.working_type }}
+              </span>
+              <span v-if="salaryRangeLabel" class="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-600">
+                {{ salaryRangeLabel }}
+                <span v-if="!vacancy.show_salary" class="font-normal text-emerald-500">(disembunyikan dari career page)</span>
+              </span>
             </p>
           </div>
           <div class="flex gap-2">

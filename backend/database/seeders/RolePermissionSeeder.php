@@ -335,6 +335,7 @@ class RolePermissionSeeder extends Seeder
             'view shifts',
             'create reimbursements',
             'create cash advances',
+            'view cash advance policies',
             'create expense claims',
             'view expense categories',
             'view expense subcategories',

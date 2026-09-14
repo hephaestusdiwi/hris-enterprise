@@ -13,13 +13,26 @@ Route::middleware('permission:view employees')->group(function () {
     Route::get('/employees/available-users', [EmployeeController::class, 'availableUsers']);
     Route::get('/employees/contract-probation', [ContractProbationController::class, 'index']);
     Route::get('/employees/contract-probation/summary', [ContractProbationController::class, 'summary']);
+    // Export/template WAJIB didaftarkan sebelum /employees/{employee} --
+    // kalau enggak, "export"/"import-template" bakal ke-tangkep sebagai
+    // {employee} oleh route wildcard di bawahnya.
+    Route::get('/employees/export', [EmployeeController::class, 'export']);
+    Route::get('/employees/import-template', [EmployeeController::class, 'importTemplate']);
     Route::get('/employees', [EmployeeController::class, 'index']);
     Route::get('/employees/{employee}', [EmployeeController::class, 'show']);
     Route::get('/employees/{employee}/hierarchy', [EmployeeController::class, 'hierarchy']);
 });
 
-Route::middleware('permission:create employees')->post('/employees', [EmployeeController::class, 'store']);
-Route::middleware('permission:edit employees')->put('/employees/{employee}', [EmployeeController::class, 'update']);
+Route::middleware('permission:create employees')->group(function () {
+    Route::post('/employees', [EmployeeController::class, 'store']);
+    Route::post('/employees/import', [EmployeeController::class, 'import']);
+});
+
+Route::middleware('permission:edit employees')->group(function () {
+    Route::put('/employees/{employee}', [EmployeeController::class, 'update']);
+    Route::post('/employees/bulk-update', [EmployeeController::class, 'bulkUpdate']);
+});
+
 Route::middleware('permission:delete employees')->delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
 
 Route::middleware('permission:edit employees')->group(function () {

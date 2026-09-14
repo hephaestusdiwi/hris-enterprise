@@ -7,6 +7,7 @@ use App\Modules\Payroll\Controllers\PayrollBpjsReportController;
 use App\Modules\Payroll\Controllers\PayrollDisbursementController;
 use App\Modules\Payroll\Controllers\PayrollReportController;
 use App\Modules\Payroll\Controllers\PayrollRunController;
+use App\Modules\Payroll\Controllers\PayrollTaxReportController;
 use App\Modules\Payroll\Controllers\PayslipController;
 use Illuminate\Support\Facades\Route;
 
@@ -37,6 +38,15 @@ Route::middleware('permission:view payroll runs')->group(function () {
     Route::get('/payroll-reports/bpjs/summary/export/excel', [PayrollBpjsReportController::class, 'exportBpjsSummaryExcel']);
     Route::get('/payroll-reports/bpjs/detail/export/pdf', [PayrollBpjsReportController::class, 'exportBpjsDetailPdf']);
     Route::get('/payroll-reports/bpjs/summary/export/pdf', [PayrollBpjsReportController::class, 'exportBpjsSummaryPdf']);
+
+    // Payroll Reports STEP 3 — Tax Reports (PPh21). Reuse permission 'view
+    // payroll runs' juga, konsisten sama STEP 1 & 2.
+    Route::get('/payroll-reports/tax/detail', [PayrollTaxReportController::class, 'taxDetail']);
+    Route::get('/payroll-reports/tax/summary', [PayrollTaxReportController::class, 'taxSummary']);
+    Route::get('/payroll-reports/tax/detail/export/excel', [PayrollTaxReportController::class, 'exportTaxDetailExcel']);
+    Route::get('/payroll-reports/tax/summary/export/excel', [PayrollTaxReportController::class, 'exportTaxSummaryExcel']);
+    Route::get('/payroll-reports/tax/detail/export/pdf', [PayrollTaxReportController::class, 'exportTaxDetailPdf']);
+    Route::get('/payroll-reports/tax/summary/export/pdf', [PayrollTaxReportController::class, 'exportTaxSummaryPdf']);
 });
 
 Route::middleware('permission:create payroll runs')->group(function () {

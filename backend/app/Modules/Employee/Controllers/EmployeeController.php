@@ -5,12 +5,16 @@ namespace App\Modules\Employee\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Employee\Contracts\EmployeeHierarchyServiceInterface;
 use App\Modules\Employee\Contracts\EmployeeScopeInterface;
+use App\Modules\Employee\Exports\EmployeeExport;
+use App\Modules\Employee\Imports\EmployeeBulkUpdateImport;
+use App\Modules\Employee\Imports\EmployeeImport;
 use App\Modules\Employee\Models\Employee;
 use Illuminate\Http\Request;
 use App\Modules\Employee\Requests\StoreEmployeeRequest;
 use App\Modules\Employee\Requests\UpdateEmployeeRequest;
 use App\Modules\Employee\Services\EmployeeService;
 use App\Models\User;
+use Maatwebsite\Excel\Facades\Excel;
 
 class EmployeeController extends Controller
 {
@@ -76,6 +80,85 @@ class EmployeeController extends Controller
                 'invite_link' => $result['invite_link'],
             ],
         ], 201);
+    }
+
+    /**
+     * Export data employee sesuai scope existing (EmployeeScope -- sama
+     * persis visibility yang dipakai index()). Hasil export ini JUGA yang
+     * dipakai sebagai template "Bulk Update" (export, edit di Excel,
+     * upload lagi ke bulkUpdate()).
+     */
+    public function export(Request $request)
+    {
+        $employees = $this->employeeScope
+            ->apply(
+                Employee::with(['company', 'branch', 'department', 'position', 'jobLevel', 'employmentType', 'employmentStatus', 'manager', 'user']),
+                $request->user(),
+            )
+            ->when($request->query('company_id'), fn ($q, $v) => $q->where('company_id', $v))
+            ->when($request->query('branch_id'), fn ($q, $v) => $q->where('branch_id', $v))
+            ->when($request->query('department_id'), fn ($q, $v) => $q->where('department_id', $v))
+            ->get();
+
+        return Excel::download(new EmployeeExport($employees), 'employees-'.now()->format('Y-m-d').'.xlsx');
+    }
+
+    /**
+     * Template kosong (headers doang) buat "Bulk Add Employee" -- beda dari
+     * export() yang isinya data existing.
+     */
+    public function importTemplate()
+    {
+        return Excel::download(new EmployeeExport(Employee::query()->whereRaw('1 = 0')->get()), 'employee-import-template.xlsx');
+    }
+
+    /**
+     * "Bulk Add Employee" -- import karyawan BARU dari Excel/CSV. Setiap
+     * baris valid diproses lewat EmployeeService::createWithUserAccount()
+     * yang sama dengan store() -- tidak ada logic duplikat.
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,csv,xls', 'max:10240'],
+        ]);
+
+        $import = new EmployeeImport($this->employeeService);
+        Excel::import($import, $request->file('file'));
+
+        return response()->json([
+            'success' => true,
+            'message' => count($import->created).' employee berhasil dibuat, '.count($import->errors).' baris gagal.',
+            'data' => [
+                'created' => $import->created,
+                'errors' => $import->errors,
+            ],
+        ], 201);
+    }
+
+    /**
+     * "Bulk Update Data" -- update employee yang SUDAH ADA (dicocokkan
+     * employee_number). Field lifecycle-controlled (company/branch/dst)
+     * TETAP dijaga lewat guard yang sama persis dengan UpdateEmployeeRequest
+     * -- lihat EmployeeBulkUpdateImport untuk detail.
+     */
+    public function bulkUpdate(Request $request)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,csv,xls', 'max:10240'],
+        ]);
+
+        $import = new EmployeeBulkUpdateImport();
+        Excel::import($import, $request->file('file'));
+
+        return response()->json([
+            'success' => true,
+            'message' => count($import->updated).' employee berhasil diupdate, '.count($import->errors).' baris gagal/ditolak.',
+            'data' => [
+                'updated' => $import->updated,
+                'errors' => $import->errors,
+            ],
+        ]);
     }
 
     public function resendInvite(Employee $employee)

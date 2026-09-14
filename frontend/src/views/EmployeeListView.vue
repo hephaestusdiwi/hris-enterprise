@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, reactive, computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Plus, Pencil, Trash2, X, ScanFace, QrCode, Search, ChevronDown, Building2, UserRound, Phone, IdCard, CheckCircle2, KeyRound } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, X, ScanFace, QrCode, Search, ChevronDown, Building2, UserRound, Phone, IdCard, CheckCircle2, KeyRound, Upload, Download, Loader2 } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
 import { useAuthStore } from '@/stores/auth'
 import OrgChart from '@/components/employee/OrgChart.vue'
@@ -10,6 +10,81 @@ import EmployeeQrModal from '@/components/EmployeeQrModal.vue'
 import EmployeeCreateWizard from '@/components/employee/EmployeeCreateWizard.vue'
 import EmployeePhotoModal from '@/components/EmployeePhotoModal.vue'
 import SmartDateInput from '@/components/employee/SmartDateInput.vue'
+
+// ---------- IMPORT / EXPORT / BULK UPDATE ----------
+const importing = ref(false)
+const importResult = ref<{ created: string[]; errors: string[] } | null>(null)
+const importFileInputRef = ref<HTMLInputElement | null>(null)
+
+const bulkUpdating = ref(false)
+const bulkUpdateResult = ref<{ updated: string[]; errors: string[] } | null>(null)
+const bulkUpdateFileInputRef = ref<HTMLInputElement | null>(null)
+
+function triggerImport() {
+  importFileInputRef.value?.click()
+}
+
+function triggerBulkUpdate() {
+  bulkUpdateFileInputRef.value?.click()
+}
+
+async function handleImportFile(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+
+  importing.value = true
+  importResult.value = null
+  bulkUpdateResult.value = null
+
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await apiClient.post('/api/employees/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    importResult.value = response.data.data
+    await loadEmployees()
+  } catch (err: any) {
+    alert(err.response?.data?.message || 'Gagal import file.')
+  } finally {
+    importing.value = false
+    if (importFileInputRef.value) importFileInputRef.value.value = ''
+  }
+}
+
+async function handleBulkUpdateFile(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+
+  bulkUpdating.value = true
+  bulkUpdateResult.value = null
+  importResult.value = null
+
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await apiClient.post('/api/employees/bulk-update', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    bulkUpdateResult.value = response.data.data
+    await loadEmployees()
+  } catch (err: any) {
+    alert(err.response?.data?.message || 'Gagal bulk update.')
+  } finally {
+    bulkUpdating.value = false
+    if (bulkUpdateFileInputRef.value) bulkUpdateFileInputRef.value.value = ''
+  }
+}
+
+function handleExport() {
+  const baseUrl = apiClient.defaults.baseURL ?? ''
+  window.open(`${baseUrl}/api/employees/export`, '_blank')
+}
+
+function handleDownloadImportTemplate() {
+  const baseUrl = apiClient.defaults.baseURL ?? ''
+  window.open(`${baseUrl}/api/employees/import-template`, '_blank')
+}
 
 interface Ref {
   id: number
@@ -527,15 +602,70 @@ onMounted(() => {
         <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Employee</h1>
         <p class="mt-1 text-sm text-slate-500">Kelola data karyawan.</p>
       </div>
-      <button
-        v-if="view === 'directory'"
-        @click="openCreateModal"
-        :disabled="companies.length === 0"
-        class="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
-      >
-        <Plus class="h-4 w-4" :stroke-width="2" />
-        Tambah Employee
-      </button>
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          @click="handleDownloadImportTemplate"
+          class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+        >
+          Template
+        </button>
+        <button
+          type="button"
+          @click="triggerImport"
+          :disabled="importing"
+          class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+        >
+          <Loader2 v-if="importing" class="h-4 w-4 animate-spin" :stroke-width="2" />
+          <Upload v-else class="h-4 w-4" :stroke-width="2" />
+          Import
+        </button>
+        <button
+          type="button"
+          @click="triggerBulkUpdate"
+          :disabled="bulkUpdating"
+          class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+        >
+          <Loader2 v-if="bulkUpdating" class="h-4 w-4 animate-spin" :stroke-width="2" />
+          <Upload v-else class="h-4 w-4" :stroke-width="2" />
+          Bulk Update
+        </button>
+        <button
+          type="button"
+          @click="handleExport"
+          class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+        >
+          <Download class="h-4 w-4" :stroke-width="2" />
+          Export
+        </button>
+        <input ref="importFileInputRef" type="file" accept=".xlsx,.xls,.csv" class="hidden" @change="handleImportFile" />
+        <input ref="bulkUpdateFileInputRef" type="file" accept=".xlsx,.xls,.csv" class="hidden" @change="handleBulkUpdateFile" />
+        <button
+          v-if="view === 'directory'"
+          @click="openCreateModal"
+          :disabled="companies.length === 0"
+          class="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
+        >
+          <Plus class="h-4 w-4" :stroke-width="2" />
+          Tambah Employee
+        </button>
+      </div>
+    </div>
+
+    <!-- Hasil Import/Bulk Update -->
+    <div v-if="importResult" class="rounded-xl border border-slate-100 bg-white p-4 text-sm">
+      <p class="font-medium text-slate-700">{{ importResult.created.length }} employee berhasil diimport.</p>
+      <div v-if="importResult.errors.length > 0" class="mt-2 space-y-1">
+        <p class="text-xs font-medium text-red-600">{{ importResult.errors.length }} baris gagal:</p>
+        <p v-for="(err, i) in importResult.errors" :key="i" class="text-xs text-red-500">{{ err }}</p>
+      </div>
+    </div>
+    <div v-if="bulkUpdateResult" class="rounded-xl border border-slate-100 bg-white p-4 text-sm">
+      <p class="font-medium text-slate-700">{{ bulkUpdateResult.updated.length }} employee berhasil diupdate.</p>
+      <div v-if="bulkUpdateResult.errors.length > 0" class="mt-2 space-y-1">
+        <p class="text-xs font-medium text-red-600">{{ bulkUpdateResult.errors.length }} baris gagal/ditolak:</p>
+        <p v-for="(err, i) in bulkUpdateResult.errors" :key="i" class="text-xs text-red-500">{{ err }}</p>
+      </div>
     </div>
 
     <!-- Tab switcher -->

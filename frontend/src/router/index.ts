@@ -69,6 +69,8 @@ import EmployeeTaxListView from '@/views/EmployeeTaxListView.vue'
 import PayrollRunListView from '@/views/PayrollRunListView.vue'
 import PayrollRunDetailView from '@/views/PayrollRunDetailView.vue'
 import PayrollSalaryReportView from '@/views/PayrollSalaryReportView.vue'
+import PayrollBpjsReportView from '@/views/PayrollBpjsReportView.vue'
+import PayrollTaxReportView from '@/views/PayrollTaxReportView.vue'
 import JobVacancyListView from '@/views/recruitment/JobVacancyListView.vue'
 import JobVacancyDetailView from '@/views/recruitment/JobVacancyDetailView.vue'
 import HiringRequisitionListView from '@/views/recruitment/HiringRequisitionListView.vue'
@@ -472,6 +474,18 @@ const router = createRouter({
       path: '/payroll-reports/salary',
       name: 'payroll-report-salary',
       component: PayrollSalaryReportView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/payroll-reports/bpjs',
+      name: 'payroll-report-bpjs',
+      component: PayrollBpjsReportView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/payroll-reports/tax',
+      name: 'payroll-report-tax',
+      component: PayrollTaxReportView,
       meta: { requiresAuth: true },
     },
     {
