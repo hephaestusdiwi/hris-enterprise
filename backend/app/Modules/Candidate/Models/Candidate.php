@@ -76,7 +76,13 @@ class Candidate extends Model
         return $this->hasMany(\App\Modules\Offering\Models\Offering::class);
     }
 
-    // Phase 4+ tinggal nambah relasi di sini tanpa ubah tabel ini:
-    // public function screenings(): HasMany { return $this->hasMany(Screening::class); }
-    // public function interviews(): HasMany { return $this->hasMany(Interview::class); }
+    public function screenings(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Screening\Models\Screening::class);
+    }
+
+    public function interviews(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Interview\Models\Interview::class);
+    }
 }

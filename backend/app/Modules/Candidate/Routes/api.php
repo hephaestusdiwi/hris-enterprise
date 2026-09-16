@@ -1,4 +1,5 @@
 <?php // backend/app/Modules/Candidate/Routes/api.php
+use App\Modules\Candidate\Controllers\CandidateBlacklistController;
 use App\Modules\Candidate\Controllers\CandidateController;
 use App\Modules\Candidate\Controllers\CandidatePublicController;
 use Illuminate\Support\Facades\Route;
@@ -11,6 +12,12 @@ Route::middleware('auth:sanctum')->prefix('candidates')->group(function () {
     Route::post('/{candidate}/select', [CandidateController::class, 'select']);  
     Route::post('/{candidate}/hire', [CandidateController::class, 'hire']);     
     Route::get('/{candidate}/cv', [CandidateController::class, 'downloadCv']);
+});
+
+Route::middleware('auth:sanctum')->prefix('candidate-blacklists')->group(function () {
+    Route::get('/', [CandidateBlacklistController::class, 'index']);
+    Route::post('/', [CandidateBlacklistController::class, 'store']);
+    Route::delete('/{candidateBlacklist}', [CandidateBlacklistController::class, 'destroy']);
 });
 
 // Career site — publik, gabung throttle group yang sama dengan JobVacancy

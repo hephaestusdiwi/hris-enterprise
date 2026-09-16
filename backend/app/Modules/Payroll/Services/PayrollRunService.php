@@ -15,6 +15,7 @@ use App\Modules\Payroll\Models\Payslip;
 use App\Modules\Payroll\Models\PayslipLine;
 use App\Modules\Payroll\Models\PayrollRun;
 use App\Modules\Payroll\Models\PayrollRunRevision;
+use App\Modules\Payroll\Notifications\PayslipPublishedNotification;
 use Illuminate\Support\Facades\DB;
 
 class PayrollRunService
@@ -240,7 +241,35 @@ class PayrollRunService
             $run->update(['published_at' => now(), 'published_by_user_id' => $actor->id]);
         });
 
+        $this->notifyPayslipsPublished($run);
+
         return $run->fresh();
+    }
+
+    /**
+     * Notifikasi dikirim SETELAH transaction commit (bukan di dalamnya) —
+     * publish() harus tetap dianggap berhasil meski ada 1-2 notifikasi yang
+     * gagal terkirim (user tidak terhubung ke Employee, mail server down,
+     * dll). Pola try/catch + report() ini persis
+     * AnnouncementService::notifyRecipients() — bukan pola baru.
+     */
+    private function notifyPayslipsPublished(PayrollRun $run): void
+    {
+        $payslips = $run->currentRevision?->payslips()->with('employee.user')->get() ?? collect();
+
+        foreach ($payslips as $payslip) {
+            $user = $payslip->employee?->user;
+
+            if (! $user) {
+                continue;
+            }
+
+            try {
+                $user->notify(new PayslipPublishedNotification($payslip));
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
     }
 
     public function unpublish(PayrollRun $run): PayrollRun

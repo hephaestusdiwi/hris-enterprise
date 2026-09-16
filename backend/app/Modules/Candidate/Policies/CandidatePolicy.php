@@ -49,4 +49,9 @@ class CandidatePolicy
     {
         return $user->can('hire candidates');
     }
+
+    public function manageBlacklist(User $user): bool
+    {
+        return $user->can('manage candidate blacklist');
+    }
 }

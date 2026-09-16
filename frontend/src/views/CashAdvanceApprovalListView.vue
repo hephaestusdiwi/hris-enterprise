@@ -38,6 +38,7 @@ const loading = ref(true)
 const errorMessage = ref('')
 
 async function loadAll() {
+  console.log('LOADALL DIPANGGIL')
   loading.value = true
   errorMessage.value = ''
   try {
@@ -45,11 +46,16 @@ async function loadAll() {
       apiClient.get('/api/cash-advance-approvals'),
       apiClient.get('/api/cash-advance-settlement-approvals'),
     ])
+    console.log('RESPONSE DITERIMA', reqRes.data, settlementRes.data)
     requestDecisions.value = reqRes.data.data
-    settlementDecisions.value = settlementRes.data.data
-  } catch {
+    settlementDecisions.value = Array.isArray(settlementRes.data.data)
+      ? settlementRes.data.data
+      : (settlementRes.data.data.data ?? [])
+  } catch (e) {
+    console.log('MASUK CATCH', e)
     errorMessage.value = 'Gagal memuat daftar approval.'
   } finally {
+    console.log('FINALLY JALAN, loading jadi false')
     loading.value = false
   }
 }
@@ -96,6 +102,7 @@ async function submitDecision() {
     submitting.value = false
   }
 }
+onMounted(loadAll)
 </script>
 
 <template>

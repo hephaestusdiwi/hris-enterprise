@@ -57,6 +57,17 @@ class CashAdvanceSettlementController extends Controller
         ]);
     }
 
+    public function pendingApprovals(Request $request)
+    {
+        $decisions = $this->approvalService->pendingDecisionsForUser($request->user());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OK',
+            'data' => $decisions,
+        ]);
+    }
+
     public function store(
         StoreCashAdvanceSettlementRequest $request,
     ) {

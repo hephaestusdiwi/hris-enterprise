@@ -13,11 +13,13 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/my-payslips', [PayslipController::class, 'myPayslips']);
 Route::get('/my-payslips/{payslip}', [PayslipController::class, 'myPayslipShow']);
+Route::get('/my-payslips/{payslip}/download', [PayslipController::class, 'myPayslipDownload']);
 
 Route::middleware('permission:view payroll runs')->group(function () {
     Route::get('/payroll-runs', [PayrollRunController::class, 'index']);
     Route::get('/payroll-runs/{payrollRun}', [PayrollRunController::class, 'show']);
     Route::get('/payslips/{payslip}', [PayslipController::class, 'show']);
+    Route::get('/payslips/{payslip}/download', [PayslipController::class, 'downloadPdf']);
     Route::get('/payroll-attendance-setting', [CompanyPayrollAttendanceSettingController::class, 'show']);
 
     // Payroll Reports STEP 1 — Salary Reports. Reuse permission 'view payroll

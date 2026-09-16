@@ -5,6 +5,8 @@ namespace App\Modules\Payroll\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Payroll\Exceptions\PayrollValidationException;
 use App\Modules\Payroll\Models\Payslip;
+use App\Modules\Payroll\Notifications\PayslipPublishedNotification;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
 class PayslipController extends Controller
@@ -18,12 +20,34 @@ class PayslipController extends Controller
         ]);
     }
 
+    /**
+     * Download PDF sisi HR — pakai data Payslip+PayslipLine yang sudah ada,
+     * TIDAK menghitung ulang apa pun. Diproteksi permission 'view payroll
+     * runs' di routes (bukan endpoint publik).
+     */
+    public function downloadPdf(Payslip $payslip)
+    {
+        $payslip->load(['employee', 'lines', 'payrollRun']);
+
+        return Pdf::loadView('payroll-reports.payslip-pdf', ['payslip' => $payslip])
+            ->download("payslip-{$payslip->employee->employee_number}-{$payslip->payrollRun->period_month}-{$payslip->payrollRun->period_year}.pdf");
+    }
+
     public function publish(Payslip $payslip)
     {
         try {
             $this->assertBelongsToCurrentRevision($payslip);
 
             $payslip->update(['is_published' => true]);
+
+            $user = $payslip->employee?->user;
+            if ($user) {
+                try {
+                    $user->notify(new PayslipPublishedNotification($payslip));
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
 
             return response()->json(['success' => true, 'message' => 'Payslip berhasil dipublish', 'data' => $payslip]);
         } catch (PayrollValidationException $e) {
@@ -85,5 +109,17 @@ class PayslipController extends Controller
         abort_if(! $employee || $payslip->employee_id !== $employee->id || ! $payslip->is_published, 403, 'Payslip tidak ditemukan.');
 
         return response()->json(['success' => true, 'message' => 'OK', 'data' => $payslip->load(['lines', 'payrollRun'])]);
+    }
+
+    public function myPayslipDownload(Request $request, Payslip $payslip)
+    {
+        $employee = $request->user()->employee;
+
+        abort_if(! $employee || $payslip->employee_id !== $employee->id || ! $payslip->is_published, 403, 'Payslip tidak ditemukan.');
+
+        $payslip->load(['employee', 'lines', 'payrollRun']);
+
+        return Pdf::loadView('payroll-reports.payslip-pdf', ['payslip' => $payslip])
+            ->download("payslip-{$payslip->payrollRun->period_month}-{$payslip->payrollRun->period_year}.pdf");
     }
 }

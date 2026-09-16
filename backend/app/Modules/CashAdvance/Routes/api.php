@@ -39,7 +39,8 @@ Route::post('/cash-advance-approvals/{decision}/decide', [CashAdvanceApprovalCon
 // ---- Settlement ----
 Route::post('/cash-advances/{cashAdvance}/settlement', [CashAdvanceSettlementController::class, 'store']);
 Route::get('/cash-advances/{cashAdvance}/settlement', [CashAdvanceSettlementController::class, 'show']);
-Route::get('/cash-advance-settlement-approvals', [CashAdvanceSettlementController::class, 'index']);
+Route::get('/cash-advance-settlement-approvals', [CashAdvanceSettlementController::class, 'pendingApprovals']);
+Route::middleware('permission:view cash advance settlements')->get('/cash-advance-settlements', [CashAdvanceSettlementController::class, 'index']);
 Route::middleware('permission:verify cash advance settlements')->post('/cash-advance-settlements/{settlement}/decide', [CashAdvanceSettlementController::class, 'decide']);
 
 // ---- Attachments ----

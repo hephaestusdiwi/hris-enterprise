@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { X } from 'lucide-vue-next'
+import { X, Download } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
 
 const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
@@ -57,6 +57,10 @@ function closeDrawer() {
   showDrawer.value = false
   drawerTarget.value = null
 }
+function downloadPdf(payslipId: number) {
+  const baseUrl = apiClient.defaults.baseURL ?? ''
+  window.open(`${baseUrl}/api/my-payslips/${payslipId}/download`, '_blank')
+}
 
 onMounted(loadPayslips)
 </script>
@@ -87,7 +91,10 @@ onMounted(loadPayslips)
         <div class="h-full w-full max-w-md overflow-y-auto bg-white shadow-xl">
           <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
             <h2 class="text-lg font-semibold text-slate-900">Detail Payslip</h2>
-            <button @click="closeDrawer" class="rounded-lg p-1 text-slate-400 hover:bg-slate-50"><X class="h-5 w-5" /></button>
+            <div class="flex items-center gap-1">
+              <button v-if="drawerTarget" @click="downloadPdf(drawerTarget.id)" title="Download PDF" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-50 hover:text-primary-dark"><Download class="h-5 w-5" /></button>
+              <button @click="closeDrawer" class="rounded-lg p-1 text-slate-400 hover:bg-slate-50"><X class="h-5 w-5" /></button>
+            </div>
           </div>
 
           <div v-if="drawerLoading" class="p-6 text-sm text-slate-400">Memuat...</div>

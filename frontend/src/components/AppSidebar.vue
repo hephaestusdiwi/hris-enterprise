@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound,
   CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch, CheckCircle2, Layers, CalendarRange, BarChart3,
   Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle, HandCoins, Receipt, BriefcaseBusiness, Megaphone, Landmark,
-  ShieldCheck, WalletCards, History, FileText, Clock3, Repeat,
+  ShieldCheck, WalletCards, History, FileText, Clock3, Repeat, ShieldOff,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
@@ -32,6 +32,7 @@ interface MenuGroup {
 
 const standaloneItems: MenuItem[] = [
   { name: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: '/', permission: null },
+  { name: 'my-profile', label: 'My Profile', icon: UserCircle, to: '/my-profile', permission: null },
   { name: 'announcements.inbox', label: 'Announcement', icon: Megaphone, to: '/announcements', permission: null },
 ]
 
@@ -172,6 +173,8 @@ const groups: MenuGroup[] = [
       { name: 'interviews', label: 'Interview Schedule', icon: BriefcaseBusiness, to: '/interviews', permission: null },
       { name: 'new-joiners', label: 'New Joiner', icon: BriefcaseBusiness, to: '/new-joiners', permission: 'view new joiners' },
       { name: 'talent-pool', label: 'Talent Pool', icon: BriefcaseBusiness, to: '/talent-pool', permission: 'view candidates' },
+      { name: 'candidate-blacklists', label: 'Blacklist', icon: ShieldOff, to: '/candidate-blacklists', permission: 'manage candidate blacklist' },
+      { name: 'recruitment-report', label: 'Time to Hire Report', icon: BarChart3, to: '/recruitment-report/time-to-hire', permission: 'view candidates' },
     ],
   },
   {

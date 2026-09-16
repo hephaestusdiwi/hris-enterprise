@@ -4,8 +4,15 @@ use App\Modules\Employee\Controllers\ContractProbationController;
 use App\Modules\Employee\Controllers\EmployeeController;
 use App\Modules\Employee\Controllers\EmployeeFaceController;
 use App\Modules\Employee\Controllers\EmployeePhotoController;
+use App\Modules\Employee\Controllers\EmployeeProfileController;
 use App\Modules\Employee\Controllers\EmployeeQrController;
 use Illuminate\Support\Facades\Route;
+
+// Employee Profile (self-service) -- General tab ala Mekari Talenta.
+// Tanpa permission khusus, sama seperti /my-attendances & /my-leave-requests:
+// setiap user yang login & punya Employee terhubung boleh akses punya sendiri.
+Route::get('/my-profile', [EmployeeProfileController::class, 'show']);
+Route::put('/my-profile', [EmployeeProfileController::class, 'update']);
 
 Route::middleware('permission:view employees')->group(function () {
     Route::get('/employees/next-number', [EmployeeController::class, 'nextNumber']);

@@ -154,4 +154,9 @@ class Employee extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function documents(): HasMany
+    {
+        return $this->hasMany(\App\Modules\EmployeeDocument\Models\EmployeeDocument::class);
+    }
 }

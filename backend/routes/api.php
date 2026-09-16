@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AccountActivationController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\RecruitmentOverviewController;
+use App\Http\Controllers\RecruitmentReportController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -13,10 +14,13 @@ Route::post('/account-activation/complete', [AccountActivationController::class,
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'me']);
-
+ 
     Route::middleware('permission:view dashboard')->get('/dashboard', [DashboardController::class, 'index']);
     Route::middleware('permission:view candidates|view job vacancies|view hiring requisitions')
         ->get('/recruitment-overview', [RecruitmentOverviewController::class, 'index']);
+    Route::middleware('permission:view candidates')
+        ->get('/recruitment-report/time-to-hire', [RecruitmentReportController::class, 'timeToHire']);
+ 
 
     Route::middleware('permission:view users')->group(function () {
         Route::get('/users', [UserController::class, 'index']);

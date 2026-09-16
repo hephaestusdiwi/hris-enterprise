@@ -6,6 +6,7 @@ use App\Modules\Candidate\Enums\CandidateSource;
 use App\Modules\Candidate\Enums\CandidateStatus;
 use App\Modules\Candidate\Exceptions\CandidateValidationException;
 use App\Modules\Candidate\Models\Candidate;
+use App\Modules\Candidate\Models\CandidateBlacklist;
 use App\Modules\Candidate\Models\CandidateStageHistory;
 use App\Modules\JobVacancy\Enums\ApplicationMethod;
 use App\Modules\JobVacancy\Enums\JobVacancyStatus;
@@ -38,6 +39,8 @@ class CandidateService
                 'Job Vacancy ini menerima lamaran lewat platform eksternal, bukan lewat sistem ini.'
             );
         }
+
+        $this->assertNotBlacklisted($data['email']);
 
         $this->assertNoDuplicateActiveApplication($vacancy, $data['email']);
 
@@ -128,6 +131,20 @@ class CandidateService
 
             return $newCandidate->fresh();
         });
+    }
+
+    private function assertNotBlacklisted(string $email): void
+    {
+        $isBlacklisted = CandidateBlacklist::where('email', strtolower($email))->exists();
+
+        if ($isBlacklisted) {
+            // Pesan sengaja generik — jangan bilang eksplisit "kamu di-blacklist" ke
+            // pelamar, cukup pesan penolakan biasa. Alasan detailnya cuma kelihatan
+            // di halaman admin Candidate Blacklist.
+            throw new CandidateValidationException(
+                'Mohon maaf, lamaran Anda untuk saat ini tidak dapat kami proses.'
+            );
+        }
     }
 
     private function assertNoDuplicateActiveApplication(

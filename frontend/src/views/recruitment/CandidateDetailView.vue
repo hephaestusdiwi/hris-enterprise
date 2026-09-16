@@ -106,6 +106,36 @@ const showNewJoinerLinkModal = ref(false)
 const newJoinerFormLink = ref('')
 const newJoinerLinkCopied = ref(false)
 
+// ---- Blacklist Candidate modal ----
+const showBlacklistModal = ref(false)
+const blacklistReason = ref('')
+const blacklistSaving = ref(false)
+
+function openBlacklistModal() {
+  blacklistReason.value = ''
+  showBlacklistModal.value = true
+}
+
+async function submitBlacklist() {
+  if (!candidate.value) return
+  blacklistSaving.value = true
+  actionError.value = ''
+  try {
+    await apiClient.post('/api/candidate-blacklists', {
+      email: candidate.value.email,
+      full_name: candidate.value.full_name,
+      candidate_id: candidate.value.id,
+      reason: blacklistReason.value,
+    })
+    showBlacklistModal.value = false
+    successMessage.value = 'Kandidat berhasil ditambahkan ke Blacklist.'
+  } catch (err: any) {
+    actionError.value = err.response?.data?.message || 'Gagal menambahkan ke Blacklist.'
+  } finally {
+    blacklistSaving.value = false
+  }
+}
+
 async function copyNewJoinerLink() {
   try {
     await navigator.clipboard.writeText(newJoinerFormLink.value)
@@ -772,6 +802,14 @@ onMounted(async () => {
           >
             Lihat Link Form
           </button>
+
+          <button
+            v-if="authStore.permissions.includes('manage candidate blacklist')"
+            class="rounded-xl border border-red-100 bg-red-50 px-3 py-1.5 text-sm text-red-600 hover:bg-red-100"
+            @click="openBlacklistModal"
+          >
+            Blacklist Kandidat Ini
+          </button>
         </div>
       </div>
 
@@ -1037,6 +1075,29 @@ onMounted(async () => {
             </button>
           </div>
         </div>
+      </BaseModal>
+
+      <!-- Blacklist Candidate -->
+      <BaseModal
+        v-if="showBlacklistModal"
+        title="Blacklist Kandidat"
+        @close="showBlacklistModal = false"
+      >
+        <form class="space-y-3" @submit.prevent="submitBlacklist">
+          <div class="rounded-xl bg-red-50 p-3 text-xs text-red-600">
+            {{ candidate?.full_name }} ({{ candidate?.email }}) tidak akan bisa melamar ke Job Vacancy manapun lagi setelah ini.
+          </div>
+          <div>
+            <label class="text-xs font-medium text-slate-500">Alasan</label>
+            <textarea v-model="blacklistReason" required rows="3" class="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm"></textarea>
+          </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" class="rounded-xl border border-slate-200 px-4 py-2 text-sm" @click="showBlacklistModal = false">Batal</button>
+            <button type="submit" :disabled="blacklistSaving" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+              {{ blacklistSaving ? 'Menyimpan...' : 'Blacklist' }}
+            </button>
+          </div>
+        </form>
       </BaseModal>
 
       <!-- Start Screening -->

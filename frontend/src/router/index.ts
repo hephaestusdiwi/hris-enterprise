@@ -7,6 +7,7 @@ import DepartmentListView from '../views/DepartmentListView.vue'
 import PositionListView from '../views/PositionListView.vue'
 import EmployeeListView from '@/views/EmployeeListView.vue'
 import EmployeeDetailView from '@/views/EmployeeDetailView.vue'
+import EmployeeProfileView from '@/views/EmployeeProfileView.vue'
 import ContractProbationListView from '@/views/ContractProbationListView.vue'
 import EmployeeMovementListView from '@/views/EmployeeMovementListView.vue'
 import AnnouncementManagementView from '@/views/AnnouncementManagementView.vue'
@@ -137,6 +138,12 @@ const router = createRouter({
       path: '/employees/:id',
       name: 'employee-detail',
       component: EmployeeDetailView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/my-profile',
+      name: 'my-profile',
+      component: EmployeeProfileView,
       meta: { requiresAuth: true },
     },
     {
@@ -600,6 +607,18 @@ const router = createRouter({
       path: '/interviews',
       name: 'interviews.index',
       component: () => import('@/views/recruitment/InterviewScheduleView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/candidate-blacklists',
+      name: 'candidate-blacklists.index',
+      component: () => import('@/views/recruitment/CandidateBlacklistView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/recruitment-report/time-to-hire',
+      name: 'recruitment-report.time-to-hire',
+      component: () => import('@/views/recruitment/RecruitmentReportView.vue'),
       meta: { requiresAuth: true },
     },
     {
