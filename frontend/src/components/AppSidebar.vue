@@ -155,6 +155,7 @@ const groups: MenuGroup[] = [
       { name: 'tax-settings', label: 'Tax Settings', icon: ShieldCheck, to: '/tax-settings', permission: 'view tax settings' },
       { name: 'employee-tax', label: 'Employee Tax', icon: ShieldCheck, to: '/employee-tax', permission: 'view tax settings' },
       { name: 'payroll-history', label: 'Payroll History', icon: WalletCards, to: '/payroll', permission: 'view payroll runs' },
+      { name: 'my-payslips', label: 'My Payslip', icon: Receipt, to: '/my-payslips', permission: null },
       { name: 'payroll-report-salary', label: 'Salary Reports', icon: BarChart3, to: '/payroll-reports/salary', permission: 'view payroll runs' },
       { name: 'payroll-report-bpjs', label: 'BPJS Reports', icon: BarChart3, to: '/payroll-reports/bpjs', permission: 'view payroll runs' },
       { name: 'payroll-report-tax', label: 'Tax Reports', icon: BarChart3, to: '/payroll-reports/tax', permission: 'view payroll runs' },

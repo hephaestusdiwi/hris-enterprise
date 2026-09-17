@@ -270,16 +270,20 @@ function calNextMonth() {
   if (calMonth.value === 12) { calMonth.value = 1; calYear.value++ } else { calMonth.value++ }
 }
 
-// ---------- Quick links (PLACEHOLDER, belum di-wire ke route) ----------
-const quickLinks = [
+// ---------- Quick links (sisanya masih PLACEHOLDER, belum di-wire ke route) ----------
+const quickLinks: Array<{ icon: any; label: string; to?: string }> = [
   { icon: UserRound, label: 'My Profile' },
-  { icon: Receipt, label: 'My Payslip' },
+  { icon: Receipt, label: 'My Payslip', to: '/my-payslips' },
   { icon: History, label: 'Attendance History' },
   { icon: CalendarDays, label: 'Leave History' },
   { icon: Folder, label: 'Documents' },
   { icon: ShieldCheck, label: 'Company Policy' },
   { icon: HelpCircle, label: 'Help Center' },
 ]
+
+function goToQuickLink(link: { to?: string }) {
+  if (link.to) router.push(link.to)
+}
 
 // ---------- Next Holiday (PLACEHOLDER tanggal, tapi hitung hari beneran) ----------
 const nextHolidayDate = new Date(2026, 7, 17) // 17 Agustus 2026 — contoh
@@ -657,6 +661,7 @@ onUnmounted(() => {
             :key="link.label"
             type="button"
             class="flex flex-col items-center gap-1.5 rounded-xl p-2 text-center transition-colors hover:bg-slate-50"
+            @click="goToQuickLink(link)"
           >
             <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-soft text-primary-dark">
               <component :is="link.icon" class="h-4 w-4" :stroke-width="1.75" />
