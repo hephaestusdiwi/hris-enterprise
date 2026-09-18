@@ -2,6 +2,7 @@
 
 namespace App\Modules\Payroll\Requests;
 
+use App\Modules\Payroll\Enums\PayrollRunType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -16,6 +17,9 @@ class StorePayrollRunRequest extends FormRequest
     {
         return [
             'company_id' => ['required', 'exists:companies,id'],
+            // Default 'regular' kalau tidak diisi — backward compatible
+            // dengan caller lama yang belum tahu field ini sama sekali.
+            'type' => ['nullable', Rule::enum(PayrollRunType::class)],
             'period_year' => ['required', 'integer', 'min:2020', 'max:2100'],
             'period_month' => ['required', 'integer', 'min:1', 'max:12'],
             'cutoff_date' => ['nullable', 'date'],

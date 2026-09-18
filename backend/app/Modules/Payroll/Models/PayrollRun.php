@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Company\Models\Company;
 use App\Modules\Employee\Models\Employee;
 use App\Modules\Payroll\Enums\PayrollRunStatus;
+use App\Modules\Payroll\Enums\PayrollRunType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -18,7 +19,7 @@ class PayrollRun extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'company_id', 'period_year', 'period_month', 'cutoff_date', 'payment_date',
+        'company_id', 'type', 'period_year', 'period_month', 'cutoff_date', 'payment_date',
         'status', 'current_revision', 'created_by_user_id',
         'requested_at', 'decided_at', 'processed_at',
         'locked_at', 'locked_by_user_id', 'published_at', 'published_by_user_id',
@@ -29,6 +30,7 @@ class PayrollRun extends Model
     {
         return [
             'status' => PayrollRunStatus::class,
+            'type' => PayrollRunType::class,
             'cutoff_date' => 'date',
             'payment_date' => 'date',
             'current_revision' => 'integer',
@@ -90,6 +92,21 @@ class PayrollRun extends Model
     public function isEditableParticipants(): bool
     {
         return $this->status === PayrollRunStatus::Draft;
+    }
+
+    public function isRegular(): bool
+    {
+        return $this->type === PayrollRunType::Regular;
+    }
+
+    public function isThr(): bool
+    {
+        return $this->type === PayrollRunType::Thr;
+    }
+
+    public function isNonRegular(): bool
+    {
+        return $this->type === PayrollRunType::NonRegular;
     }
 
     /**

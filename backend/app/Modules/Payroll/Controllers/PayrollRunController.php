@@ -3,6 +3,7 @@
 namespace App\Modules\Payroll\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Payroll\Enums\PayrollRunType;
 use App\Modules\Payroll\Exceptions\PayrollValidationException;
 use App\Modules\Payroll\Models\PayrollRun;
 use App\Modules\Payroll\Requests\CancelPayrollRunRequest;
@@ -17,11 +18,50 @@ class PayrollRunController extends Controller
     {
     }
 
+    /**
+     * Fase 7 — permission granular per type ('view/create/edit/lock/publish
+     * thr|non regular payroll') di-layer TAMBAHAN di atas permission generik
+     * existing ('view/create payroll runs' dst di routes/api.php), BUKAN
+     * pengganti. Regular Payroll (type default) TIDAK kena extra check ini
+     * sama sekali — persis behavior sebelum Fase 7, existing role manapun
+     * yang sudah punya permission generik tetap jalan tanpa perubahan.
+     */
+    private function assertTypePermission(Request $request, PayrollRunType $type, string $action): void
+    {
+        if ($type === PayrollRunType::Regular) {
+            return;
+        }
+
+        $label = $type === PayrollRunType::Thr ? 'thr' : 'non regular';
+        $permission = match ($action) {
+            'view' => "view {$label} payroll",
+            'create' => "create {$label} payroll",
+            'edit' => "edit {$label} payroll",
+            'request_approval' => "request {$label} payroll approval",
+            'lock' => "lock {$label} payroll",
+            'publish' => "publish {$label} payroll",
+            default => null,
+        };
+
+        if ($permission && ! $request->user()?->can($permission)) {
+            abort(403, "Anda tidak punya izin '{$permission}'.");
+        }
+    }
+
     public function index(Request $request)
     {
+        if ($request->filled('type')) {
+            $type = PayrollRunType::tryFrom($request->query('type'));
+
+            if ($type) {
+                $this->assertTypePermission($request, $type, 'view');
+            }
+        }
+
         $runs = PayrollRun::with(['company', 'currentRevision.payslips:id,payroll_run_revision_id,net_pay'])
             ->withCount('participants')
             ->when($request->query('company_id'), fn ($q, $v) => $q->where('company_id', $v))
+            ->when($request->query('type'), fn ($q, $v) => $q->where('type', $v))
             ->when($request->query('status'), fn ($q, $v) => $q->where('status', $v))
             ->when($request->query('period_year'), fn ($q, $v) => $q->where('period_year', $v))
             ->when($request->query('period_month'), fn ($q, $v) => $q->where('period_month', $v))
@@ -51,8 +91,10 @@ class PayrollRunController extends Controller
         return response()->json(['success' => true, 'message' => 'OK', 'data' => $runs]);
     }
 
-    public function show(PayrollRun $payrollRun)
+    public function show(Request $request, PayrollRun $payrollRun)
     {
+        $this->assertTypePermission($request, $payrollRun->type, 'view');
+
         $payrollRun->load([
             'participants',
             'currentRevision.payslips.employee',
@@ -88,6 +130,9 @@ class PayrollRunController extends Controller
 
     public function store(StorePayrollRunRequest $request)
     {
+        $type = PayrollRunType::tryFrom($request->validated('type') ?? PayrollRunType::Regular->value) ?? PayrollRunType::Regular;
+        $this->assertTypePermission($request, $type, 'create');
+
         try {
             $run = $this->payrollRunService->createDraft(
                 $request->validated('company_id'),
@@ -97,6 +142,7 @@ class PayrollRunController extends Controller
                 $request->validated('cutoff_date'),
                 $request->validated('payment_date'),
                 $request->user(),
+                $type->value,
             );
 
             return response()->json(['success' => true, 'message' => 'Payroll run berhasil dibuat sebagai Draft', 'data' => $run], 201);
@@ -107,6 +153,8 @@ class PayrollRunController extends Controller
 
     public function updateParticipants(UpdatePayrollRunParticipantsRequest $request, PayrollRun $payrollRun)
     {
+        $this->assertTypePermission($request, $payrollRun->type, 'edit');
+
         try {
             $run = $this->payrollRunService->syncParticipants($payrollRun, $request->validated('employee_ids'));
 
@@ -118,6 +166,8 @@ class PayrollRunController extends Controller
 
     public function proceedPayslip(Request $request, PayrollRun $payrollRun)
     {
+        $this->assertTypePermission($request, $payrollRun->type, 'edit');
+
         try {
             $run = $this->payrollRunService->proceedPayslip($payrollRun, $request->user(), $request->input('note'));
             $revisionNumber = $run->current_revision;
@@ -140,8 +190,10 @@ class PayrollRunController extends Controller
         }
     }
 
-    public function requestApproval(PayrollRun $payrollRun)
+    public function requestApproval(Request $request, PayrollRun $payrollRun)
     {
+        $this->assertTypePermission($request, $payrollRun->type, 'request_approval');
+
         try {
             $run = $this->payrollRunService->requestApproval($payrollRun);
 
@@ -153,6 +205,8 @@ class PayrollRunController extends Controller
 
     public function lock(Request $request, PayrollRun $payrollRun)
     {
+        $this->assertTypePermission($request, $payrollRun->type, 'lock');
+
         try {
             $run = $this->payrollRunService->lock($payrollRun, $request->user());
 
@@ -164,6 +218,8 @@ class PayrollRunController extends Controller
 
     public function publish(Request $request, PayrollRun $payrollRun)
     {
+        $this->assertTypePermission($request, $payrollRun->type, 'publish');
+
         try {
             $run = $this->payrollRunService->publish($payrollRun, $request->user());
 
@@ -173,8 +229,10 @@ class PayrollRunController extends Controller
         }
     }
 
-    public function unpublish(PayrollRun $payrollRun)
+    public function unpublish(Request $request, PayrollRun $payrollRun)
     {
+        $this->assertTypePermission($request, $payrollRun->type, 'publish');
+
         $run = $this->payrollRunService->unpublish($payrollRun);
 
         return response()->json(['success' => true, 'message' => 'Publish payslip dibatalkan', 'data' => $run]);
@@ -182,6 +240,8 @@ class PayrollRunController extends Controller
 
     public function cancel(CancelPayrollRunRequest $request, PayrollRun $payrollRun)
     {
+        $this->assertTypePermission($request, $payrollRun->type, 'edit');
+
         try {
             $run = $this->payrollRunService->cancel($payrollRun, $request->validated('reason'));
 

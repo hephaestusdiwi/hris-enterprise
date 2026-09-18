@@ -10,7 +10,9 @@ use App\Modules\Loan\Models\LoanInstallment;
 use App\Modules\Loan\Services\LoanService;
 use App\Modules\Payroll\Contracts\PayrollCalculationEngineInterface;
 use App\Modules\Payroll\Enums\PayrollRunStatus;
+use App\Modules\Payroll\Enums\PayrollRunType;
 use App\Modules\Payroll\Exceptions\PayrollValidationException;
+use App\Modules\Payroll\Models\EmployeeNonRegularInput;
 use App\Modules\Payroll\Models\Payslip;
 use App\Modules\Payroll\Models\PayslipLine;
 use App\Modules\Payroll\Models\PayrollRun;
@@ -38,10 +40,12 @@ class PayrollRunService
         ?string $cutoffDate,
         ?string $paymentDate,
         ?User $actor,
+        string $type = PayrollRunType::Regular->value,
     ): PayrollRun {
-        return DB::transaction(function () use ($companyId, $periodYear, $periodMonth, $employeeIds, $cutoffDate, $paymentDate, $actor) {
+        return DB::transaction(function () use ($companyId, $periodYear, $periodMonth, $employeeIds, $cutoffDate, $paymentDate, $actor, $type) {
             $run = PayrollRun::create([
                 'company_id' => $companyId,
+                'type' => $type,
                 'period_year' => $periodYear,
                 'period_month' => $periodMonth,
                 'cutoff_date' => $cutoffDate,
@@ -198,26 +202,45 @@ class PayrollRunService
         return DB::transaction(function () use ($run, $actor) {
             $employeeIds = $run->participants()->pluck('employees.id');
 
-            EmployeeAllowance::whereIn('employee_id', $employeeIds)
-                ->where('status', 'ready')
-                ->where('payroll_period_year', $run->period_year)
-                ->where('payroll_period_month', $run->period_month)
-                ->update(['status' => 'processed', 'processed_at' => now()]);
+            // Regular payroll: konsumsi EmployeeAllowance/EmployeeDeduction/
+            // LoanInstallment 'ready' periode ini seperti sebelumnya.
+            // THR & Non-Regular run TIDAK boleh ikut menyentuh tabel ini —
+            // kalau ada Regular run lain berjalan di periode yang sama,
+            // allowance/deduction/installment periode itu harus tetap utuh
+            // sampai Regular run-nya sendiri yang di-Lock.
+            if ($run->isRegular()) {
+                EmployeeAllowance::whereIn('employee_id', $employeeIds)
+                    ->where('status', 'ready')
+                    ->where('payroll_period_year', $run->period_year)
+                    ->where('payroll_period_month', $run->period_month)
+                    ->update(['status' => 'processed', 'processed_at' => now()]);
 
-            EmployeeDeduction::whereIn('employee_id', $employeeIds)
-                ->where('status', 'ready')
-                ->where('payroll_period_year', $run->period_year)
-                ->where('payroll_period_month', $run->period_month)
-                ->update(['status' => 'processed', 'processed_at' => now()]);
+                EmployeeDeduction::whereIn('employee_id', $employeeIds)
+                    ->where('status', 'ready')
+                    ->where('payroll_period_year', $run->period_year)
+                    ->where('payroll_period_month', $run->period_month)
+                    ->update(['status' => 'processed', 'processed_at' => now()]);
 
-            $dueInstallments = LoanInstallment::whereHas('loan', fn ($q) => $q->whereIn('employee_id', $employeeIds))
-                ->where('status', LoanInstallmentStatus::Scheduled->value)
-                ->where('payroll_period_year', $run->period_year)
-                ->where('payroll_period_month', $run->period_month)
-                ->get();
+                $dueInstallments = LoanInstallment::whereHas('loan', fn ($q) => $q->whereIn('employee_id', $employeeIds))
+                    ->where('status', LoanInstallmentStatus::Scheduled->value)
+                    ->where('payroll_period_year', $run->period_year)
+                    ->where('payroll_period_month', $run->period_month)
+                    ->get();
 
-            foreach ($dueInstallments as $installment) {
-                $this->loanService->markInstallmentPaid($installment);
+                foreach ($dueInstallments as $installment) {
+                    $this->loanService->markInstallmentPaid($installment);
+                }
+            }
+
+            // Non-Regular payroll: konsumsi EmployeeNonRegularInput 'ready'
+            // periode ini — mekanisme sama persis (ready->processed) supaya
+            // input yang sama tidak bisa ke-pakai dua kali oleh run lain.
+            if ($run->isNonRegular()) {
+                EmployeeNonRegularInput::whereIn('employee_id', $employeeIds)
+                    ->where('status', 'ready')
+                    ->where('payroll_period_year', $run->period_year)
+                    ->where('payroll_period_month', $run->period_month)
+                    ->update(['status' => 'processed', 'processed_at' => now(), 'payroll_run_id' => $run->id]);
             }
 
             $run->update([

@@ -2,13 +2,18 @@
 
 use App\Modules\Payroll\Controllers\CompanyBankSettingController;
 use App\Modules\Payroll\Controllers\CompanyPayrollAttendanceSettingController;
+use App\Modules\Payroll\Controllers\EmployeeNonRegularInputController;
+use App\Modules\Payroll\Controllers\NonRegularPayrollComponentController;
 use App\Modules\Payroll\Controllers\PayrollApprovalController;
 use App\Modules\Payroll\Controllers\PayrollBpjsReportController;
 use App\Modules\Payroll\Controllers\PayrollDisbursementController;
+use App\Modules\Payroll\Controllers\PayrollNonRegularReportController;
 use App\Modules\Payroll\Controllers\PayrollReportController;
 use App\Modules\Payroll\Controllers\PayrollRunController;
 use App\Modules\Payroll\Controllers\PayrollTaxReportController;
+use App\Modules\Payroll\Controllers\PayrollThrReportController;
 use App\Modules\Payroll\Controllers\PayslipController;
+use App\Modules\Payroll\Controllers\ThrPolicyController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/my-payslips', [PayslipController::class, 'myPayslips']);
@@ -87,3 +92,47 @@ Route::middleware('permission:manage payroll disbursements')->group(function () 
 
 Route::get('/payroll-approvals', [PayrollApprovalController::class, 'index']);
 Route::post('/payroll-approvals/{decision}/decide', [PayrollApprovalController::class, 'decide']);
+
+// ==================== FASE 7 — THR & NON-REGULAR PAYROLL ====================
+// Component master data & THR Policy diperlakukan sebagai "payroll settings"
+// (reuse permission generik existing), TIDAK bikin permission baru buat ini —
+// permission baru cuma buat yang eksplisit diminta section K (view/create/
+// edit/request approval/lock/publish thr|non regular payroll).
+Route::middleware('permission:view thr payroll')->group(function () {
+    Route::get('/thr-policies', [ThrPolicyController::class, 'index']);
+    Route::get('/thr-policies/eligible-employees', [ThrPolicyController::class, 'eligibleEmployees']);
+    Route::get('/thr-policies/{thrPolicy}', [ThrPolicyController::class, 'show']);
+    Route::get('/payroll-reports/thr/detail', [PayrollThrReportController::class, 'detail']);
+    Route::get('/payroll-reports/thr/detail/export/excel', [PayrollThrReportController::class, 'exportExcel']);
+    Route::get('/payroll-reports/thr/detail/export/pdf', [PayrollThrReportController::class, 'exportPdf']);
+});
+
+Route::middleware('permission:edit thr payroll')->group(function () {
+    Route::post('/thr-policies', [ThrPolicyController::class, 'store']);
+    Route::put('/thr-policies/{thrPolicy}', [ThrPolicyController::class, 'update']);
+    Route::delete('/thr-policies/{thrPolicy}', [ThrPolicyController::class, 'destroy']);
+});
+
+Route::middleware('permission:view non regular payroll')->group(function () {
+    Route::get('/non-regular-payroll-components', [NonRegularPayrollComponentController::class, 'index']);
+    Route::get('/non-regular-payroll-components/{nonRegularPayrollComponent}', [NonRegularPayrollComponentController::class, 'show']);
+    Route::get('/employee-non-regular-inputs', [EmployeeNonRegularInputController::class, 'index']);
+    Route::get('/employee-non-regular-inputs/{employeeNonRegularInput}', [EmployeeNonRegularInputController::class, 'show']);
+    Route::get('/payroll-reports/non-regular/detail', [PayrollNonRegularReportController::class, 'detail']);
+    Route::get('/payroll-reports/non-regular/detail/export/excel', [PayrollNonRegularReportController::class, 'exportExcel']);
+    Route::get('/payroll-reports/non-regular/detail/export/pdf', [PayrollNonRegularReportController::class, 'exportPdf']);
+});
+
+Route::middleware('permission:create non regular payroll')->group(function () {
+    Route::post('/non-regular-payroll-components', [NonRegularPayrollComponentController::class, 'store']);
+    Route::post('/employee-non-regular-inputs', [EmployeeNonRegularInputController::class, 'store']);
+});
+
+Route::middleware('permission:edit non regular payroll')->group(function () {
+    Route::put('/non-regular-payroll-components/{nonRegularPayrollComponent}', [NonRegularPayrollComponentController::class, 'update']);
+    Route::delete('/non-regular-payroll-components/{nonRegularPayrollComponent}', [NonRegularPayrollComponentController::class, 'destroy']);
+    Route::put('/employee-non-regular-inputs/{employeeNonRegularInput}', [EmployeeNonRegularInputController::class, 'update']);
+    Route::post('/employee-non-regular-inputs/{employeeNonRegularInput}/void', [EmployeeNonRegularInputController::class, 'void']);
+    Route::post('/employee-non-regular-inputs/{employeeNonRegularInput}/mark-ready', [EmployeeNonRegularInputController::class, 'markReady']);
+    Route::post('/employee-non-regular-inputs/bulk-mark-ready', [EmployeeNonRegularInputController::class, 'bulkMarkReady']);
+});

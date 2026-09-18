@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound,
   CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch, CheckCircle2, Layers, CalendarRange, BarChart3,
   Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle, HandCoins, Receipt, BriefcaseBusiness, Megaphone, Landmark,
-  ShieldCheck, WalletCards, History, FileText, Clock3, Repeat, ShieldOff,
+  ShieldCheck, WalletCards, History, FileText, Clock3, Repeat, ShieldOff, ClipboardList,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
@@ -176,6 +176,15 @@ const groups: MenuGroup[] = [
       { name: 'talent-pool', label: 'Talent Pool', icon: BriefcaseBusiness, to: '/talent-pool', permission: 'view candidates' },
       { name: 'candidate-blacklists', label: 'Blacklist', icon: ShieldOff, to: '/candidate-blacklists', permission: 'manage candidate blacklist' },
       { name: 'recruitment-report', label: 'Time to Hire Report', icon: BarChart3, to: '/recruitment-report/time-to-hire', permission: 'view candidates' },
+    ],
+  },
+  {
+    name: 'grooming',
+    label: 'Grooming',
+    icon: ClipboardList,
+    items: [
+      { name: 'grooming-self', label: 'Grooming Self', icon: ClipboardList, to: '/grooming-self', permission: null },
+      { name: 'grooming-standards', label: 'Grooming Standards', icon: ClipboardList, to: '/grooming-standards', permission: 'manage grooming standards' },
     ],
   },
   {

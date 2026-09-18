@@ -11,4 +11,6 @@ enum PayslipLineSource: string
     case Loan = 'loan';
     case Bpjs = 'bpjs';
     case Pph21 = 'pph21';
+    case Thr = 'thr';
+    case NonRegular = 'non_regular';
 }

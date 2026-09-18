@@ -106,15 +106,17 @@ class BpjsCalculationEngine implements BpjsCalculationEngineInterface
         return $total;
     }
 
-    private function resolveCostBearer(string $employeeOverride, ?string $companyDefault): BpjsCostBearer
-    {
-        $bearer = BpjsCostBearer::from($employeeOverride);
+    private function resolveCostBearer(
+        ?BpjsCostBearer $employeeOverride,
+        ?BpjsCostBearer $companyDefault,
+    ): BpjsCostBearer {
+        $bearer = $employeeOverride ?? BpjsCostBearer::DefaultPolicy;
 
         if ($bearer !== BpjsCostBearer::DefaultPolicy) {
             return $bearer;
         }
 
-        return $companyDefault ? BpjsCostBearer::from($companyDefault) : BpjsCostBearer::EmployeeBorne;
+        return $companyDefault ?? BpjsCostBearer::EmployeeBorne;
     }
 
     private function applyWageCap(string $wageBase, ?BpjsRateConfig $rate): string

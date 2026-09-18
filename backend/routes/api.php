@@ -39,6 +39,11 @@ Route::middleware('auth:sanctum')->group(function () {
     require __DIR__.'/../app/Modules/EmploymentStatus/Routes/api.php';
     require __DIR__.'/../app/Modules/EmploymentType/Routes/api.php';
     require __DIR__.'/../app/Modules/Employee/Routes/api.php';
+    require __DIR__.'/../app/Modules/EmployeeDocument/Routes/api.php';
+    require __DIR__.'/../app/Modules/EmployeeAsset/Routes/api.php';
+    require __DIR__.'/../app/Modules/EmployeeEducation/Routes/api.php';
+    require __DIR__.'/../app/Modules/EmployeeExperience/Routes/api.php';
+    require __DIR__.'/../app/Modules/EmployeeReprimand/Routes/api.php';
     require __DIR__.'/../app/Modules/Holiday/Routes/api.php';
     require __DIR__.'/../app/Modules/JobLevel/Routes/api.php';
     require __DIR__.'/../app/Modules/Shift/Routes/api.php';
@@ -61,9 +66,11 @@ Route::middleware('auth:sanctum')->group(function () {
     require __DIR__.'/../app/Modules/Reimbursement/Routes/api.php';
     require __DIR__.'/../app/Modules/CashAdvance/Routes/api.php';
     require __DIR__.'/../app/Modules/Expense/Routes/api.php';
+    require __DIR__.'/../app/Modules/Report/Routes/api.php';
     require __DIR__.'/../app/Modules/Bpjs/Routes/api.php';
     require __DIR__.'/../app/Modules/Pph21/Routes/api.php';
     require __DIR__.'/../app/Modules/Payroll/Routes/api.php';
+    require __DIR__.'/../app/Modules/Grooming/Routes/api.php';
     require __DIR__.'/../app/Modules/HiringRequisition/Routes/api.php';
     require __DIR__.'/../app/Modules/EmployeeMovement/Routes/api.php';
     require __DIR__.'/../app/Modules/Screening/Routes/api.php';

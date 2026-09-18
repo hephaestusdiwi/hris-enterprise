@@ -629,6 +629,24 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/grooming-standards',
+      name: 'grooming-standards.index',
+      component: () => import('@/views/grooming/GroomingStandardListView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/grooming-standards/:id',
+      name: 'grooming-standards.show',
+      component: () => import('@/views/grooming/GroomingStandardDetailView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/grooming-self',
+      name: 'grooming-self.index',
+      component: () => import('@/views/grooming/GroomingSelfView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/new-joiner-form/:token',
       name: 'new-joiner-form.show',
       component: () => import('@/views/recruitment/NewJoinerFormView.vue'),

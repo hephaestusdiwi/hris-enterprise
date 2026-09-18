@@ -159,4 +159,24 @@ class Employee extends Model
     {
         return $this->hasMany(\App\Modules\EmployeeDocument\Models\EmployeeDocument::class);
     }
+
+    public function assets(): HasMany
+    {
+        return $this->hasMany(\App\Modules\EmployeeAsset\Models\EmployeeAsset::class);
+    }
+
+    public function educations(): HasMany
+    {
+        return $this->hasMany(\App\Modules\EmployeeEducation\Models\EmployeeEducation::class);
+    }
+
+    public function experiences(): HasMany
+    {
+        return $this->hasMany(\App\Modules\EmployeeExperience\Models\EmployeeExperience::class);
+    }
+
+    public function reprimands(): HasMany
+    {
+        return $this->hasMany(\App\Modules\EmployeeReprimand\Models\EmployeeReprimand::class);
+    }
 }

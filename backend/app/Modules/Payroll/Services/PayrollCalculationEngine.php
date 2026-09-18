@@ -14,12 +14,18 @@ use App\Modules\Loan\Models\LoanInstallment;
 use App\Modules\Payroll\Contracts\PayrollCalculationEngineInterface;
 use App\Modules\Payroll\DataTransferObjects\EmployeePayslipDraft;
 use App\Modules\Payroll\DataTransferObjects\PayslipLineDraft;
+use App\Modules\Payroll\Enums\EmployeeNonRegularInputStatus;
+use App\Modules\Payroll\Enums\PayrollRunType;
 use App\Modules\Payroll\Enums\PayslipLineSource;
 use App\Modules\Payroll\Enums\PayslipLineType;
 use App\Modules\Payroll\Models\CompanyPayrollAttendanceSetting;
+use App\Modules\Payroll\Models\EmployeeNonRegularInput;
 use App\Modules\Payroll\Models\PayrollRun;
+use App\Modules\Payroll\Models\ThrPolicy;
 use App\Modules\Payroll\Support\PayrollMath;
 use App\Modules\Pph21\Contracts\TaxCalculationEngineInterface;
+use App\Modules\SalaryComponent\Enums\SalaryComponentCategory;
+use App\Modules\SalaryComponent\Models\SalaryComponent;
 use Carbon\Carbon;
 
 class PayrollCalculationEngine implements PayrollCalculationEngineInterface
@@ -30,12 +36,33 @@ class PayrollCalculationEngine implements PayrollCalculationEngineInterface
         private TaxCalculationEngineInterface $taxEngine,
         private AttendanceReportService $attendanceReportService,
         private PayrollHistoryReader $historyReader,
+        private ThrEligibilityService $thrEligibilityService,
     ) {
     }
 
+    /**
+     * Fase 7 — THR & Non-Regular Payroll dikalkulasi lewat cabang method
+     * TERPISAH (calculateThrDraftsForRun/calculateNonRegularDraftsForRun),
+     * BUKAN engine baru — masih 1 class/1 file yang sama, masih pakai
+     * EmployeeSalaryResolver/BpjsCalculationEngine/TaxCalculationEngine yang
+     * SAMA persis. Regular Payroll (default) jalan di
+     * calculateRegularDraftsForRun() — badan method-nya SAMA PERSIS dengan
+     * calculateDraftsForRun() sebelum Fase 7, tidak ada satu baris pun yang
+     * berubah, supaya behavior/hasil Regular Payroll dijamin tidak berubah.
+     */
     public function calculateDraftsForRun(PayrollRun $payrollRun): array
     {
         $referenceDate = Carbon::createFromDate($payrollRun->period_year, $payrollRun->period_month, 1)->endOfMonth();
+
+        return match ($payrollRun->type) {
+            PayrollRunType::Thr => $this->calculateThrDraftsForRun($payrollRun, $referenceDate),
+            PayrollRunType::NonRegular => $this->calculateNonRegularDraftsForRun($payrollRun, $referenceDate),
+            default => $this->calculateRegularDraftsForRun($payrollRun, $referenceDate),
+        };
+    }
+
+    private function calculateRegularDraftsForRun(PayrollRun $payrollRun, Carbon $referenceDate): array
+    {
         $periodStart = $referenceDate->copy()->startOfMonth();
         $periodEnd = $payrollRun->cutoff_date ?? $referenceDate->copy()->endOfMonth();
 
@@ -224,6 +251,235 @@ class PayrollCalculationEngine implements PayrollCalculationEngineInterface
             bpjsEmployerTotal: $bpjsEmployerTotal,
             taxAmount: $taxAmount,
             loanDeductionTotal: $loanDeductionTotal,
+            netPay: $netPay,
+            lines: $lines,
+        );
+    }
+
+    /**
+     * ==================== FASE 7 — THR ====================
+     *
+     * THR dikalkulasi dari SalaryComponent basic_salary yang SAMA (via
+     * EmployeeSalaryResolver) dikali faktor prorata dari ThrEligibilityService,
+     * lalu di-shim ke Tax/BPJS engine LEWAT SalaryComponent transient (tidak
+     * disimpan ke DB) — supaya PPh21/BPJS reuse 100% engine yang sama dengan
+     * Regular Payroll, tanpa implementasi kedua.
+     *
+     * Catatan penting soal PPh21 TER: kalau THR dibayar di bulan yang sama
+     * dengan payroll reguler, run ini dihitung TERPISAH dari run reguler
+     * (masing-masing calculateMonthly() dengan gross sendiri-sendiri), jadi
+     * tarif TER bulan berjalan bisa sedikit under-estimate dibanding kalau
+     * digabung. Ini SENGAJA dibiarkan — PayrollHistoryReader::priorMonthsInYear()
+     * tidak memfilter berdasarkan type payroll run, jadi begitu run ini
+     * di-Lock, gross & PPh21-nya otomatis ikut ke-agregasi di rekonsiliasi
+     * tahunan (Desember/resign) employee yang sama, sehingga selisihnya
+     * balance di sana. Ini konsisten dengan mekanisme reconciliation yang
+     * SUDAH ADA, bukan celah baru.
+     */
+    private function calculateThrDraftsForRun(PayrollRun $payrollRun, Carbon $referenceDate): array
+    {
+        $policy = $this->thrEligibilityService->resolveActivePolicy($payrollRun->company_id, $referenceDate);
+        $drafts = [];
+
+        foreach ($payrollRun->participants as $employee) {
+            $drafts[$employee->id] = $this->calculateThrForEmployee($employee, $payrollRun, $referenceDate, $policy);
+        }
+
+        return $drafts;
+    }
+
+    private function calculateThrForEmployee(Employee $employee, PayrollRun $payrollRun, Carbon $referenceDate, ?ThrPolicy $policy): EmployeePayslipDraft
+    {
+        $lines = [];
+
+        $structuralLines = $this->salaryResolver->resolveComponents($employee, $referenceDate);
+        $basicSalaryAmount = collect($structuralLines)
+            ->first(fn ($l) => $l->component->category?->value === 'basic_salary')?->amount ?? '0.00';
+
+        $serviceMonths = $this->thrEligibilityService->serviceMonths($employee, $referenceDate);
+        // Tanpa policy aktif (edge case — seharusnya sudah dicek sejak preview
+        // eligibility), fallback ke prorata penuh supaya kalkulasi tetap
+        // berjalan (tolerant-by-default, konsisten dengan gaya engine ini
+        // di tempat lain yang fallback ke nilai netral alih-alih exception).
+        $prorationFactor = $policy
+            ? $this->thrEligibilityService->prorationFactor($employee, $policy, $referenceDate)
+            : '1.000000';
+
+        $thrAmount = PayrollMath::mul($basicSalaryAmount, $prorationFactor);
+
+        $thrComponent = new SalaryComponent([
+            'name' => 'THR',
+            'category' => SalaryComponentCategory::Allowance->value,
+            'is_addition' => true,
+            'is_taxable' => true,
+            'include_in_bpjs_base' => (bool) ($policy?->include_in_bpjs_base ?? false),
+        ]);
+
+        $earningLines = [new ResolvedSalaryLine($thrComponent, $thrAmount, null, null, 'thr')];
+
+        $lines[] = new PayslipLineDraft(
+            PayslipLineType::Earning,
+            PayslipLineSource::Thr,
+            'THR (masa kerja '.$serviceMonths.' bulan, prorata '.PayrollMath::mul($prorationFactor, '100').'%)',
+            $thrAmount,
+        );
+
+        // BPJS — reuse engine yang sama; default include_in_bpjs_base=false
+        // di atas otomatis membuat kontribusi 0 kecuali company override policy.
+        $resolvedBpjsContributions = $this->bpjsEngine->calculateForEmployee($employee, $referenceDate, $earningLines);
+        $bpjsEmployeeTotal = '0.00';
+        $bpjsEmployerTotal = '0.00';
+
+        foreach ($resolvedBpjsContributions as $programKey => $contribution) {
+            $bpjsEmployeeTotal = PayrollMath::add($bpjsEmployeeTotal, $contribution->employeeAmount);
+            $bpjsEmployerTotal = PayrollMath::add($bpjsEmployerTotal, $contribution->employerAmount);
+
+            if (PayrollMath::add($contribution->employeeAmount, '0') !== '0.00') {
+                $lines[] = new PayslipLineDraft(PayslipLineType::BpjsEmployee, PayslipLineSource::Bpjs, strtoupper($programKey).' (Karyawan)', $contribution->employeeAmount);
+            }
+
+            if (PayrollMath::add($contribution->employerAmount, '0') !== '0.00') {
+                $lines[] = new PayslipLineDraft(PayslipLineType::BpjsEmployer, PayslipLineSource::Bpjs, strtoupper($programKey).' (Company)', $contribution->employerAmount);
+            }
+        }
+
+        // PPh21 — reuse TaxCalculationEngine yang sama. THR tidak pernah jadi
+        // "periode final" tersendiri (rekonsiliasi tahunan tetap milik run
+        // reguler Desember/resign), jadi selalu pakai TER bulanan di sini.
+        $taxAmount = '0.00';
+        $result = $this->taxEngine->calculateMonthly($employee, $referenceDate, $earningLines, $resolvedBpjsContributions);
+
+        if ($result) {
+            $taxAmount = $result->takeHomePayDeduction;
+            $lines[] = new PayslipLineDraft(PayslipLineType::Tax, PayslipLineSource::Pph21, 'PPh 21 atas THR', $result->pph21Amount);
+        }
+
+        $netPay = PayrollMath::sub($thrAmount, $bpjsEmployeeTotal);
+        $netPay = PayrollMath::sub($netPay, $taxAmount);
+
+        return new EmployeePayslipDraft(
+            employeeId: $employee->id,
+            grossEarning: $thrAmount,
+            structuralDeduction: '0.00',
+            manualDeductionTotal: '0.00',
+            bpjsEmployeeTotal: $bpjsEmployeeTotal,
+            bpjsEmployerTotal: $bpjsEmployerTotal,
+            taxAmount: $taxAmount,
+            loanDeductionTotal: '0.00',
+            netPay: $netPay,
+            lines: $lines,
+        );
+    }
+
+    /**
+     * ==================== FASE 7 — NON-REGULAR PAYROLL ====================
+     *
+     * Ambil seluruh EmployeeNonRegularInput berstatus 'ready' milik employee
+     * ini untuk periode run ini (pola query SAMA PERSIS dengan EmployeeAllowance/
+     * EmployeeDeduction 'ready' di calculateForEmployee() Regular) — TIDAK
+     * ditandai processed di sini (itu tanggung jawab PayrollRunService::lock()),
+     * cuma dibaca buat kalkulasi draft.
+     */
+    private function calculateNonRegularDraftsForRun(PayrollRun $payrollRun, Carbon $referenceDate): array
+    {
+        $drafts = [];
+
+        foreach ($payrollRun->participants as $employee) {
+            $drafts[$employee->id] = $this->calculateNonRegularForEmployee($employee, $payrollRun, $referenceDate);
+        }
+
+        return $drafts;
+    }
+
+    private function calculateNonRegularForEmployee(Employee $employee, PayrollRun $payrollRun, Carbon $referenceDate): EmployeePayslipDraft
+    {
+        $lines = [];
+
+        $inputs = EmployeeNonRegularInput::where('employee_id', $employee->id)
+            ->where('status', EmployeeNonRegularInputStatus::Ready->value)
+            ->where('payroll_period_year', $payrollRun->period_year)
+            ->where('payroll_period_month', $payrollRun->period_month)
+            ->with('component')
+            ->get();
+
+        $earningLines = [];
+        $grossEarning = '0.00';
+        $manualDeductionTotal = '0.00';
+
+        foreach ($inputs as $input) {
+            $component = $input->component;
+            $amount = (string) $input->amount;
+            $isAddition = $input->is_addition;
+
+            $shimComponent = new SalaryComponent([
+                'name' => $component->name,
+                'category' => $isAddition ? SalaryComponentCategory::Allowance->value : SalaryComponentCategory::Deduction->value,
+                'is_addition' => $isAddition,
+                'is_taxable' => $component->is_taxable,
+                'include_in_bpjs_base' => $component->include_in_bpjs_base,
+            ]);
+
+            $lineType = $isAddition ? PayslipLineType::Earning : PayslipLineType::Deduction;
+            $lines[] = new PayslipLineDraft($lineType, PayslipLineSource::NonRegular, $component->name, $amount, $input->id);
+
+            if ($isAddition) {
+                $earningLines[] = new ResolvedSalaryLine($shimComponent, $amount, null, null, 'non_regular');
+                $grossEarning = PayrollMath::add($grossEarning, $amount);
+            } else {
+                $manualDeductionTotal = PayrollMath::add($manualDeductionTotal, $amount);
+            }
+        }
+
+        // BPJS — reuse engine yang sama, cuma earning yang include_in_bpjs_base
+        // true di component-nya yang dihitung (default false, lihat migration).
+        $resolvedBpjsContributions = $earningLines
+            ? $this->bpjsEngine->calculateForEmployee($employee, $referenceDate, $earningLines)
+            : [];
+        $bpjsEmployeeTotal = '0.00';
+        $bpjsEmployerTotal = '0.00';
+
+        foreach ($resolvedBpjsContributions as $programKey => $contribution) {
+            $bpjsEmployeeTotal = PayrollMath::add($bpjsEmployeeTotal, $contribution->employeeAmount);
+            $bpjsEmployerTotal = PayrollMath::add($bpjsEmployerTotal, $contribution->employerAmount);
+
+            if (PayrollMath::add($contribution->employeeAmount, '0') !== '0.00') {
+                $lines[] = new PayslipLineDraft(PayslipLineType::BpjsEmployee, PayslipLineSource::Bpjs, strtoupper($programKey).' (Karyawan)', $contribution->employeeAmount);
+            }
+
+            if (PayrollMath::add($contribution->employerAmount, '0') !== '0.00') {
+                $lines[] = new PayslipLineDraft(PayslipLineType::BpjsEmployer, PayslipLineSource::Bpjs, strtoupper($programKey).' (Company)', $contribution->employerAmount);
+            }
+        }
+
+        // PPh21 — cuma dihitung kalau ada earning yang taxable, reuse
+        // calculateMonthly() (bonus/incentive/commission bukan periode final
+        // tersendiri; sama seperti THR, ikut ke-agregasi di rekonsiliasi
+        // tahunan run reguler lewat PayrollHistoryReader).
+        $taxAmount = '0.00';
+
+        if ($earningLines) {
+            $result = $this->taxEngine->calculateMonthly($employee, $referenceDate, $earningLines, $resolvedBpjsContributions);
+
+            if ($result) {
+                $taxAmount = $result->takeHomePayDeduction;
+                $lines[] = new PayslipLineDraft(PayslipLineType::Tax, PayslipLineSource::Pph21, 'PPh 21 atas Payroll Non-Reguler', $result->pph21Amount);
+            }
+        }
+
+        $netPay = $grossEarning;
+        $netPay = PayrollMath::sub($netPay, $manualDeductionTotal);
+        $netPay = PayrollMath::sub($netPay, $bpjsEmployeeTotal);
+        $netPay = PayrollMath::sub($netPay, $taxAmount);
+
+        return new EmployeePayslipDraft(
+            employeeId: $employee->id,
+            grossEarning: $grossEarning,
+            structuralDeduction: '0.00',
+            manualDeductionTotal: $manualDeductionTotal,
+            bpjsEmployeeTotal: $bpjsEmployeeTotal,
+            bpjsEmployerTotal: $bpjsEmployerTotal,
+            taxAmount: $taxAmount,
+            loanDeductionTotal: '0.00',
             netPay: $netPay,
             lines: $lines,
         );

@@ -1,14 +1,14 @@
 <?php
- 
+
 namespace App\Modules\EmployeeDocument\Controllers;
- 
+
 use App\Http\Controllers\Controller;
 use App\Modules\Employee\Models\Employee;
 use App\Modules\EmployeeDocument\Models\EmployeeDocument;
 use App\Modules\EmployeeDocument\Requests\StoreEmployeeDocumentRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
- 
+
 /**
  * Employee Documents (Files tab ala Mekari Talenta).
  *
@@ -28,7 +28,7 @@ class EmployeeDocumentController extends Controller
     public function indexMine(Request $request)
     {
         $employee = $request->user()->employee;
-        abort_if(! $employee, 422, 'User ini tidak terhubung dengan data employee');
+        abort_if(! $employee, 422, 'User ini tidak terhubung dengan data employee.');
 
         return response()->json([
             'success' => true,
@@ -40,7 +40,7 @@ class EmployeeDocumentController extends Controller
     public function storeMine(StoreEmployeeDocumentRequest $request)
     {
         $employee = $request->user()->employee;
-        abort_if(! $employee, 422, 'User ini tidak terhubung dengan data employee');
+        abort_if(! $employee, 422, 'User ini tidak terhubung dengan data employee.');
 
         $document = $this->storeDocument($employee, $request);
 
@@ -54,7 +54,7 @@ class EmployeeDocumentController extends Controller
     public function destroyMine(Request $request, EmployeeDocument $document)
     {
         $employee = $request->user()->employee;
-        abort_if(! $employee, 422, 'User ini tidak terhubung dengan data employee');
+        abort_if(! $employee, 422, 'User ini tidak terhubung dengan data employee.');
         abort_unless($document->employee_id === $employee->id, 403);
 
         $this->deleteDocument($document);
@@ -63,6 +63,7 @@ class EmployeeDocumentController extends Controller
     }
 
     // ---------- Admin ----------
+
     public function indexForEmployee(Employee $employee)
     {
         return response()->json([
@@ -78,7 +79,7 @@ class EmployeeDocumentController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Dokumen berhasil di upload',
+            'message' => 'Dokumen berhasil diupload',
             'data' => $document,
         ], 201);
     }
@@ -93,12 +94,13 @@ class EmployeeDocumentController extends Controller
     }
 
     // ---------- Shared ----------
+
     private function storeDocument(Employee $employee, StoreEmployeeDocumentRequest $request): EmployeeDocument
     {
         $file = $request->file('document');
         $path = $file->store('employees/'.$employee->id.'/documents', 'public');
 
-        return $employee->document()->create([
+        return $employee->documents()->create([
             'category' => $request->validated('category'),
             'file_path' => $path,
             'file_name' => $file->getClientOriginalName(),
