@@ -72,6 +72,11 @@ import PayrollRunDetailView from '@/views/PayrollRunDetailView.vue'
 import PayrollSalaryReportView from '@/views/PayrollSalaryReportView.vue'
 import PayrollBpjsReportView from '@/views/PayrollBpjsReportView.vue'
 import PayrollTaxReportView from '@/views/PayrollTaxReportView.vue'
+import PayrollThrReportView from '@/views/PayrollThrReportView.vue'
+import PayrollNonRegularReportView from '@/views/PayrollNonRegularReportView.vue'
+import ThrPolicyListView from '@/views/ThrPolicyListView.vue'
+import NonRegularPayrollComponentListView from '@/views/NonRegularPayrollComponentListView.vue'
+import EmployeeNonRegularInputListView from '@/views/EmployeeNonRegularInputListView.vue'
 import MyPayslipView from '@/views/MyPayslipView.vue'
 import JobVacancyListView from '@/views/recruitment/JobVacancyListView.vue'
 import JobVacancyDetailView from '@/views/recruitment/JobVacancyDetailView.vue'
@@ -497,6 +502,36 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/payroll-reports/thr',
+      name: 'payroll-report-thr',
+      component: PayrollThrReportView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/payroll-reports/non-regular',
+      name: 'payroll-report-non-regular',
+      component: PayrollNonRegularReportView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/thr-policies',
+      name: 'thr-policies.list',
+      component: ThrPolicyListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/non-regular-payroll-components',
+      name: 'non-regular-payroll-components.list',
+      component: NonRegularPayrollComponentListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/employee-non-regular-inputs',
+      name: 'employee-non-regular-inputs.list',
+      component: EmployeeNonRegularInputListView,
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/my-payslips',
       name: 'my-payslips.list',
       component: MyPayslipView,
@@ -644,6 +679,24 @@ const router = createRouter({
       path: '/grooming-self',
       name: 'grooming-self.index',
       component: () => import('@/views/grooming/GroomingSelfView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/grooming-store',
+      name: 'grooming-store.index',
+      component: () => import('@/views/grooming/GroomingStoreView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/grooming-self/monitoring',
+      name: 'grooming-self.monitoring',
+      component: () => import('@/views/grooming/GroomingSelfMonitoringView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/grooming-store/monitoring',
+      name: 'grooming-store.monitoring',
+      component: () => import('@/views/grooming/GroomingStoreMonitoringView.vue'),
       meta: { requiresAuth: true },
     },
     {

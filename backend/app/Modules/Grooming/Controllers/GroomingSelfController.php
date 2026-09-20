@@ -3,6 +3,8 @@
 namespace App\Modules\Grooming\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Employee\Models\Employee;
+use App\Modules\Grooming\Enums\GroomingResult;
 use App\Modules\Grooming\Models\GroomingSelfSubmission;
 use App\Modules\Grooming\Requests\StoreGroomingSelfSubmissionRequest;
 use App\Modules\Grooming\Services\GroomingSelfService;
@@ -55,6 +57,43 @@ class GroomingSelfController extends Controller
             'success' => true,
             'message' => 'Histori Grooming Self berhasil diambil.',
             'data' => $submissions,
+        ]);
+    }
+
+    /**
+     * Ringkasan buat kartu overview monitoring — Total Employee/Submitted/
+     * Not Submitted/PASS/NOT PASS/Compliance % untuk SATU tanggal. "Submitted"
+     * dihitung dari submission TERAKHIR tiap employee di tanggal itu (selaras
+     * dengan aturan "submission terakhir = status hari ini").
+     */
+    public function monitoringSummary(Request $request): JsonResponse
+    {
+        $this->authorize('viewMonitoring', GroomingSelfSubmission::class);
+
+        $date = $request->date('date') ?? today();
+        $totalEmployees = Employee::whereNull('resign_date')->count();
+
+        $latestPerEmployeeToday = GroomingSelfSubmission::whereDate('submitted_at', $date)
+            ->orderByDesc('submitted_at')
+            ->get()
+            ->unique('employee_id');
+
+        $submittedCount = $latestPerEmployeeToday->count();
+        $passCount = $latestPerEmployeeToday->where('overall_result', GroomingResult::Pass)->count();
+        $notPassCount = $latestPerEmployeeToday->where('overall_result', GroomingResult::NotPass)->count();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Ringkasan monitoring Grooming Self berhasil diambil.',
+            'data' => [
+                'date' => $date->toDateString(),
+                'total_employees' => $totalEmployees,
+                'submitted_count' => $submittedCount,
+                'not_submitted_count' => max(0, $totalEmployees - $submittedCount),
+                'pass_count' => $passCount,
+                'not_pass_count' => $notPassCount,
+                'compliance_percent' => $totalEmployees > 0 ? round(($passCount / $totalEmployees) * 100, 1) : null,
+            ],
         ]);
     }
 

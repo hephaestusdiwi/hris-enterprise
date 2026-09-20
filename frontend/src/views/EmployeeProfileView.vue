@@ -153,7 +153,28 @@ const reprimandTypeLabels: Record<string, string> = {
   termination_notice: 'Surat Pemutusan',
 }
 
-const activeTab = ref<'personal' | 'employment' | 'files' | 'assets' | 'education' | 'reprimands'>('personal')
+interface MyCompanyDocument {
+  id: number
+  category: string
+  visibility: string
+  title: string
+  description: string | null
+  module_context: string | null
+  url: string
+}
+
+const companyDocumentCategoryLabels: Record<string, string> = {
+  sop: 'SOP',
+  handbook: 'Handbook',
+  work_guide: 'Panduan Kerja',
+  form_template: 'Template Formulir',
+  ktp: 'KTP',
+  bank_account: 'Rekening Bank',
+  employment_contract: 'Kontrak Kerja',
+  disciplinary: 'Dokumen Disiplin',
+}
+
+const activeTab = ref<'personal' | 'employment' | 'files' | 'assets' | 'education' | 'reprimands' | 'company-documents'>('personal')
 const profile = ref<EmployeeProfile | null>(null)
 const loading = ref(true)
 const errorMessage = ref('')
@@ -208,6 +229,11 @@ const reprimandsLoading = ref(false)
 const reprimandsLoaded = ref(false)
 const reprimandError = ref('')
 
+const companyDocuments = ref<MyCompanyDocument[]>([])
+const companyDocumentsLoading = ref(false)
+const companyDocumentsLoaded = ref(false)
+const companyDocumentError = ref('')
+
 const maritalStatusLabels: Record<string, string> = {
   single: 'Belum Menikah',
   married: 'Menikah',
@@ -239,30 +265,11 @@ function fillFormFromProfile(data: EmployeeProfile) {
 
 function normalizeProfile(data: any): EmployeeProfile {
   return {
-    id: data.id,
-    employee_number: data.employee_number,
-    first_name: data.first_name,
-    last_name: data.last_name ?? null,
+    ...data,
     photo_url: data.photo_url ?? null,
-    gender: data.gender,
-    birth_place: data.birth_place ?? null,
-    birth_date: data.birth_date ?? null,
-    marital_status: data.marital_status ?? null,
-    phone: data.phone ?? null,
-    personal_email: data.personal_email ?? null,
-    address: data.address ?? null,
-    emergency_contact_name: data.emergency_contact_name ?? null,
-    emergency_contact_phone: data.emergency_contact_phone ?? null,
-    national_id_number: data.national_id_number ?? null,
-    join_date: data.join_date ?? null,
-    company: data.company ?? null,
-    branch: data.branch ?? null,
-    department: data.department ?? null,
-    position: data.position ?? null,
-    jobLevel: data.job_level ?? data.jobLevel ?? null,
-    employmentType: data.employment_type ?? data.employmentType ?? null,
-    employmentStatus: data.employment_status ?? data.employmentStatus ?? null,
-    manager: data.manager ?? null,
+    jobLevel: data.job_level ?? null,
+    employmentType: data.employment_type ?? null,
+    employmentStatus: data.employment_status ?? null,
   }
 }
 
@@ -303,15 +310,12 @@ function refName(item: RefOption | null) {
 function formatDate(date: string | null) {
   if (!date) return '-'
 
-  const parsed = new Date(date)
-  if (Number.isNaN(parsed.getTime())) return date
-
   return new Intl.DateTimeFormat('id-ID', {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
     timeZone: 'Asia/Jakarta',
-  }).format(parsed)
+  }).format(new Date(date))
 }
 
 function formatFileSize(bytes: number) {
@@ -526,7 +530,21 @@ async function loadReprimands() {
   }
 }
 
-function selectTab(tab: 'personal' | 'employment' | 'files' | 'assets' | 'education' | 'reprimands') {
+async function loadCompanyDocuments() {
+  companyDocumentsLoading.value = true
+  companyDocumentError.value = ''
+  try {
+    const response = await apiClient.get('/api/my-company-documents')
+    companyDocuments.value = response.data.data
+    companyDocumentsLoaded.value = true
+  } catch {
+    companyDocumentError.value = 'Gagal memuat dokumen.'
+  } finally {
+    companyDocumentsLoading.value = false
+  }
+}
+
+function selectTab(tab: 'personal' | 'employment' | 'files' | 'assets' | 'education' | 'reprimands' | 'company-documents') {
   activeTab.value = tab
   if (tab === 'files' && !documentsLoaded.value) {
     loadDocuments()
@@ -540,6 +558,9 @@ function selectTab(tab: 'personal' | 'employment' | 'files' | 'assets' | 'educat
   }
   if (tab === 'reprimands' && !reprimandsLoaded.value) {
     loadReprimands()
+  }
+  if (tab === 'company-documents' && !companyDocumentsLoaded.value) {
+    loadCompanyDocuments()
   }
 }
 
@@ -558,20 +579,16 @@ onMounted(loadProfile)
     <template v-else-if="profile">
       <div class="rounded-xl bg-white p-5 shadow-sm">
         <div class="flex items-center gap-4">
-          <div class="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-primary-soft">
+          <div class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-soft text-lg font-semibold text-primary-dark">
             <img
               v-if="profile.photo_url"
               :src="profile.photo_url"
               :alt="`${profile.first_name} ${profile.last_name ?? ''}`"
               class="h-full w-full object-cover"
             />
-
-            <div
-              v-else
-              class="flex h-full w-full items-center justify-center text-lg font-semibold text-primary-dark"
-            >
+            <span v-else>
               {{ profile.first_name.charAt(0) }}{{ (profile.last_name ?? '').charAt(0) }}
-            </div>
+            </span>
           </div>
           <div>
             <p class="text-lg font-semibold text-slate-900">{{ profile.first_name }} {{ profile.last_name }}</p>
@@ -628,6 +645,14 @@ onMounted(loadProfile)
           @click="selectTab('reprimands')"
         >
           History
+        </button>
+        <button
+          type="button"
+          class="px-4 py-2 text-sm font-medium"
+          :class="activeTab === 'company-documents' ? 'border-b-2 border-primary text-primary' : 'text-slate-500 hover:text-slate-700'"
+          @click="selectTab('company-documents')"
+        >
+          Documents
         </button>
       </div>
 
@@ -925,7 +950,7 @@ onMounted(loadProfile)
         </div>
       </div>
 
-      <div v-else class="rounded-xl bg-white p-5 shadow-sm">
+      <div v-else-if="activeTab === 'reprimands'" class="rounded-xl bg-white p-5 shadow-sm">
         <p v-if="reprimandError" class="mb-3 text-sm text-red-600">{{ reprimandError }}</p>
         <div v-if="reprimandsLoading" class="text-sm text-slate-400">Memuat riwayat...</div>
         <div v-else-if="reprimands.length === 0" class="rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-400">
@@ -948,6 +973,32 @@ onMounted(loadProfile)
           </div>
         </div>
         <p class="mt-4 text-xs text-slate-400">Riwayat reprimand hanya bisa dibuat/diubah oleh HR/Admin dan tidak pernah dihapus permanen (void saja).</p>
+      </div>
+
+      <div v-else class="rounded-xl bg-white p-5 shadow-sm">
+        <p v-if="companyDocumentError" class="mb-3 text-sm text-red-600">{{ companyDocumentError }}</p>
+        <div v-if="companyDocumentsLoading" class="text-sm text-slate-400">Memuat dokumen...</div>
+        <div v-else-if="companyDocuments.length === 0" class="rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-400">
+          Belum ada dokumen yang terkait dengan Anda.
+        </div>
+        <div v-else class="divide-y divide-slate-100">
+          <div v-for="doc in companyDocuments" :key="doc.id" class="flex items-center justify-between py-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <p class="text-sm font-medium text-slate-900">{{ doc.title }}</p>
+                <span
+                  class="rounded-full px-2 py-0.5 text-xs font-medium"
+                  :class="doc.visibility === 'private' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'"
+                >
+                  {{ doc.visibility === 'private' ? 'Private' : 'Public' }}
+                </span>
+              </div>
+              <p class="text-xs text-slate-500">{{ companyDocumentCategoryLabels[doc.category] ?? doc.category }}<span v-if="doc.description"> &middot; {{ doc.description }}</span></p>
+            </div>
+            <a :href="doc.url" target="_blank" rel="noopener" class="text-sm font-medium text-primary hover:underline">Lihat</a>
+          </div>
+        </div>
+        <p class="mt-4 text-xs text-slate-400">Dokumen sensitif (KTP, rekening, kontrak, dsb) di sini hanya bisa diupload/diubah oleh HR/Admin.</p>
       </div>
     </template>
 

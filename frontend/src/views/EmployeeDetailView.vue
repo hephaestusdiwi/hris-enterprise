@@ -3,7 +3,30 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { ArrowLeft, Users, UserRound, GitBranch } from 'lucide-vue-next'
 import apiClient from '@/lib/axios'
+import { useAuthStore } from '@/stores/auth'
 import EmployeeMovementFormModal from '@/components/employee/EmployeeMovementFormModal.vue'
+import EmployeeReprimandFormModal from '@/components/employee/EmployeeReprimandFormModal.vue'
+
+const authStore = useAuthStore()
+
+interface EmployeeReprimand {
+  id: number
+  reprimand_type: string
+  title: string
+  date: string
+  reason: string
+  status: string
+  void_reason: string | null
+  attachment_url: string | null
+}
+
+const reprimandTypeLabels: Record<string, string> = {
+  verbal_warning: 'Teguran Lisan',
+  sp1: 'SP 1',
+  sp2: 'SP 2',
+  sp3: 'SP 3',
+  termination_notice: 'Surat Pemutusan',
+}
 
 interface HierarchyPerson {
   id: number
@@ -70,6 +93,49 @@ function onMovementCreated() {
   loadEmployee(employeeId.value) // refresh info dasar (nggak berubah sampai movement di-approve, tapi aman di-refresh)
 }
 
+const reprimands = ref<EmployeeReprimand[]>([])
+const reprimandsLoading = ref(false)
+const reprimandError = ref('')
+const showReprimandModal = ref(false)
+const voidingReprimandId = ref<number | null>(null)
+const voidReason = ref('')
+
+async function loadReprimands(id: number) {
+  reprimandsLoading.value = true
+  try {
+    const response = await apiClient.get(`/api/employees/${id}/reprimands`)
+    reprimands.value = response.data.data.data ?? response.data.data
+  } catch {
+    reprimandError.value = 'Gagal memuat riwayat reprimand.'
+  } finally {
+    reprimandsLoading.value = false
+  }
+}
+
+function onReprimandCreated() {
+  showReprimandModal.value = false
+  loadReprimands(employeeId.value)
+}
+
+function startVoid(reprimand: EmployeeReprimand) {
+  voidingReprimandId.value = reprimand.id
+  voidReason.value = ''
+}
+
+async function confirmVoid() {
+  if (!voidingReprimandId.value || !voidReason.value) return
+  reprimandError.value = ''
+  try {
+    await apiClient.post(`/api/employees/${employeeId.value}/reprimands/${voidingReprimandId.value}/void`, {
+      reason: voidReason.value,
+    })
+    voidingReprimandId.value = null
+    loadReprimands(employeeId.value)
+  } catch {
+    reprimandError.value = 'Gagal meng-void reprimand.'
+  }
+}
+
 const fullName = computed(() => {
   if (!employee.value) return ''
   return [employee.value.first_name, employee.value.last_name].filter(Boolean).join(' ')
@@ -118,12 +184,22 @@ function goToEmployee(id: number) {
   router.push({ name: 'employee-detail', params: { id } })
 }
 
-onMounted(() => loadEmployee(employeeId.value))
+onMounted(() => {
+  loadEmployee(employeeId.value)
+  if (authStore.permissions.includes('view employee reprimands')) {
+    loadReprimands(employeeId.value)
+  }
+})
 
 // Route param bisa berubah (klik Manager/Direct Report) tanpa component
 // di-unmount ulang oleh Vue Router — perlu di-watch supaya data ke-refresh.
 watch(employeeId, (id) => {
-  if (!Number.isNaN(id)) loadEmployee(id)
+  if (!Number.isNaN(id)) {
+    loadEmployee(id)
+    if (authStore.permissions.includes('view employee reprimands')) {
+      loadReprimands(id)
+    }
+  }
 })
 </script>
 
@@ -316,7 +392,67 @@ watch(employeeId, (id) => {
           </button>
         </div>
       </div>
+      <!-- Reprimand / SP -- history disipliner, "hapus" = void (bukan hard delete) -->
+      <div v-if="authStore.permissions.includes('view employee reprimands')" class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-slate-700">Reprimand / SP</h2>
+          <button
+            v-if="authStore.permissions.includes('create employee reprimands')"
+            type="button"
+            class="rounded-xl border border-red-100 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50"
+            @click="showReprimandModal = true"
+          >
+            Berikan Reprimand
+          </button>
+        </div>
+
+        <p v-if="reprimandError" class="mt-2 text-xs text-red-600">{{ reprimandError }}</p>
+        <div v-if="reprimandsLoading" class="mt-3 text-sm text-slate-400">Memuat...</div>
+        <div v-else-if="reprimands.length === 0" class="mt-3 rounded-xl bg-slate-50 p-4 text-center text-sm text-slate-400">
+          Belum ada riwayat reprimand.
+        </div>
+        <div v-else class="mt-3 divide-y divide-slate-100">
+          <div v-for="item in reprimands" :key="item.id" class="py-3">
+            <div class="flex items-center justify-between">
+              <p class="text-sm font-medium text-slate-900">{{ reprimandTypeLabels[item.reprimand_type] ?? item.reprimand_type }} &middot; {{ item.title }}</p>
+              <span
+                class="rounded-full px-2 py-0.5 text-xs font-medium"
+                :class="item.status === 'void' ? 'bg-slate-100 text-slate-500' : 'bg-red-50 text-red-600'"
+              >
+                {{ item.status === 'void' ? 'Void' : 'Aktif' }}
+              </span>
+            </div>
+            <p class="mt-0.5 text-xs text-slate-500">{{ item.date }} &middot; {{ item.reason }}</p>
+            <p v-if="item.status === 'void' && item.void_reason" class="mt-0.5 text-xs italic text-slate-400">Dibatalkan: {{ item.void_reason }}</p>
+            <a v-if="item.attachment_url" :href="item.attachment_url" target="_blank" rel="noopener" class="mt-0.5 block text-xs font-medium text-primary hover:underline">Lihat lampiran</a>
+
+            <button
+              v-if="item.status === 'active' && authStore.permissions.includes('delete employee reprimands') && voidingReprimandId !== item.id"
+              type="button"
+              class="mt-1 text-xs font-medium text-slate-500 hover:underline"
+              @click="startVoid(item)"
+            >
+              Void
+            </button>
+            <div v-if="voidingReprimandId === item.id" class="mt-2 flex items-center gap-2">
+              <input v-model="voidReason" type="text" placeholder="Alasan void..." class="flex-1 rounded-xl border border-slate-200 px-3 py-1.5 text-xs" />
+              <button type="button" :disabled="!voidReason" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50" @click="confirmVoid">
+                Konfirmasi
+              </button>
+              <button type="button" class="text-xs text-slate-400 hover:underline" @click="voidingReprimandId = null">Batal</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </template>
+
+    <EmployeeReprimandFormModal
+      v-if="showReprimandModal && employee"
+      :employee-id="employee.id"
+      :employee-name="fullName"
+      @close="showReprimandModal = false"
+      @created="onReprimandCreated"
+    />
 
     <EmployeeMovementFormModal
       v-if="movementModalType && employee"

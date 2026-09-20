@@ -19,6 +19,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('grooming-self')->group(function () {
         Route::get('/active-standard', [GroomingSelfController::class, 'activeStandard']);
         Route::get('/my-history', [GroomingSelfController::class, 'myHistory']);
+        Route::get('/monitoring-summary', [GroomingSelfController::class, 'monitoringSummary']);
         Route::get('/', [GroomingSelfController::class, 'index']);
         Route::post('/', [GroomingSelfController::class, 'store']);
         Route::get('/{groomingSelfSubmission}', [GroomingSelfController::class, 'show']);
@@ -27,6 +28,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('grooming-store')->group(function () {
         Route::get('/active-standard', [GroomingStoreController::class, 'activeStandard']);
         Route::get('/accessible-branches', [GroomingStoreController::class, 'accessibleBranches']);
+        Route::get('/monitoring-summary', [GroomingStoreController::class, 'monitoringSummary']);
         Route::get('/', [GroomingStoreController::class, 'index']);
         Route::post('/', [GroomingStoreController::class, 'store']);
         Route::get('/{groomingStoreSubmission}', [GroomingStoreController::class, 'show']);

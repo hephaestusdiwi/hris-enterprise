@@ -44,6 +44,7 @@ Route::middleware('auth:sanctum')->group(function () {
     require __DIR__.'/../app/Modules/EmployeeEducation/Routes/api.php';
     require __DIR__.'/../app/Modules/EmployeeExperience/Routes/api.php';
     require __DIR__.'/../app/Modules/EmployeeReprimand/Routes/api.php';
+    require __DIR__.'/../app/Modules/CompanyDocument/Routes/api.php';
     require __DIR__.'/../app/Modules/Holiday/Routes/api.php';
     require __DIR__.'/../app/Modules/JobLevel/Routes/api.php';
     require __DIR__.'/../app/Modules/Shift/Routes/api.php';

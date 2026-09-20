@@ -14,3 +14,9 @@ Route::middleware('permission:view finance reports')
 
 Route::middleware('permission:export finance reports')
     ->get('/reports/finance/outstanding/export', [FinanceReportController::class, 'exportOutstanding']);
+
+Route::middleware('permission:view finance reports')
+    ->get('/reports/finance/approval-aging', [FinanceReportController::class, 'approvalAging']);
+
+Route::middleware('permission:export finance reports')
+    ->get('/reports/finance/approval-aging/export', [FinanceReportController::class, 'exportApprovalAging']);

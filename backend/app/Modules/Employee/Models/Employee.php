@@ -179,4 +179,9 @@ class Employee extends Model
     {
         return $this->hasMany(\App\Modules\EmployeeReprimand\Models\EmployeeReprimand::class);
     }
+
+    public function companyDocuments(): HasMany
+    {
+        return $this->hasMany(\App\Modules\CompanyDocument\Models\CompanyDocument::class);
+    }
 }

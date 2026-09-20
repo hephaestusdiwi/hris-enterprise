@@ -33,13 +33,19 @@ class FaceIdentificationStrategy implements AttendanceIdentificationStrategyInte
             throw new AttendanceValidationException('Verifikasi wajah gagal: terindikasi bukan wajah asli (kemungkinan foto/spoofing).');
         }
 
+        $activeModel = config('face_recognition.active_model');
+
         $candidateEmployees = Employee::where('company_id', $device->company_id)
             ->when($device->branch_id, fn ($query, $branchId) => $query->where('branch_id', $branchId))
             ->whereNotNull('face_embedding')
+            ->where('face_embedding_model', $activeModel)
             ->get(['id', 'face_embedding']);
 
         if ($candidateEmployees->isEmpty()) {
-            throw new AttendanceValidationException('Belum ada employee dengan wajah terdaftar di device ini.');
+            throw new AttendanceValidationException(
+                'Belum ada employee dengan wajah terdaftar di device ini menggunakan model pengenalan wajah terbaru. '
+                . 'Employee yang wajahnya masih terdaftar dengan model lama perlu mendaftar ulang (menu Daftarkan Wajah).'
+            );
         }
 
         $candidates = $candidateEmployees->map(fn (Employee $employee) => [
