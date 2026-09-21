@@ -5,6 +5,7 @@ namespace App\Modules\ApprovalFlow\Requests;
 use App\Modules\ApprovalFlow\Enums\ApproverType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UpdateApprovalStepRequest extends FormRequest
 {
@@ -40,5 +41,24 @@ class UpdateApprovalStepRequest extends FormRequest
             ],
             'is_active' => ['boolean'],
         ];
+    }
+
+    /** Lihat StoreApprovalStepRequest::withValidator() — guard yang sama. */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $approvalFlow = $this->route('approvalFlow');
+
+            if (
+                $approvalFlow
+                && $approvalFlow->approval_type === 'payroll'
+                && $this->input('approver_type') === ApproverType::DirectManager->value
+            ) {
+                $validator->errors()->add(
+                    'approver_type',
+                    'Approver type Direct Manager tidak bisa dipakai untuk Approval Flow Payroll — Payroll Run tidak punya employee subject, approval-nya tidak akan pernah bisa diputuskan siapa pun. Gunakan Specific Employee atau Specific Role.'
+                );
+            }
+        });
     }
 }

@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Building2, MapPin, Network, Briefcase, UserRound,
   CalendarDays, TrendingUp, Clock, CalendarClock, Fingerprint, ChevronDown, GitBranch, CheckCircle2, Layers, CalendarRange, BarChart3,
   Wallet, Palmtree, KeyRound, Send, ClipboardCheck, UserCircle, Gift, ScanFace, MinusCircle, HandCoins, Receipt, BriefcaseBusiness, Megaphone, Landmark,
-  ShieldCheck, WalletCards, History, FileText, Clock3, Repeat, ShieldOff, ClipboardList,
+  ShieldCheck, WalletCards, History, FileText, Clock3, Repeat, ShieldOff, ClipboardList, Bell, ScrollText,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
@@ -34,6 +34,7 @@ const standaloneItems: MenuItem[] = [
   { name: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: '/', permission: null },
   { name: 'my-profile', label: 'My Profile', icon: UserCircle, to: '/my-profile', permission: null },
   { name: 'announcements.inbox', label: 'Announcement', icon: Megaphone, to: '/announcements', permission: null },
+  { name: 'my-company-obligation-reminders', label: 'Reminder Saya', icon: Bell, to: '/my-company-obligation-reminders', permission: null },
 ]
 
 const groups: MenuGroup[] = [
@@ -47,6 +48,7 @@ const groups: MenuGroup[] = [
       { name: 'departments', label: 'Department', icon: Network, to: '/departments', permission: 'view departments' },
       { name: 'positions', label: 'Position', icon: Briefcase, to: '/positions', permission: 'view positions' },
       { name: 'job-levels', label: 'Job Level', icon: TrendingUp, to: '/job-levels', permission: 'view job levels' },
+      { name: 'company-obligations', label: 'Company Obligations', icon: ScrollText, to: '/company-obligations', permission: 'view company obligations' },
     ],
   },
   {
@@ -69,6 +71,7 @@ const groups: MenuGroup[] = [
         permission: 'view employees',
       },
       { name: 'employee-movements', label: 'Employee Movement', icon: GitBranch, to: '/employee-movements', permission: 'view employee movements' },
+      { name: 'company-documents', label: 'Document Library', icon: FileText, to: '/company-documents', permission: 'view company documents' },
     ],
   },
   {

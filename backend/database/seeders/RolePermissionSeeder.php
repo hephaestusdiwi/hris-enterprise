@@ -251,6 +251,10 @@ class RolePermissionSeeder extends Seeder
             'view new joiners',
             'manage new joiners',
             'proceed as employee',
+            'view company obligations',
+            'create company obligations',
+            'edit company obligations',
+            'delete company obligations',
         ];
 
         foreach ($permissions as $permission) {
@@ -418,6 +422,10 @@ class RolePermissionSeeder extends Seeder
             'view new joiners',
             'manage new joiners',
             'proceed as employee',
+            'view company obligations',
+            'create company obligations',
+            'edit company obligations',
+            'delete company obligations',
         ]);
 
         $employee = Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'web']);

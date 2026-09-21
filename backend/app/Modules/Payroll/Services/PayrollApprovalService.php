@@ -4,12 +4,14 @@ namespace App\Modules\Payroll\Services;
 
 use App\Models\User;
 use App\Modules\ApprovalFlow\DataTransferObjects\ApprovalScope;
+use App\Modules\ApprovalFlow\Enums\ApproverType;
 use App\Modules\ApprovalFlow\Services\ApprovalFlowResolver;
 use App\Modules\Attendance\Services\ApprovalStepApproverResolver;
 use App\Modules\Payroll\Enums\PayrollApprovalRequestStatus;
 use App\Modules\Payroll\Enums\PayrollApprovalStepDecisionStatus;
 use App\Modules\Payroll\Enums\PayrollRunStatus;
 use App\Modules\Payroll\Exceptions\PayrollApprovalException;
+use App\Modules\Payroll\Exceptions\PayrollValidationException;
 use App\Modules\Payroll\Models\PayrollApprovalRequest;
 use App\Modules\Payroll\Models\PayrollApprovalStepDecision;
 use App\Modules\Payroll\Models\PayrollRun;
@@ -52,6 +54,21 @@ class PayrollApprovalService
             $this->autoApprove($payrollRun);
 
             return;
+        }
+
+        // Guard defensif (bukan cuma dicegah di Store/UpdateApprovalStepRequest
+        // saat step dibuat) — nangkep juga data yang sudah kepalang tersimpan
+        // sebelum validasi ini ada, atau kepasang lewat jalur lain (seeder,
+        // dst). PayrollRun tidak pernah punya subject Employee (lihat decide()
+        // di bawah), jadi step DirectManager di sini PASTI unresolvable —
+        // mending gagal keras & jelas sekarang daripada nyangkut pending_approval
+        // selamanya tanpa ada yang bisa mutusin.
+        $misconfiguredStep = $steps->first(fn ($step) => $step->approver_type === ApproverType::DirectManager);
+
+        if ($misconfiguredStep) {
+            throw new PayrollValidationException(
+                "Approval Flow \"{$approvalFlow->name}\" salah dikonfigurasi: step \"{$misconfiguredStep->name}\" pakai approver type Direct Manager, padahal Payroll Run tidak punya employee subject sehingga tidak akan pernah bisa diputuskan siapa pun. Perbaiki dulu step ini (pakai Specific Employee atau Specific Role) sebelum request approval."
+            );
         }
 
         $request = PayrollApprovalRequest::create([
@@ -105,12 +122,15 @@ class PayrollApprovalService
     }
 
     /**
-     * Tidak ada subject Employee sama sekali di sini — kalau step-nya
-     * ternyata approver_type=DirectManager (konfigurasi yang salah untuk
-     * flow Payroll), resolver bakal balikin array kosong dan approval ini
-     * ga akan pernah bisa diputuskan siapa pun. Itu perilaku yang disengaja
-     * (lihat proposal arsitektur) — bukan bug, tapi sinyal HR salah
-     * konfigurasi approval flow untuk Payroll.
+     * Tidak ada subject Employee sama sekali di sini — PayrollRun bukan
+     * Employee. Kalau ada step approver_type=DirectManager di flow ini,
+     * resolver bakal balikin array kosong (unresolvable). Sejak fix
+     * DirectManager-untuk-Payroll ini SEHARUSNYA sudah tidak mungkin terjadi:
+     * initiate() menolak keras di awal (PayrollValidationException) sebelum
+     * PayrollApprovalRequest dibuat, dan Store/UpdateApprovalStepRequest
+     * menolak konfigurasi ini dari sumbernya. Check di resolveApproverUserIds
+     * tetap array kosong sebagai defense-in-depth, bukan lagi "sinyal salah
+     * konfigurasi yang dibiarkan".
      */
     public function decide(
         PayrollApprovalStepDecision $decision,

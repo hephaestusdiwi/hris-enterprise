@@ -225,6 +225,12 @@ class PayrollApprovalTest extends TestCase
     }
 
     // 4. Payroll tidak menggunakan DirectManager — approval macet (tidak ada yang eligible), bukan salah proxy.
+    // Backlog fix: DirectManager buat Payroll sekarang DICEGAH KERAS di
+    // request-approval (bukan lagi silently pending forever lalu baru ketahuan
+    // pas decide() — lihat PayrollApprovalService::initiate() guard baru).
+    // Step ini dibuat langsung lewat ApprovalStep::create() (bypass Store/
+    // UpdateApprovalStepRequest) justru buat membuktikan defense-in-depth di
+    // initiate() menangkap juga data yang lolos dari jalur lain.
     public function test_payroll_never_resolves_direct_manager(): void
     {
         $manager = Employee::factory()->create(['company_id' => $this->company->id]);
@@ -235,22 +241,23 @@ class PayrollApprovalTest extends TestCase
             'company_id' => $this->company->id, 'name' => 'DM Flow', 'code' => 'dm-'.uniqid(),
             'approval_type' => 'payroll', 'is_active' => true,
         ]);
-        $step = ApprovalStep::create([
+        ApprovalStep::create([
             'approval_flow_id' => $flow->id, 'sequence' => 1, 'name' => 'DM Step',
             'approver_type' => ApproverType::DirectManager->value, 'is_active' => true,
         ]);
 
         $run = $this->createDraftRun();
         $this->proceed($run);
-        $this->actingAs($this->admin)->postJson("/api/payroll-runs/{$run->id}/request-approval")->assertOk();
 
-        $decision = $run->approvalRequest->stepDecisions()->first();
-
-        // Bahkan manager beneran pun TIDAK eligible, karena Payroll tidak pernah
-        // ngirim subject employee — resolveApproverUserIds(step, null) buat DirectManager selalu [].
-        $this->actingAs($managerUser)
-            ->postJson("/api/payroll-approvals/{$decision->id}/decide", ['action' => 'approve'])
+        // request-approval sekarang menolak keras (422) SEBELUM PayrollApprovalRequest
+        // dibuat sama sekali — run tetap Processed, bukan nyangkut di pending_approval.
+        $this->actingAs($this->admin)
+            ->postJson("/api/payroll-runs/{$run->id}/request-approval")
             ->assertStatus(422);
+
+        $run->refresh();
+        $this->assertEquals('processed', $run->status->value);
+        $this->assertNull($run->approvalRequest);
     }
 
     // 5. SpecificRole approver dapat resolve.

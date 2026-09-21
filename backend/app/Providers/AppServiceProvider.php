@@ -81,6 +81,10 @@ class AppServiceProvider extends ServiceProvider
             \App\Modules\EmployeeMovement\Contracts\EmployeeMovementScopeInterface::class,
             \App\Modules\EmployeeMovement\Services\EmployeeMovementScope::class,
         );
+        $this->app->bind(
+            \App\Modules\CompanyObligation\Contracts\CompanyObligationScopeInterface::class,
+            \App\Modules\CompanyObligation\Services\CompanyObligationScope::class,
+        );
 
         $this->app->bind(BpjsRateResolverInterface::class, BpjsRateResolver::class);
         $this->app->bind(BpjsJkkRiskClassResolverInterface::class, BpjsJkkRiskClassResolver::class);
@@ -133,6 +137,11 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Support\Facades\Gate::policy(
             \App\Modules\HiringRequisition\Models\HiringRequisition::class,
             \App\Modules\HiringRequisition\Policies\HiringRequisitionPolicy::class,
+        );
+
+        \Illuminate\Support\Facades\Gate::policy(
+            \App\Modules\CompanyObligation\Models\CompanyObligation::class,
+            \App\Modules\CompanyObligation\Policies\CompanyObligationPolicy::class,
         );
     }
 }

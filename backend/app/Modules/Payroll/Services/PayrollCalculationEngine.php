@@ -191,6 +191,7 @@ class PayrollCalculationEngine implements PayrollCalculationEngineInterface
         // stateless, tidak ada perubahan di app/Modules/Pph21 sama sekali.
         $taxAmount = '0.00';
         $isFinalTaxPeriod = $this->isFinalTaxPeriod($employee, $payrollRun);
+        $annualReconciliation = null;
 
         if ($isFinalTaxPeriod) {
             $priorMonths = $this->historyReader->priorMonthsInYear($payrollRun->company_id, $employee->id, $payrollRun->period_year, $payrollRun->period_month);
@@ -198,6 +199,7 @@ class PayrollCalculationEngine implements PayrollCalculationEngineInterface
 
             if ($result) {
                 $taxAmount = $result->finalPeriodAdjustment;
+                $annualReconciliation = $result;
                 $lines[] = new PayslipLineDraft(PayslipLineType::Tax, PayslipLineSource::Pph21, 'PPh 21 (Rekonsiliasi Tahunan)', $taxAmount);
             }
         } else {
@@ -253,6 +255,7 @@ class PayrollCalculationEngine implements PayrollCalculationEngineInterface
             loanDeductionTotal: $loanDeductionTotal,
             netPay: $netPay,
             lines: $lines,
+            annualReconciliation: $annualReconciliation,
         );
     }
 

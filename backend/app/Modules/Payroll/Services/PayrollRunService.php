@@ -12,6 +12,7 @@ use App\Modules\Payroll\Contracts\PayrollCalculationEngineInterface;
 use App\Modules\Payroll\Enums\PayrollRunStatus;
 use App\Modules\Payroll\Enums\PayrollRunType;
 use App\Modules\Payroll\Exceptions\PayrollValidationException;
+use App\Modules\Payroll\Models\EmployeeAnnualTaxReconciliation;
 use App\Modules\Payroll\Models\EmployeeNonRegularInput;
 use App\Modules\Payroll\Models\Payslip;
 use App\Modules\Payroll\Models\PayslipLine;
@@ -143,6 +144,34 @@ class PayrollRunService
                         'label' => $line->label,
                         'amount' => $line->amount,
                         'reference_id' => $line->referenceId,
+                    ]);
+                }
+
+                // Fase 8 — persist breakdown rekonsiliasi tahunan PERSIS di titik
+                // yang sama Payslip ditulis, supaya otomatis ikut ter-versioning
+                // lewat payslip_id tiap kali run ini direvisi/dihitung ulang.
+                // calculateDraftsForRun() sendiri TETAP murni kalkulasi (tidak
+                // menulis DB) — ini satu-satunya tempat sisi tulis untuk draft.
+                if ($draft->annualReconciliation) {
+                    $reconciliation = $draft->annualReconciliation;
+
+                    EmployeeAnnualTaxReconciliation::create([
+                        'employee_id' => $employeeId,
+                        'payslip_id' => $payslip->id,
+                        'payroll_run_id' => $run->id,
+                        'tax_year' => $run->period_year,
+                        'tax_method_applied' => $reconciliation->taxMethodApplied->value,
+                        'total_gross_annual' => $reconciliation->totalGrossAnnual,
+                        'position_cost_deduction' => $reconciliation->positionCostDeduction,
+                        'pension_deduction' => $reconciliation->pensionDeduction,
+                        'ptkp_amount' => $reconciliation->ptkpAmount,
+                        'net_annual_income' => $reconciliation->netAnnualIncome,
+                        'pkp' => $reconciliation->pkp,
+                        'annual_tax_pasal17' => $reconciliation->annualTaxPasal17,
+                        'total_withheld_prior_months' => $reconciliation->totalWithheldPriorMonths,
+                        'final_period_adjustment' => $reconciliation->finalPeriodAdjustment,
+                        'gross_up_allowance' => $reconciliation->grossUpAllowance,
+                        'no_tax_id_surcharge_applied' => $reconciliation->noTaxIdSurchargeApplied,
                     ]);
                 }
             }

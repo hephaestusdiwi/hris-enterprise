@@ -44,6 +44,7 @@ interface ApprovalFlowDetailData {
   code: string
   description: string | null
   is_active: boolean
+  approval_type: string
   company: { id: number; name: string }
   branch: { id: number; name: string } | null
   department: { id: number; name: string } | null
@@ -58,6 +59,12 @@ const router = useRouter()
 const flowId = computed(() => Number(props.id ?? route.params.id))
 
 const flow = ref<ApprovalFlowDetailData | null>(null)
+
+// PayrollRun tidak pernah punya subject Employee (lihat PayrollApprovalService)
+// — Direct Manager MEMANG tidak bisa dipakai buat flow approval_type=payroll,
+// backend menolak keras (422). Disembunyikan di sini murni supaya HR gak
+// sempat coba pilih opsi yang pasti ditolak.
+const isPayrollFlow = computed(() => flow.value?.approval_type === 'payroll')
 const employees = ref<Employee[]>([])
 const roles = ref<Role[]>([])
 const loading = ref(true)
@@ -121,7 +128,7 @@ function resetStepForm() {
   stepForm.id = 0
   stepForm.sequence = (flow.value?.steps.length ?? 0) + 1
   stepForm.name = ''
-  stepForm.approver_type = 'direct_manager'
+  stepForm.approver_type = isPayrollFlow.value ? 'specific_role' : 'direct_manager'
   stepForm.approver_employee_id = null
   stepForm.approver_role_id = null
   stepForm.is_active = true
@@ -403,10 +410,13 @@ onMounted(() => {
                 v-model="stepForm.approver_type"
                 class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
               >
-                <option value="direct_manager">Direct Manager</option>
+                <option value="direct_manager" :disabled="isPayrollFlow">Direct Manager</option>
                 <option value="specific_employee">Specific Employee</option>
                 <option value="specific_role">Specific Role</option>
               </select>
+              <p v-if="isPayrollFlow" class="mt-1 text-xs text-amber-600">
+                Direct Manager tidak tersedia untuk Approval Flow Payroll — Payroll Run tidak punya employee subject, gunakan Specific Employee atau Specific Role.
+              </p>
             </div>
 
             <div v-if="stepForm.approver_type === 'specific_employee'">

@@ -10,6 +10,7 @@ import EmployeeDetailView from '@/views/EmployeeDetailView.vue'
 import EmployeeProfileView from '@/views/EmployeeProfileView.vue'
 import ContractProbationListView from '@/views/ContractProbationListView.vue'
 import EmployeeMovementListView from '@/views/EmployeeMovementListView.vue'
+import CompanyDocumentLibraryView from '@/views/CompanyDocumentLibraryView.vue'
 import AnnouncementManagementView from '@/views/AnnouncementManagementView.vue'
 import AnnouncementInboxView from '@/views/AnnouncementInboxView.vue'
 import HolidayListView from '@/views/HolidayListView.vue'
@@ -63,6 +64,8 @@ import ExpensePolicyAssignmentListView from '@/views/ExpensePolicyAssignmentList
 import MyExpenseClaimView from '@/views/MyExpenseClaimView.vue'
 import ExpenseClaimListView from '@/views/ExpenseClaimListView.vue'
 import ExpenseClaimApprovalListView from '@/views/ExpenseClaimApprovalListView.vue'
+import CompanyObligationListView from '@/views/CompanyObligationListView.vue'
+import MyCompanyObligationReminderView from '@/views/MyCompanyObligationReminderView.vue'
 import BpjsSettingView from '@/views/BpjsSettingView.vue'
 import EmployeeBpjsListView from '@/views/EmployeeBpjsListView.vue'
 import TaxSettingsView from '@/views/TaxSettingsView.vue'
@@ -448,6 +451,18 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/company-obligations',
+      name: 'company-obligations.list',
+      component: CompanyObligationListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/my-company-obligation-reminders',
+      name: 'my-company-obligation-reminders.list',
+      component: MyCompanyObligationReminderView,
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/bpjs/settings',
       name: 'bpjs-settings',
       component: BpjsSettingView,
@@ -547,6 +562,12 @@ const router = createRouter({
       path: '/employee-movements',
       name: 'employee-movements',
       component: EmployeeMovementListView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/company-documents',
+      name: 'company-documents',
+      component: CompanyDocumentLibraryView,
       meta: { requiresAuth: true },
     },
     {

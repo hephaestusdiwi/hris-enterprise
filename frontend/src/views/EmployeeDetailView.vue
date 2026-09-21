@@ -6,6 +6,28 @@ import apiClient from '@/lib/axios'
 import { useAuthStore } from '@/stores/auth'
 import EmployeeMovementFormModal from '@/components/employee/EmployeeMovementFormModal.vue'
 import EmployeeReprimandFormModal from '@/components/employee/EmployeeReprimandFormModal.vue'
+import EmployeeCompanyDocumentFormModal from '@/components/employee/EmployeeCompanyDocumentFormModal.vue'
+
+interface EmployeeCompanyDocument {
+  id: number
+  category: string
+  visibility: string
+  title: string
+  description: string | null
+  module_context: string | null
+  url: string
+}
+
+const companyDocumentCategoryLabels: Record<string, string> = {
+  sop: 'SOP',
+  handbook: 'Handbook',
+  work_guide: 'Panduan Kerja',
+  form_template: 'Template Formulir',
+  ktp: 'KTP',
+  bank_account: 'Rekening Bank',
+  employment_contract: 'Kontrak Kerja',
+  disciplinary: 'Dokumen Disiplin',
+}
 
 const authStore = useAuthStore()
 
@@ -136,6 +158,37 @@ async function confirmVoid() {
   }
 }
 
+const companyDocuments = ref<EmployeeCompanyDocument[]>([])
+const companyDocumentsLoading = ref(false)
+const companyDocumentError = ref('')
+const showCompanyDocumentModal = ref(false)
+
+async function loadCompanyDocuments(id: number) {
+  companyDocumentsLoading.value = true
+  try {
+    const response = await apiClient.get(`/api/employees/${id}/company-documents`)
+    companyDocuments.value = response.data.data
+  } catch {
+    companyDocumentError.value = 'Gagal memuat dokumen.'
+  } finally {
+    companyDocumentsLoading.value = false
+  }
+}
+
+function onCompanyDocumentCreated() {
+  showCompanyDocumentModal.value = false
+  loadCompanyDocuments(employeeId.value)
+}
+
+async function deleteCompanyDocument(doc: EmployeeCompanyDocument) {
+  try {
+    await apiClient.delete(`/api/employees/${employeeId.value}/company-documents/${doc.id}`)
+    companyDocuments.value = companyDocuments.value.filter((d) => d.id !== doc.id)
+  } catch {
+    companyDocumentError.value = 'Gagal menghapus dokumen (cek permission Anda untuk kategori ini).'
+  }
+}
+
 const fullName = computed(() => {
   if (!employee.value) return ''
   return [employee.value.first_name, employee.value.last_name].filter(Boolean).join(' ')
@@ -189,6 +242,7 @@ onMounted(() => {
   if (authStore.permissions.includes('view employee reprimands')) {
     loadReprimands(employeeId.value)
   }
+  loadCompanyDocuments(employeeId.value)
 })
 
 // Route param bisa berubah (klik Manager/Direct Report) tanpa component
@@ -199,6 +253,7 @@ watch(employeeId, (id) => {
     if (authStore.permissions.includes('view employee reprimands')) {
       loadReprimands(id)
     }
+    loadCompanyDocuments(id)
   }
 })
 </script>
@@ -444,6 +499,48 @@ watch(employeeId, (id) => {
           </div>
         </div>
       </div>
+
+      <!-- Documents -- Hidden/Private (KTP, rekening, kontrak, dsb) & Open/Public
+           yang terkait employee ini. List sudah difilter server-side sesuai
+           permission view per kategori (lihat CompanyDocumentController::indexForEmployee) -->
+      <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-slate-700">Documents</h2>
+          <button
+            type="button"
+            class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+            @click="showCompanyDocumentModal = true"
+          >
+            Upload Dokumen
+          </button>
+        </div>
+
+        <p v-if="companyDocumentError" class="mt-2 text-xs text-red-600">{{ companyDocumentError }}</p>
+        <div v-if="companyDocumentsLoading" class="mt-3 text-sm text-slate-400">Memuat...</div>
+        <div v-else-if="companyDocuments.length === 0" class="mt-3 rounded-xl bg-slate-50 p-4 text-center text-sm text-slate-400">
+          Belum ada dokumen (atau Anda tidak punya permission untuk melihat kategori yang ada).
+        </div>
+        <div v-else class="mt-3 divide-y divide-slate-100">
+          <div v-for="doc in companyDocuments" :key="doc.id" class="flex items-center justify-between py-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <p class="text-sm font-medium text-slate-900">{{ doc.title }}</p>
+                <span
+                  class="rounded-full px-2 py-0.5 text-xs font-medium"
+                  :class="doc.visibility === 'private' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'"
+                >
+                  {{ doc.visibility === 'private' ? 'Private' : 'Public' }}
+                </span>
+              </div>
+              <p class="text-xs text-slate-500">{{ companyDocumentCategoryLabels[doc.category] ?? doc.category }}</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <a :href="doc.url" target="_blank" rel="noopener" class="text-sm font-medium text-primary hover:underline">Lihat</a>
+              <button type="button" class="text-sm font-medium text-red-600 hover:underline" @click="deleteCompanyDocument(doc)">Hapus</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </template>
 
     <EmployeeReprimandFormModal
@@ -452,6 +549,14 @@ watch(employeeId, (id) => {
       :employee-name="fullName"
       @close="showReprimandModal = false"
       @created="onReprimandCreated"
+    />
+
+    <EmployeeCompanyDocumentFormModal
+      v-if="showCompanyDocumentModal && employee"
+      :employee-id="employee.id"
+      :employee-name="fullName"
+      @close="showCompanyDocumentModal = false"
+      @created="onCompanyDocumentCreated"
     />
 
     <EmployeeMovementFormModal
