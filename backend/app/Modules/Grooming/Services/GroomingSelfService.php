@@ -3,16 +3,18 @@
 namespace App\Modules\Grooming\Services;
 
 use App\Modules\Employee\Models\Employee;
+use App\Modules\Grooming\Concerns\SavesGroomingPhoto;
 use App\Modules\Grooming\Enums\GroomingResult;
 use App\Modules\Grooming\Enums\GroomingType;
 use App\Modules\Grooming\Exceptions\GroomingValidationException;
 use App\Modules\Grooming\Models\GroomingSelfSubmission;
 use App\Modules\Grooming\Models\GroomingStandard;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class GroomingSelfService
 {
+    use SavesGroomingPhoto;
+
     public function __construct(
         private GroomingStandardService $standardService,
     ) {
@@ -61,7 +63,7 @@ class GroomingSelfService
             }
         }
 
-        $photoPath = $this->savePhoto($employee, $photoBase64);
+        $photoPath = $this->saveGroomingPhoto($photoBase64, "grooming-self/{$employee->id}");
 
         return DB::transaction(function () use ($employee, $standard, $answersByItemId, $overallResult, $photoPath) {
             $submission = GroomingSelfSubmission::create([
@@ -88,32 +90,5 @@ class GroomingSelfService
 
             return $submission->load('answers.item');
         });
-    }
-
-    /**
-     * Simpan foto base64 sebagai webp — pola identik dengan
-     * AttendanceService::resolveAndSavePhoto(), disk public, biar konsisten
-     * dengan bagaimana foto Face Attendance sudah ditangani di project ini.
-     */
-    private function savePhoto(Employee $employee, string $photoBase64): string
-    {
-        $raw = preg_replace('/^data:image\/\w+;base64,/', '', $photoBase64);
-        $decoded = base64_decode($raw);
-        $image = @imagecreatefromstring($decoded);
-
-        if (! $image) {
-            throw new GroomingValidationException('Format foto tidak valid.');
-        }
-
-        imagepalettetotruecolor($image);
-        imagealphablending($image, true);
-        imagesavealpha($image, true);
-
-        $filename = "grooming-self/{$employee->id}/".now()->timestamp.'.webp';
-        Storage::disk('public')->makeDirectory("grooming-self/{$employee->id}");
-        imagewebp($image, Storage::disk('public')->path($filename), 85);
-        imagedestroy($image);
-
-        return $filename;
     }
 }

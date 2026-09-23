@@ -8,7 +8,7 @@ export interface Branch {
   name: string
 }
 
-export type BpjsProgram = 'kesehatan' | 'jht' | 'jkk' | 'jkm'
+export type BpjsProgram = 'kesehatan' | 'jht' | 'jkk' | 'jkm' | 'jp'
 
 export interface RateConfig {
   id: number
@@ -42,8 +42,10 @@ export interface Registration {
 
 export type CostBearer = 'employee_borne' | 'company_borne'
 export type JhtCostBearer = CostBearer | 'not_participating'
+export type JpCostBearer = CostBearer | 'not_participating'
 
 export interface DefaultPolicySetting {
   default_health_cost_bearer: CostBearer
   default_jht_cost_bearer: JhtCostBearer
+  default_jp_cost_bearer: JpCostBearer
 }

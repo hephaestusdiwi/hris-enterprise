@@ -4,6 +4,7 @@ namespace App\Modules\Grooming\Services;
 
 use App\Modules\Branch\Models\Branch;
 use App\Modules\Employee\Models\Employee;
+use App\Modules\Grooming\Concerns\SavesGroomingPhoto;
 use App\Modules\Grooming\Enums\GroomingResult;
 use App\Modules\Grooming\Enums\GroomingType;
 use App\Modules\Grooming\Exceptions\GroomingValidationException;
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\DB;
 
 class GroomingStoreService
 {
+    use SavesGroomingPhoto;
+
     public function __construct(
         private GroomingStandardService $standardService,
     ) {
@@ -24,7 +27,7 @@ class GroomingStoreService
     }
 
     /**
-     * @param array<int, array{grooming_standard_item_id: int, result: string, note?: ?string}> $answers
+     * @param array<int, array{grooming_standard_item_id: int, result: string, note?: ?string, photo?: ?string}> $answers
      */
     public function submit(Branch $branch, Employee $submitter, array $answers): GroomingStoreSubmission
     {
@@ -43,6 +46,15 @@ class GroomingStoreService
             $answer = $answersByItemId->get($item->id);
             if (! $answer) {
                 continue;
+            }
+
+            // Validasi kelengkapan dulu (foto + catatan) sebelum ada apapun
+            // yang ditulis ke DB — supaya submission gagal utuh, bukan
+            // setengah-setengah kalau item ke-3 dari 5 ternyata kurang foto.
+            if ($item->requires_photo && empty($answer['photo'] ?? null)) {
+                throw new GroomingValidationException(
+                    "Foto wajib dilampirkan untuk item \"{$item->name}\"."
+                );
             }
 
             $result = GroomingResult::from($answer['result']);
@@ -74,10 +86,19 @@ class GroomingStoreService
                     continue;
                 }
 
+                $photoPath = null;
+                if (! empty($answer['photo'] ?? null)) {
+                    $photoPath = $this->saveGroomingPhoto(
+                        $answer['photo'],
+                        "grooming-store/{$branch->id}/{$submission->id}"
+                    );
+                }
+
                 $submission->answers()->create([
                     'grooming_standard_item_id' => $item->id,
                     'result' => $answer['result'],
                     'note' => $answer['note'] ?? null,
+                    'photo_path' => $photoPath,
                 ]);
             }
 

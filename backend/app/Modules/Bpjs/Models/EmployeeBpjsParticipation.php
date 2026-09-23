@@ -19,6 +19,7 @@ class EmployeeBpjsParticipation extends Model
         'bpjs_registration_npp_number',
         'bpjs_employment_start_date',
         'jht_cost_bearer',
+        'jp_cost_bearer',
     ];
 
     protected function casts(): array
@@ -29,6 +30,7 @@ class EmployeeBpjsParticipation extends Model
             'bpjs_health_cost_bearer' => BpjsCostBearer::class,
             'bpjs_employment_start_date' => 'date',
             'jht_cost_bearer' => BpjsCostBearer::class,
+            'jp_cost_bearer' => BpjsCostBearer::class,
         ];
     }
 

@@ -16,6 +16,7 @@ interface Participation {
   bpjs_registration_npp_number: string | null
   bpjs_employment_start_date: string | null
   jht_cost_bearer: string
+  jp_cost_bearer: string
 }
 
 interface Registration { id: number; company_id: number; npp_number: string; label: string | null }
@@ -63,6 +64,7 @@ const form = reactive({
   bpjs_registration_npp_number: '',
   bpjs_employment_start_date: '',
   jht_cost_bearer: 'default',
+  jp_cost_bearer: 'default',
 })
 
 function availableRegistrations(employee: Employee) {
@@ -81,6 +83,7 @@ function openEdit(employee: Employee) {
   form.bpjs_registration_npp_number = existing?.bpjs_registration_npp_number ?? ''
   form.bpjs_employment_start_date = existing?.bpjs_employment_start_date?.slice(0, 10) ?? ''
   form.jht_cost_bearer = existing?.jht_cost_bearer ?? 'default'
+  form.jp_cost_bearer = existing?.jp_cost_bearer ?? 'default'
   showModal.value = true
 }
 
@@ -184,7 +187,7 @@ onMounted(loadAll)
             </div>
 
             <div class="border-t border-slate-100 pt-4">
-              <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">BPJS Ketenagakerjaan (JHT / JKK / JKM)</p>
+              <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">BPJS Ketenagakerjaan (JHT / JKK / JKM / JP)</p>
               <div class="space-y-3">
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">Nomor KPJ</label>
@@ -210,7 +213,16 @@ onMounted(loadAll)
                     <option value="not_participating">Tidak Diikutkan</option>
                   </select>
                 </div>
-                <p class="text-xs text-slate-400">JKK & JKM otomatis 100% ditanggung company begitu KPJ diisi — tidak ada opsi cost bearer utk keduanya (sesuai regulasi).</p>
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-slate-700">JP Cost Bearer</label>
+                  <select v-model="form.jp_cost_bearer" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                    <option value="default">Default (ikut pengaturan company)</option>
+                    <option value="company_borne">Ditanggung Company</option>
+                    <option value="employee_borne">Ditanggung Karyawan</option>
+                    <option value="not_participating">Tidak Diikutkan</option>
+                  </select>
+                </div>
+                <p class="text-xs text-slate-400">JKK & JKM otomatis 100% ditanggung company begitu KPJ diisi — tidak ada opsi cost bearer utk keduanya (sesuai regulasi). JP butuh Rate Config program JP aktif di Pengaturan BPJS, kalau belum ada JP tidak akan dihitung meski kolom ini diisi.</p>
               </div>
             </div>
 

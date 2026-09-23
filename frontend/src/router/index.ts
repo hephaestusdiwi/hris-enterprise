@@ -7,6 +7,8 @@ import DepartmentListView from '../views/DepartmentListView.vue'
 import PositionListView from '../views/PositionListView.vue'
 import EmployeeListView from '@/views/EmployeeListView.vue'
 import EmployeeDetailView from '@/views/EmployeeDetailView.vue'
+import PeopleDirectoryView from '@/views/PeopleDirectoryView.vue'
+import PersonProfileView from '@/views/PersonProfileView.vue'
 import EmployeeProfileView from '@/views/EmployeeProfileView.vue'
 import ContractProbationListView from '@/views/ContractProbationListView.vue'
 import EmployeeMovementListView from '@/views/EmployeeMovementListView.vue'
@@ -75,6 +77,7 @@ import PayrollRunDetailView from '@/views/PayrollRunDetailView.vue'
 import PayrollSalaryReportView from '@/views/PayrollSalaryReportView.vue'
 import PayrollBpjsReportView from '@/views/PayrollBpjsReportView.vue'
 import PayrollTaxReportView from '@/views/PayrollTaxReportView.vue'
+import AnnualTaxRecapView from '@/views/AnnualTaxRecapView.vue'
 import PayrollThrReportView from '@/views/PayrollThrReportView.vue'
 import PayrollNonRegularReportView from '@/views/PayrollNonRegularReportView.vue'
 import ThrPolicyListView from '@/views/ThrPolicyListView.vue'
@@ -147,6 +150,18 @@ const router = createRouter({
       path: '/employees/:id',
       name: 'employee-detail',
       component: EmployeeDetailView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/people-directory',
+      name: 'people-directory',
+      component: PeopleDirectoryView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/people-directory/:id',
+      name: 'people-directory-profile',
+      component: PersonProfileView,
       meta: { requiresAuth: true },
     },
     {
@@ -514,6 +529,12 @@ const router = createRouter({
       path: '/payroll-reports/tax',
       name: 'payroll-report-tax',
       component: PayrollTaxReportView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/payroll-reports/annual-tax-recap',
+      name: 'payroll-report-annual-tax-recap',
+      component: AnnualTaxRecapView,
       meta: { requiresAuth: true },
     },
     {

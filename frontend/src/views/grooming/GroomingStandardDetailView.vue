@@ -202,7 +202,7 @@ onMounted(loadStandard)
         <h3 class="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-400">Checklist Items</h3>
 
         <template v-if="standard.status === 'draft'">
-          <GroomingStandardItemsEditor v-model="editItems" />
+          <GroomingStandardItemsEditor v-model="editItems" :show-photo-toggle="standard.type === 'store'" />
           <div class="mt-4 flex justify-end">
             <button :disabled="editSaving" class="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50" @click="saveDraft">
               {{ editSaving ? 'Menyimpan...' : 'Simpan Perubahan' }}
@@ -243,7 +243,7 @@ onMounted(loadStandard)
           </div>
           <div>
             <label class="mb-2 block text-xs font-medium text-slate-500">Checklist Items (sudah diisi dari versi sebelumnya, silakan ubah)</label>
-            <GroomingStandardItemsEditor v-model="versionItems" />
+            <GroomingStandardItemsEditor v-model="versionItems" :show-photo-toggle="standard.type === 'store'" />
           </div>
 
           <div class="flex justify-end gap-2 pt-2">

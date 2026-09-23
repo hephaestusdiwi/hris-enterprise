@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import type { CostBearer, JhtCostBearer } from '@/composables/bpjs'
+import type { CostBearer, JhtCostBearer, JpCostBearer } from '@/composables/bpjs'
 
 defineProps<{
   form: {
     default_health_cost_bearer: CostBearer
     default_jht_cost_bearer: JhtCostBearer
+    default_jp_cost_bearer: JpCostBearer
   }
   saving: boolean
   saved: boolean
@@ -28,6 +29,17 @@ defineProps<{
       <label class="mb-1.5 block text-sm font-medium text-slate-700">Default JHT</label>
       <select
         v-model="form.default_jht_cost_bearer"
+        class="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+      >
+        <option value="employee_borne">Ditanggung Karyawan (split normal)</option>
+        <option value="company_borne">Ditanggung Company</option>
+        <option value="not_participating">Tidak Diikutkan</option>
+      </select>
+    </div>
+    <div>
+      <label class="mb-1.5 block text-sm font-medium text-slate-700">Default JP</label>
+      <select
+        v-model="form.default_jp_cost_bearer"
         class="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
       >
         <option value="employee_borne">Ditanggung Karyawan (split normal)</option>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
-import type { BpjsProgram } from '@/types/bpjs'
+import type { BpjsProgram } from '@/composables/bpjs'
 
 const props = defineProps<{
   onCreate: (payload: Record<string, unknown>) => Promise<void>
@@ -48,9 +48,13 @@ async function submit() {
           <option value="jht">JHT</option>
           <option value="jkk">JKK</option>
           <option value="jkm">JKM</option>
+          <option value="jp">JP (Jaminan Pensiun)</option>
         </select>
         <p v-if="form.program === 'jkk'" class="mt-1 text-xs text-slate-500">
           Rate JKK diisi lewat tarif kelas risiko — kolom rate company di bawah boleh dikosongkan.
+        </p>
+        <p v-if="form.program === 'jp'" class="mt-1 text-xs text-slate-500">
+          Tarif standar 1% karyawan + 2% company. Wage Base Cap WAJIB diisi (batas upah JP disesuaikan pemerintah tiap Maret — cek nilai terbaru di bpjsketenagakerjaan.go.id).
         </p>
       </div>
 

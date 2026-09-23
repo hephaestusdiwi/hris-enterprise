@@ -171,7 +171,7 @@ onMounted(loadStandards)
 
           <div>
             <label class="mb-2 block text-xs font-medium text-slate-500">Checklist Items</label>
-            <GroomingStandardItemsEditor v-model="createItems" />
+            <GroomingStandardItemsEditor v-model="createItems" :show-photo-toggle="activeTab === 'store'" />
           </div>
 
           <p class="text-xs text-slate-400">

@@ -5,6 +5,7 @@ export const programLabels: Record<BpjsProgram, string> = {
   jht: 'JHT',
   jkk: 'JKK',
   jkm: 'JKM',
+  jp: 'JP',
 }
 
 export function formatDate(value: string): string {

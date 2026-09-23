@@ -1,14 +1,16 @@
 import { reactive, ref, type Ref } from 'vue'
 import apiClient from '@/lib/axios'
-import type { CostBearer, JhtCostBearer } from '@/types/bpjs'
+import type { CostBearer, JhtCostBearer, JpCostBearer } from '@/composables/bpjs'
 
 export function useDefaultPolicy(selectedCompanyId: Ref<number | null>) {
   const form = reactive<{
     default_health_cost_bearer: CostBearer
     default_jht_cost_bearer: JhtCostBearer
+    default_jp_cost_bearer: JpCostBearer
   }>({
     default_health_cost_bearer: 'employee_borne',
     default_jht_cost_bearer: 'employee_borne',
+    default_jp_cost_bearer: 'employee_borne',
   })
   const saving = ref(false)
   const saved = ref(false)
@@ -21,6 +23,7 @@ export function useDefaultPolicy(selectedCompanyId: Ref<number | null>) {
     const data = response.data.data
     form.default_health_cost_bearer = data?.default_health_cost_bearer ?? 'employee_borne'
     form.default_jht_cost_bearer = data?.default_jht_cost_bearer ?? 'employee_borne'
+    form.default_jp_cost_bearer = data?.default_jp_cost_bearer ?? 'employee_borne'
   }
 
   async function save() {

@@ -71,6 +71,26 @@ class BpjsCalculationEngine implements BpjsCalculationEngineInterface
                 $results[BpjsProgram::Jkm->value] = $jkmResult;
             }
 
+            // Fase 9 — JP (Jaminan Pensiun). Sama seperti JHT: punya porsi
+            // karyawan, dipengaruhi cost bearer, dan reuse calculateFlatProgram()
+            // yang SAMA tanpa perubahan apa pun (cuma wage_base_cap-nya beda —
+            // itu sudah otomatis dari BpjsRateConfig company yang bersangkutan,
+            // bukan hard-code di sini). Kalau company belum seed BpjsRateConfig
+            // program=jp, resolveActiveVersion() balikin null dan JP otomatis
+            // TIDAK dihitung — itu mekanisme opt-in-nya, konsisten sama program lain.
+            $jpBearer = $this->resolveCostBearer(
+                $participation->jp_cost_bearer,
+                $companySetting?->default_jp_cost_bearer,
+            );
+
+            if ($jpBearer !== BpjsCostBearer::NotParticipating) {
+                $jpResult = $this->calculateFlatProgram($employee->company_id, BpjsProgram::Jp, $wageBase, $referenceDate, $jpBearer);
+
+                if ($jpResult) {
+                    $results[BpjsProgram::Jp->value] = $jpResult;
+                }
+            }
+
             if ($participation->bpjs_registration_npp_number) {
                 $jkkResult = $this->calculateJkk(
                     $employee->company_id,

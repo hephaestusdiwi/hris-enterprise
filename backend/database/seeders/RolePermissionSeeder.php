@@ -443,6 +443,7 @@ class RolePermissionSeeder extends Seeder
             'create expense claims',
             'view expense categories',
             'view expense subcategories',
+            'submit grooming store',
         ]);
     }
 }

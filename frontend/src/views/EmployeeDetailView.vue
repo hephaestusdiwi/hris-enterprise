@@ -7,6 +7,87 @@ import { useAuthStore } from '@/stores/auth'
 import EmployeeMovementFormModal from '@/components/employee/EmployeeMovementFormModal.vue'
 import EmployeeReprimandFormModal from '@/components/employee/EmployeeReprimandFormModal.vue'
 import EmployeeCompanyDocumentFormModal from '@/components/employee/EmployeeCompanyDocumentFormModal.vue'
+import EmployeeAssetFormModal from '@/components/employee/EmployeeAssetFormModal.vue'
+import EmployeeDocumentFormModal from '@/components/employee/EmployeeDocumentFormModal.vue'
+import EmployeeEducationFormModal from '@/components/employee/EmployeeEducationFormModal.vue'
+import EmployeeExperienceFormModal from '@/components/employee/EmployeeExperienceFormModal.vue'
+
+interface EmployeeFileRow {
+  id: number
+  category: string
+  file_name: string
+  file_size: number
+  url: string
+}
+
+const fileCategoryLabels: Record<string, string> = {
+  ktp: 'KTP',
+  npwp: 'NPWP',
+  kartu_keluarga: 'Kartu Keluarga',
+  ijazah: 'Ijazah',
+  kontrak_kerja: 'Kontrak Kerja',
+  skck: 'SKCK',
+  lainnya: 'Lainnya',
+}
+
+interface EmployeeEducationRow {
+  id: number
+  education_level: string
+  institution_name: string
+  major: string | null
+  start_date: string | null
+  end_date: string | null
+  graduation_status: string
+  description: string | null
+}
+
+const educationLevelLabels: Record<string, string> = {
+  sd: 'SD', smp: 'SMP', sma_smk: 'SMA/SMK', d1: 'D1', d2: 'D2', d3: 'D3', d4: 'D4', s1: 'S1', s2: 'S2', s3: 'S3',
+}
+const graduationStatusLabels: Record<string, string> = {
+  ongoing: 'Sedang Berjalan', graduated: 'Lulus', dropped_out: 'Tidak Selesai',
+}
+
+interface EmployeeExperienceRow {
+  id: number
+  company_name: string
+  position_title: string
+  employment_type: string | null
+  start_date: string
+  end_date: string | null
+  description: string | null
+  reason_for_leaving: string | null
+}
+
+const employmentTypeLabels: Record<string, string> = {
+  full_time: 'Full-time', part_time: 'Part-time', contract: 'Kontrak', internship: 'Magang', freelance: 'Freelance',
+}
+
+interface EmployeeAssetRow {
+  id: number
+  asset_type: string
+  asset_name: string
+  serial_number: string | null
+  condition: string
+  assigned_date: string
+  returned_date: string | null
+}
+
+const assetTypeLabels: Record<string, string> = {
+  laptop: 'Laptop',
+  mobile_phone: 'HP',
+  id_card: 'Kartu ID',
+  access_card: 'Kartu Akses',
+  vehicle: 'Kendaraan',
+  other: 'Lainnya',
+}
+
+const assetConditionLabels: Record<string, string> = {
+  new: 'Baru',
+  good: 'Baik',
+  fair: 'Cukup',
+  damaged: 'Rusak',
+}
 
 interface EmployeeCompanyDocument {
   id: number
@@ -189,6 +270,163 @@ async function deleteCompanyDocument(doc: EmployeeCompanyDocument) {
   }
 }
 
+const assets = ref<EmployeeAssetRow[]>([])
+const assetsLoading = ref(false)
+const assetError = ref('')
+const showAssetModal = ref(false)
+
+async function loadAssets(id: number) {
+  assetsLoading.value = true
+  try {
+    const response = await apiClient.get(`/api/employees/${id}/assets`)
+    assets.value = response.data.data
+  } catch {
+    assetError.value = 'Gagal memuat data asset.'
+  } finally {
+    assetsLoading.value = false
+  }
+}
+
+function onAssetCreated() {
+  showAssetModal.value = false
+  loadAssets(employeeId.value)
+}
+
+async function markAssetReturned(asset: EmployeeAssetRow) {
+  try {
+    await apiClient.put(`/api/employees/${employeeId.value}/assets/${asset.id}`, {
+      returned_date: new Date().toISOString().slice(0, 10),
+    })
+    loadAssets(employeeId.value)
+  } catch {
+    assetError.value = 'Gagal update status asset.'
+  }
+}
+
+async function deleteAsset(asset: EmployeeAssetRow) {
+  try {
+    await apiClient.delete(`/api/employees/${employeeId.value}/assets/${asset.id}`)
+    assets.value = assets.value.filter((a) => a.id !== asset.id)
+  } catch {
+    assetError.value = 'Gagal menghapus asset.'
+  }
+}
+
+const files = ref<EmployeeFileRow[]>([])
+const filesLoading = ref(false)
+const fileError = ref('')
+const showFileModal = ref(false)
+
+async function loadFiles(id: number) {
+  filesLoading.value = true
+  try {
+    const response = await apiClient.get(`/api/employees/${id}/documents`)
+    files.value = response.data.data
+  } catch {
+    fileError.value = 'Gagal memuat dokumen (Files).'
+  } finally {
+    filesLoading.value = false
+  }
+}
+
+function onFileCreated() {
+  showFileModal.value = false
+  loadFiles(employeeId.value)
+}
+
+async function deleteFile(file: EmployeeFileRow) {
+  try {
+    await apiClient.delete(`/api/employees/${employeeId.value}/documents/${file.id}`)
+    files.value = files.value.filter((f) => f.id !== file.id)
+  } catch {
+    fileError.value = 'Gagal menghapus dokumen.'
+  }
+}
+
+const educations = ref<EmployeeEducationRow[]>([])
+const educationsLoading = ref(false)
+const educationError = ref('')
+const showEducationModal = ref(false)
+const editingEducation = ref<EmployeeEducationRow | null>(null)
+
+async function loadEducations(id: number) {
+  educationsLoading.value = true
+  try {
+    const response = await apiClient.get(`/api/employees/${id}/educations`)
+    educations.value = response.data.data
+  } catch {
+    educationError.value = 'Gagal memuat riwayat pendidikan.'
+  } finally {
+    educationsLoading.value = false
+  }
+}
+
+function openCreateEducation() {
+  editingEducation.value = null
+  showEducationModal.value = true
+}
+
+function openEditEducation(item: EmployeeEducationRow) {
+  editingEducation.value = item
+  showEducationModal.value = true
+}
+
+function onEducationSaved() {
+  showEducationModal.value = false
+  loadEducations(employeeId.value)
+}
+
+async function deleteEducation(item: EmployeeEducationRow) {
+  try {
+    await apiClient.delete(`/api/employees/${employeeId.value}/educations/${item.id}`)
+    educations.value = educations.value.filter((e) => e.id !== item.id)
+  } catch {
+    educationError.value = 'Gagal menghapus riwayat pendidikan.'
+  }
+}
+
+const experiences = ref<EmployeeExperienceRow[]>([])
+const experiencesLoading = ref(false)
+const experienceError = ref('')
+const showExperienceModal = ref(false)
+const editingExperience = ref<EmployeeExperienceRow | null>(null)
+
+async function loadExperiences(id: number) {
+  experiencesLoading.value = true
+  try {
+    const response = await apiClient.get(`/api/employees/${id}/experiences`)
+    experiences.value = response.data.data
+  } catch {
+    experienceError.value = 'Gagal memuat riwayat pengalaman kerja.'
+  } finally {
+    experiencesLoading.value = false
+  }
+}
+
+function openCreateExperience() {
+  editingExperience.value = null
+  showExperienceModal.value = true
+}
+
+function openEditExperience(item: EmployeeExperienceRow) {
+  editingExperience.value = item
+  showExperienceModal.value = true
+}
+
+function onExperienceSaved() {
+  showExperienceModal.value = false
+  loadExperiences(employeeId.value)
+}
+
+async function deleteExperience(item: EmployeeExperienceRow) {
+  try {
+    await apiClient.delete(`/api/employees/${employeeId.value}/experiences/${item.id}`)
+    experiences.value = experiences.value.filter((e) => e.id !== item.id)
+  } catch {
+    experienceError.value = 'Gagal menghapus riwayat pengalaman kerja.'
+  }
+}
+
 const fullName = computed(() => {
   if (!employee.value) return ''
   return [employee.value.first_name, employee.value.last_name].filter(Boolean).join(' ')
@@ -237,12 +475,28 @@ function goToEmployee(id: number) {
   router.push({ name: 'employee-detail', params: { id } })
 }
 
+function loadPermissionGatedTabs(id: number) {
+  if (authStore.permissions.includes('view employee reprimands')) {
+    loadReprimands(id)
+  }
+  loadCompanyDocuments(id)
+  if (authStore.permissions.includes('view employee assets')) {
+    loadAssets(id)
+  }
+  if (authStore.permissions.includes('view employee documents')) {
+    loadFiles(id)
+  }
+  if (authStore.permissions.includes('view employee education')) {
+    loadEducations(id)
+  }
+  if (authStore.permissions.includes('view employee experience')) {
+    loadExperiences(id)
+  }
+}
+
 onMounted(() => {
   loadEmployee(employeeId.value)
-  if (authStore.permissions.includes('view employee reprimands')) {
-    loadReprimands(employeeId.value)
-  }
-  loadCompanyDocuments(employeeId.value)
+  loadPermissionGatedTabs(employeeId.value)
 })
 
 // Route param bisa berubah (klik Manager/Direct Report) tanpa component
@@ -250,10 +504,7 @@ onMounted(() => {
 watch(employeeId, (id) => {
   if (!Number.isNaN(id)) {
     loadEmployee(id)
-    if (authStore.permissions.includes('view employee reprimands')) {
-      loadReprimands(id)
-    }
-    loadCompanyDocuments(id)
+    loadPermissionGatedTabs(id)
   }
 })
 </script>
@@ -541,7 +792,229 @@ watch(employeeId, (id) => {
           </div>
         </div>
       </div>
+
+      <!-- Assets -- company property yang di-assign ke employee ini (laptop,
+           kartu ID, dsb). Assignment murni wewenang HR/Admin. -->
+      <div v-if="authStore.permissions.includes('view employee assets')" class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-slate-700">Assets</h2>
+          <button
+            v-if="authStore.permissions.includes('create employee assets')"
+            type="button"
+            class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+            @click="showAssetModal = true"
+          >
+            Assign Asset
+          </button>
+        </div>
+
+        <p v-if="assetError" class="mt-2 text-xs text-red-600">{{ assetError }}</p>
+        <div v-if="assetsLoading" class="mt-3 text-sm text-slate-400">Memuat...</div>
+        <div v-else-if="assets.length === 0" class="mt-3 rounded-xl bg-slate-50 p-4 text-center text-sm text-slate-400">
+          Belum ada asset yang di-assign.
+        </div>
+        <div v-else class="mt-3 divide-y divide-slate-100">
+          <div v-for="asset in assets" :key="asset.id" class="py-3">
+            <div class="flex items-center justify-between">
+              <p class="text-sm font-medium text-slate-900">{{ asset.asset_name }}</p>
+              <span class="text-xs text-slate-500">{{ assetTypeLabels[asset.asset_type] ?? asset.asset_type }}</span>
+            </div>
+            <p class="mt-0.5 text-xs text-slate-500">
+              {{ assetConditionLabels[asset.condition] ?? asset.condition }}
+              <span v-if="asset.serial_number">&middot; SN: {{ asset.serial_number }}</span>
+              &middot; Diterima {{ asset.assigned_date }}
+              <span v-if="asset.returned_date">&middot; Dikembalikan {{ asset.returned_date }}</span>
+            </p>
+            <div v-if="authStore.permissions.includes('edit employee assets') || authStore.permissions.includes('delete employee assets')" class="mt-1 flex items-center gap-3">
+              <button
+                v-if="!asset.returned_date && authStore.permissions.includes('edit employee assets')"
+                type="button"
+                class="text-xs font-medium text-slate-500 hover:underline"
+                @click="markAssetReturned(asset)"
+              >
+                Tandai Dikembalikan
+              </button>
+              <button
+                v-if="authStore.permissions.includes('delete employee assets')"
+                type="button"
+                class="text-xs font-medium text-red-600 hover:underline"
+                @click="deleteAsset(asset)"
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Files -- KTP/NPWP/dst yang self-service employee juga bisa kelola
+           sendiri (/my-documents); di sini HR bisa upload/lihat/hapus buat
+           employee mana pun yang dia punya permission-nya. -->
+      <div v-if="authStore.permissions.includes('view employee documents')" class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-slate-700">Files</h2>
+          <button
+            v-if="authStore.permissions.includes('create employee documents')"
+            type="button"
+            class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+            @click="showFileModal = true"
+          >
+            Upload File
+          </button>
+        </div>
+
+        <p v-if="fileError" class="mt-2 text-xs text-red-600">{{ fileError }}</p>
+        <div v-if="filesLoading" class="mt-3 text-sm text-slate-400">Memuat...</div>
+        <div v-else-if="files.length === 0" class="mt-3 rounded-xl bg-slate-50 p-4 text-center text-sm text-slate-400">Belum ada file.</div>
+        <div v-else class="mt-3 divide-y divide-slate-100">
+          <div v-for="doc in files" :key="doc.id" class="flex items-center justify-between py-3">
+            <div>
+              <p class="text-sm font-medium text-slate-900">{{ fileCategoryLabels[doc.category] ?? doc.category }}</p>
+              <p class="text-xs text-slate-500">{{ doc.file_name }}</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <a :href="doc.url" target="_blank" rel="noopener" class="text-sm font-medium text-primary hover:underline">Lihat</a>
+              <button
+                v-if="authStore.permissions.includes('delete employee documents')"
+                type="button"
+                class="text-sm font-medium text-red-600 hover:underline"
+                @click="deleteFile(doc)"
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Education & Experience -->
+      <div v-if="authStore.permissions.includes('view employee education') || authStore.permissions.includes('view employee experience')" class="space-y-4">
+        <div v-if="authStore.permissions.includes('view employee education')" class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-slate-700">Riwayat Pendidikan</h2>
+            <button
+              v-if="authStore.permissions.includes('create employee education')"
+              type="button"
+              class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+              @click="openCreateEducation"
+            >
+              Tambah
+            </button>
+          </div>
+          <p v-if="educationError" class="mt-2 text-xs text-red-600">{{ educationError }}</p>
+          <div v-if="educationsLoading" class="mt-3 text-sm text-slate-400">Memuat...</div>
+          <div v-else-if="educations.length === 0" class="mt-3 rounded-xl bg-slate-50 p-4 text-center text-sm text-slate-400">Belum ada riwayat pendidikan.</div>
+          <div v-else class="mt-3 divide-y divide-slate-100">
+            <div v-for="edu in educations" :key="edu.id" class="flex items-center justify-between py-3">
+              <div>
+                <p class="text-sm font-medium text-slate-900">{{ educationLevelLabels[edu.education_level] ?? edu.education_level }} &middot; {{ edu.institution_name }}</p>
+                <p class="text-xs text-slate-500">
+                  {{ edu.major ?? '-' }} &middot; {{ graduationStatusLabels[edu.graduation_status] ?? edu.graduation_status }}
+                </p>
+              </div>
+              <div class="flex items-center gap-3">
+                <button
+                  v-if="authStore.permissions.includes('edit employee education')"
+                  type="button"
+                  class="text-sm font-medium text-primary hover:underline"
+                  @click="openEditEducation(edu)"
+                >
+                  Edit
+                </button>
+                <button
+                  v-if="authStore.permissions.includes('delete employee education')"
+                  type="button"
+                  class="text-sm font-medium text-red-600 hover:underline"
+                  @click="deleteEducation(edu)"
+                >
+                  Hapus
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="authStore.permissions.includes('view employee experience')" class="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-slate-700">Pengalaman Kerja</h2>
+            <button
+              v-if="authStore.permissions.includes('create employee experience')"
+              type="button"
+              class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+              @click="openCreateExperience"
+            >
+              Tambah
+            </button>
+          </div>
+          <p v-if="experienceError" class="mt-2 text-xs text-red-600">{{ experienceError }}</p>
+          <div v-if="experiencesLoading" class="mt-3 text-sm text-slate-400">Memuat...</div>
+          <div v-else-if="experiences.length === 0" class="mt-3 rounded-xl bg-slate-50 p-4 text-center text-sm text-slate-400">Belum ada riwayat pengalaman kerja.</div>
+          <div v-else class="mt-3 divide-y divide-slate-100">
+            <div v-for="exp in experiences" :key="exp.id" class="flex items-center justify-between py-3">
+              <div>
+                <p class="text-sm font-medium text-slate-900">{{ exp.position_title }} &middot; {{ exp.company_name }}</p>
+                <p class="text-xs text-slate-500">
+                  {{ exp.employment_type ? employmentTypeLabels[exp.employment_type] ?? exp.employment_type : '-' }}
+                  &middot; {{ exp.start_date }} s/d {{ exp.end_date ?? 'sekarang' }}
+                </p>
+              </div>
+              <div class="flex items-center gap-3">
+                <button
+                  v-if="authStore.permissions.includes('edit employee experience')"
+                  type="button"
+                  class="text-sm font-medium text-primary hover:underline"
+                  @click="openEditExperience(exp)"
+                >
+                  Edit
+                </button>
+                <button
+                  v-if="authStore.permissions.includes('delete employee experience')"
+                  type="button"
+                  class="text-sm font-medium text-red-600 hover:underline"
+                  @click="deleteExperience(exp)"
+                >
+                  Hapus
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </template>
+
+    <EmployeeDocumentFormModal
+      v-if="showFileModal && employee"
+      :employee-id="employee.id"
+      :employee-name="fullName"
+      @close="showFileModal = false"
+      @created="onFileCreated"
+    />
+
+    <EmployeeEducationFormModal
+      v-if="showEducationModal && employee"
+      :employee-id="employee.id"
+      :employee-name="fullName"
+      :editing="editingEducation"
+      @close="showEducationModal = false"
+      @saved="onEducationSaved"
+    />
+
+    <EmployeeExperienceFormModal
+      v-if="showExperienceModal && employee"
+      :employee-id="employee.id"
+      :employee-name="fullName"
+      :editing="editingExperience"
+      @close="showExperienceModal = false"
+      @saved="onExperienceSaved"
+    />
+
+    <EmployeeAssetFormModal
+      v-if="showAssetModal && employee"
+      :employee-id="employee.id"
+      :employee-name="fullName"
+      @close="showAssetModal = false"
+      @created="onAssetCreated"
+    />
 
     <EmployeeReprimandFormModal
       v-if="showReprimandModal && employee"

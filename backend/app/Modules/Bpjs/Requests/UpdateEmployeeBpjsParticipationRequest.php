@@ -24,6 +24,7 @@ class UpdateEmployeeBpjsParticipationRequest extends FormRequest
             'bpjs_registration_npp_number' => ['nullable', 'string', 'max:50'],
             'bpjs_employment_start_date' => ['nullable', 'date'],
             'jht_cost_bearer' => ['required', Rule::in(['default', 'company_borne', 'employee_borne', 'not_participating'])],
+            'jp_cost_bearer' => ['required', Rule::in(['default', 'company_borne', 'employee_borne', 'not_participating'])],
         ];
     }
 }

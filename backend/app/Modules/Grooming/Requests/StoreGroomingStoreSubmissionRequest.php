@@ -19,6 +19,10 @@ class StoreGroomingStoreSubmissionRequest extends FormRequest
             'answers.*.grooming_standard_item_id' => ['required', 'integer', 'exists:grooming_standard_items,id'],
             'answers.*.result' => ['required', 'string', 'in:pass,not_pass'],
             'answers.*.note' => ['nullable', 'string'],
+            // Wajib-tidaknya bergantung pada requires_photo per item — itu
+            // baru diketahui setelah tahu standard aktifnya, jadi dicek di
+            // GroomingStoreService::submit(), bukan di sini.
+            'answers.*.photo' => ['nullable', 'string'],
         ];
     }
 }

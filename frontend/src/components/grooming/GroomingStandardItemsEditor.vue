@@ -6,12 +6,18 @@ export interface GroomingItemDraft {
   description: string
   mandatory: boolean
   requires_note_on_fail: boolean
+  requires_photo: boolean
 }
+
+withDefaults(defineProps<{ showPhotoToggle?: boolean }>(), { showPhotoToggle: false })
 
 const items = defineModel<GroomingItemDraft[]>({ required: true })
 
 function addItem() {
-  items.value = [...items.value, { name: '', description: '', mandatory: true, requires_note_on_fail: true }]
+  items.value = [
+    ...items.value,
+    { name: '', description: '', mandatory: true, requires_note_on_fail: true, requires_photo: false },
+  ]
 }
 
 function removeItem(index: number) {
@@ -68,6 +74,10 @@ function moveDown(index: number) {
           <label class="flex items-center gap-1.5">
             <input v-model="item.requires_note_on_fail" type="checkbox" class="rounded border-slate-300" />
             Wajib catatan kalau NOT PASS
+          </label>
+          <label v-if="showPhotoToggle" class="flex items-center gap-1.5">
+            <input v-model="item.requires_photo" type="checkbox" class="rounded border-slate-300" />
+            Wajib foto
           </label>
         </div>
       </div>

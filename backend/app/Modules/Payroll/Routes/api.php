@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Payroll\Controllers\AnnualTaxReconciliationController;
 use App\Modules\Payroll\Controllers\CompanyBankSettingController;
 use App\Modules\Payroll\Controllers\CompanyPayrollAttendanceSettingController;
 use App\Modules\Payroll\Controllers\EmployeeNonRegularInputController;
@@ -54,6 +55,12 @@ Route::middleware('permission:view payroll runs')->group(function () {
     Route::get('/payroll-reports/tax/summary/export/excel', [PayrollTaxReportController::class, 'exportTaxSummaryExcel']);
     Route::get('/payroll-reports/tax/detail/export/pdf', [PayrollTaxReportController::class, 'exportTaxDetailPdf']);
     Route::get('/payroll-reports/tax/summary/export/pdf', [PayrollTaxReportController::class, 'exportTaxSummaryPdf']);
+
+    // Fase 8 — Tax Compliance & Government Reporting. Reuse permission
+    // 'view payroll runs' juga, konsisten sama report lain di atas.
+    Route::get('/payroll-reports/annual-tax-recap', [AnnualTaxReconciliationController::class, 'recap']);
+    Route::get('/payroll-reports/annual-tax-recap/export/excel', [AnnualTaxReconciliationController::class, 'exportRecapExcel']);
+    Route::get('/employees/{employee}/bpa1', [AnnualTaxReconciliationController::class, 'downloadBpa1']);
 });
 
 Route::middleware('permission:create payroll runs')->group(function () {

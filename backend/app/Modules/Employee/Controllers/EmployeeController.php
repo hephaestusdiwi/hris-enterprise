@@ -335,6 +335,105 @@ class EmployeeController extends Controller
         ]);
     }
 
+    /**
+     * Company Org Chart -- self-service, TANPA permission gate. Beda dari
+     * orgChart() di atas yang di belakang 'view employees' dan buat non-
+     * admin/hr di-scope ke subordinate tree sendiri: ini SENGAJA nampilin
+     * SELURUH company, field terbatas (nama, foto, posisi, department),
+     * sama seperti People Directory di bawah -- setiap employee yang login
+     * berhak lihat siapa aja di perusahaan & struktur reporting-nya, ala
+     * Mekari Talenta. orgChart() yang lama TIDAK diubah/disentuh.
+     */
+    public function companyOrgChart(Request $request)
+    {
+        $employees = Employee::with(['position:id,name', 'department:id,name'])
+            ->whereNull('resign_date')
+            ->get(['id', 'first_name', 'last_name', 'manager_employee_id', 'position_id', 'department_id', 'photo_path']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OK',
+            'data' => $this->buildDirectoryTree($employees, null),
+        ]);
+    }
+
+    /**
+     * People Directory -- self-service, TANPA permission gate. List datar
+     * (bukan tree) semua employee aktif, field terbatas: nama, foto,
+     * posisi, department, nama manager. TIDAK ada NIK/rekening/kontak
+     * pribadi/data sensitif lain -- itu semua tetap di balik
+     * EmployeeDocument/CompanyDocument yang permission-nya ketat.
+     */
+    public function directory(Request $request)
+    {
+        $employees = Employee::with(['position:id,name', 'department:id,name', 'manager:id,first_name,last_name'])
+            ->whereNull('resign_date')
+            ->orderBy('first_name')
+            ->get(['id', 'first_name', 'last_name', 'manager_employee_id', 'position_id', 'department_id', 'photo_path']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OK',
+            'data' => $employees->map(fn (Employee $e) => [
+                'id' => $e->id,
+                'name' => trim("{$e->first_name} {$e->last_name}"),
+                'photo_url' => $e->photo_url,
+                'position' => $e->position?->name,
+                'department' => $e->department?->name,
+                'manager_name' => $e->manager ? trim("{$e->manager->first_name} {$e->manager->last_name}") : null,
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * Detail read-only 1 orang buat People Directory -- self-service,
+     * TANPA permission gate, field SAMA PERSIS kayak directory() (tidak
+     * ada field tambahan yang lebih sensitif). Dipakai waktu klik
+     * card/node di People Directory & Company Org Chart, BUKAN pengganti
+     * EmployeeDetailView (halaman admin, tetap digembok 'view employees').
+     */
+    public function directoryShow(Employee $employee)
+    {
+        abort_if($employee->resign_date !== null, 404);
+
+        $employee->load(['position:id,name', 'department:id,name', 'manager:id,first_name,last_name']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OK',
+            'data' => [
+                'id' => $employee->id,
+                'name' => trim("{$employee->first_name} {$employee->last_name}"),
+                'photo_url' => $employee->photo_url,
+                'position' => $employee->position?->name,
+                'department' => $employee->department?->name,
+                'manager_name' => $employee->manager ? trim("{$employee->manager->first_name} {$employee->manager->last_name}") : null,
+            ],
+        ]);
+    }
+
+    /**
+     * Sama seperti buildOrgTree() tapi nyisipin department -- dibuat
+     * terpisah (bukan nambahin field ke buildOrgTree yang sudah ada)
+     * supaya response shape endpoint admin lama (orgChart()) sama sekali
+     * tidak berubah.
+     */
+    private function buildDirectoryTree($employees, ?int $managerId = null): array
+    {
+        return $employees
+            ->where('manager_employee_id', $managerId)
+            ->map(fn ($employee) => [
+                'id' => $employee->id,
+                'name' => trim("{$employee->first_name} {$employee->last_name}"),
+                'position' => $employee->position?->name,
+                'department' => $employee->department?->name,
+                'photo_url' => $employee->photo_url,
+                'children' => $this->buildDirectoryTree($employees, $employee->id),
+            ])
+            ->values()
+            ->all();
+    }
+
     private function buildOrgTree($employees, ?int $managerId = null): array
     {
         return $employees

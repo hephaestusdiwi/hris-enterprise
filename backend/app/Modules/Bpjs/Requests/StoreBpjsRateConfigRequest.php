@@ -16,7 +16,7 @@ class StoreBpjsRateConfigRequest extends FormRequest
     {
         return [
             'company_id' => ['required', 'exists:companies,id'],
-            'program' => ['required', Rule::in(['kesehatan', 'jht', 'jkk', 'jkm'])],
+            'program' => ['required', Rule::in(['kesehatan', 'jht', 'jkk', 'jkm', 'jp'])],
             'effective_date' => ['required', 'date'],
             // Jkk: rate diisi null di sini, tarifnya dari BpjsJkkRiskClassRate.
             'employee_rate_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],

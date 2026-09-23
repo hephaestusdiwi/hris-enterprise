@@ -34,6 +34,7 @@ const standaloneItems: MenuItem[] = [
   { name: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: '/', permission: null },
   { name: 'my-profile', label: 'My Profile', icon: UserCircle, to: '/my-profile', permission: null },
   { name: 'announcements.inbox', label: 'Announcement', icon: Megaphone, to: '/announcements', permission: null },
+  { name: 'people-directory', label: 'People Directory', icon: Users, to: '/people-directory', permission: null },
   { name: 'my-company-obligation-reminders', label: 'Reminder Saya', icon: Bell, to: '/my-company-obligation-reminders', permission: null },
 ]
 
@@ -165,6 +166,7 @@ const groups: MenuGroup[] = [
       { name: 'payroll-report-salary', label: 'Salary Reports', icon: BarChart3, to: '/payroll-reports/salary', permission: 'view payroll runs' },
       { name: 'payroll-report-bpjs', label: 'BPJS Reports', icon: BarChart3, to: '/payroll-reports/bpjs', permission: 'view payroll runs' },
       { name: 'payroll-report-tax', label: 'Tax Reports', icon: BarChart3, to: '/payroll-reports/tax', permission: 'view payroll runs' },
+      { name: 'payroll-report-annual-tax-recap', label: 'Annual Tax Recap (BPA1)', icon: FileText, to: '/payroll-reports/annual-tax-recap', permission: 'view payroll runs' },
       { name: 'payroll-report-thr', label: 'THR Reports', icon: BarChart3, to: '/payroll-reports/thr', permission: 'view thr payroll' },
       { name: 'payroll-report-non-regular', label: 'Non-Regular Reports', icon: BarChart3, to: '/payroll-reports/non-regular', permission: 'view non regular payroll' },
     ],

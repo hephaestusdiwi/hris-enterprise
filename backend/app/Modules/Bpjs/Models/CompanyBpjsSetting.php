@@ -13,6 +13,7 @@ class CompanyBpjsSetting extends Model
         'company_id',
         'default_health_cost_bearer',
         'default_jht_cost_bearer',
+        'default_jp_cost_bearer',
     ];
 
     protected function casts(): array
@@ -20,6 +21,7 @@ class CompanyBpjsSetting extends Model
         return [
             'default_health_cost_bearer' => BpjsCostBearer::class,
             'default_jht_cost_bearer' => BpjsCostBearer::class,
+            'default_jp_cost_bearer' => BpjsCostBearer::class,
         ];
     }
 

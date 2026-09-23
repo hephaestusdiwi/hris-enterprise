@@ -14,6 +14,13 @@ use Illuminate\Support\Facades\Route;
 Route::get('/my-profile', [EmployeeProfileController::class, 'show']);
 Route::put('/my-profile', [EmployeeProfileController::class, 'update']);
 
+// People Directory & Company Org Chart -- self-service, tanpa permission,
+// field terbatas (nama, foto, posisi, department, manager). Endpoint admin
+// /employees/org-chart yang lama TIDAK diubah/disentuh sama sekali.
+Route::get('/people-directory', [EmployeeController::class, 'directory']);
+Route::get('/people-directory/{employee}', [EmployeeController::class, 'directoryShow']);
+Route::get('/company-org-chart', [EmployeeController::class, 'companyOrgChart']);
+
 Route::middleware('permission:view employees')->group(function () {
     Route::get('/employees/next-number', [EmployeeController::class, 'nextNumber']);
     Route::get('/employees/org-chart', [EmployeeController::class, 'orgChart']);
