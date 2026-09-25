@@ -114,7 +114,12 @@ async function handleDone() {
 
 function backToDashboard() {
   stopCamera()
-  router.push({ name: 'dashboard' })
+
+  if (window.history.length > 1) {
+    router.back()
+  } else {
+    router.push('/')
+  }
 }
 
 onMounted(() => {

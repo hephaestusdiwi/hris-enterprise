@@ -21,11 +21,11 @@ class CompanyTaxSetting extends Model
     protected function casts(): array
     {
         return [
-        'default_max_method' => TaxMethod::class,
-        'no_npwp_surcharge_percentage' => 'decimal:2',
-        'position_cost_percentage' => 'decimal:2',
-        'position_cost_monthly_cap' => 'decimal:2',
-        'position_cost_annual_cap' => 'decimal:2',
+            'default_tax_method' => TaxMethod::class,
+            'no_npwp_surcharge_percentage' => 'decimal:2',
+            'position_cost_percentage' => 'decimal:2',
+            'position_cost_monthly_cap' => 'decimal:2',
+            'position_cost_annual_cap' => 'decimal:2',
         ];
     }
 

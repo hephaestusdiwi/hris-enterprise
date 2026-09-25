@@ -85,6 +85,10 @@ class AppServiceProvider extends ServiceProvider
             \App\Modules\CompanyObligation\Contracts\CompanyObligationScopeInterface::class,
             \App\Modules\CompanyObligation\Services\CompanyObligationScope::class,
         );
+        $this->app->bind(
+            \App\Modules\Training\Contracts\TrainingScopeInterface::class,
+            \App\Modules\Training\Services\TrainingScope::class,
+        );
 
         $this->app->bind(BpjsRateResolverInterface::class, BpjsRateResolver::class);
         $this->app->bind(BpjsJkkRiskClassResolverInterface::class, BpjsJkkRiskClassResolver::class);
@@ -142,6 +146,11 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Support\Facades\Gate::policy(
             \App\Modules\CompanyObligation\Models\CompanyObligation::class,
             \App\Modules\CompanyObligation\Policies\CompanyObligationPolicy::class,
+        );
+
+        \Illuminate\Support\Facades\Gate::policy(
+            \App\Modules\Training\Models\TrainingProgram::class,
+            \App\Modules\Training\Policies\TrainingProgramPolicy::class,
         );
     }
 }

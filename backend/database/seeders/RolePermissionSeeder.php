@@ -255,6 +255,14 @@ class RolePermissionSeeder extends Seeder
             'create company obligations',
             'edit company obligations',
             'delete company obligations',
+            'view training categories',
+            'create training categories',
+            'edit training categories',
+            'delete training categories',
+            'view trainings',
+            'create trainings',
+            'edit trainings',
+            'delete trainings',
         ];
 
         foreach ($permissions as $permission) {
@@ -426,6 +434,14 @@ class RolePermissionSeeder extends Seeder
             'create company obligations',
             'edit company obligations',
             'delete company obligations',
+            'view training categories',
+            'create training categories',
+            'edit training categories',
+            'delete training categories',
+            'view trainings',
+            'create trainings',
+            'edit trainings',
+            'delete trainings',
         ]);
 
         $employee = Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'web']);

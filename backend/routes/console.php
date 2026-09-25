@@ -24,3 +24,12 @@ Schedule::command('leave-balance:sync')->yearlyOn(1, 1, '00:10');
 Schedule::command('leave-balance:sync')->dailyAt('01:00');
 // Phase 3 Contract & Probation — cek milestone H-30/H-14/H-7 tiap hari.
 Schedule::command('contract-probation:send-reminders')->dailyAt('07:00');
+
+// Company Obligations (Sewa Ruko/MOU Legal/Jatuh Tempo Piutang) — cek
+// milestone H-30/H-14/H-7/H-1/H-0 tiap hari. (Catatan: command ini sudah
+// ada dari sesi sebelumnya tapi ternyata belum kedaftar di scheduler --
+// ditambahkan sekarang.)
+Schedule::command('company-obligations:send-reminders')->dailyAt('07:00');
+
+// Training — reminder H-30/H-14/H-7/H-1/H-0 sebelum TrainingSession mulai.
+Schedule::command('trainings:send-reminders')->dailyAt('07:00');

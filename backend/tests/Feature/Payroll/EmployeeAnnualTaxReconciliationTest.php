@@ -201,9 +201,6 @@ class EmployeeAnnualTaxReconciliationTest extends TestCase
 
         $this->assertNotEquals($first->id, $second->id);
         $this->assertNotEquals($first->payslip_id, $second->payslip_id, 'Reconciliation baru harus terikat ke payslip revisi baru, bukan payslip lama.');
-        // Payslip lama (revisi 1) sudah tidak ada di payslips table aktif untuk
-        // employee ini? Tidak — Payslip lama TETAP ada (histori revisi), begitu
-        // juga reconciliation-nya — keduanya immutable, bukan dihapus/di-update.
         $this->assertDatabaseHas('payslips', ['id' => $first->payslip_id]);
         $this->assertDatabaseHas('payslips', ['id' => $second->payslip_id]);
     }

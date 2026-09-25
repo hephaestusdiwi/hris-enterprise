@@ -68,6 +68,9 @@ import ExpenseClaimListView from '@/views/ExpenseClaimListView.vue'
 import ExpenseClaimApprovalListView from '@/views/ExpenseClaimApprovalListView.vue'
 import CompanyObligationListView from '@/views/CompanyObligationListView.vue'
 import MyCompanyObligationReminderView from '@/views/MyCompanyObligationReminderView.vue'
+import TrainingCategoryListView from '@/views/TrainingCategoryListView.vue'
+import TrainingProgramListView from '@/views/TrainingProgramListView.vue'
+import MyTrainingView from '@/views/MyTrainingView.vue'
 import BpjsSettingView from '@/views/BpjsSettingView.vue'
 import EmployeeBpjsListView from '@/views/EmployeeBpjsListView.vue'
 import TaxSettingsView from '@/views/TaxSettingsView.vue'
@@ -477,6 +480,7 @@ const router = createRouter({
       component: MyCompanyObligationReminderView,
       meta: { requiresAuth: true },
     },
+    
     {
       path: '/bpjs/settings',
       name: 'bpjs-settings',
